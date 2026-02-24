@@ -1063,35 +1063,93 @@
             }, [aggregatedHistory]);
 
             // --- Asset 360 Logic ---
+            const combined360Assets = useMemo(() => {
+                const list = [];
+                const seen = new Set();
+
+                // 1. 當前資產清單 (Current Assets)
+                assetList.forEach(a => {
+                    const key = a.name?.trim();
+                    if (!key) return;
+                    list.push({ id: `curr_${a.id}`, name: key, category: a.category });
+                    seen.add(key.toLowerCase());
+                });
+
+                // 2. 歷史 Log 收集指引中的系統 (Historical Log Systems)
+                logGuides.forEach(l => {
+                    const key = l.system?.trim();
+                    if (key && !seen.has(key.toLowerCase())) {
+                        list.push({ id: `log_${l.id}`, name: key, category: '歷史紀錄資產 (Logs)' });
+                        seen.add(key.toLowerCase());
+                    }
+                });
+
+                // 3. 歷史威脅情境中的關聯資產 (Historical Threat Assets)
+                threatHistory.forEach(h => {
+                    h.scenarios?.forEach(s => {
+                        if (Array.isArray(s.related_assets)) {
+                            s.related_assets.forEach(ra => {
+                                const key = ra?.trim();
+                                if (key && !seen.has(key.toLowerCase())) {
+                                    list.push({ id: `scen_${key}`, name: key, category: '歷史紀錄資產 (Threats)' });
+                                    seen.add(key.toLowerCase());
+                                }
+                            });
+                        }
+                    });
+                });
+
+                // 依照名稱排序
+                return list.sort((a, b) => a.name.localeCompare(b.name));
+            }, [assetList, logGuides, threatHistory]);
+
             const asset360Data = useMemo(() => {
                 if (!selectedAssetFor360) return null;
-                const asset = assetList.find(a => a.id.toString() === selectedAssetFor360);
-                if (!asset) return null;
-
-                const assetNameLower = asset.name.toLowerCase();
-                const assetCatLower = asset.category.toLowerCase();
                 
+                const assetName = selectedAssetFor360;
+                // 正規化: 移除空白、破折號與底線，並轉小寫，確保高容錯率比對
+                const normAssetName = String(assetName).toLowerCase().replace(/[\s\-_]/g, '');
+
                 const flatScenarios = Object.values(aggregatedHistory.byRisk).flat();
                 
                 // Fuzzy match scenarios
                 const matchingScenarios = flatScenarios.filter(s => {
-                    const sStr = JSON.stringify(s).toLowerCase();
-                    // 優先比對名稱，若無則比對分類
-                    return sStr.includes(assetNameLower) || (assetNameLower.length > 2 && sStr.includes(assetNameLower.substring(0,3))) || s.category.toLowerCase().includes(assetCatLower);
+                    const normTitle = String(s.title).toLowerCase().replace(/[\s\-_]/g, '');
+                    const sStr = String(JSON.stringify(s)).toLowerCase().replace(/[\s\-_]/g, '');
+                    let matchInRelated = false;
+                    
+                    if (Array.isArray(s.related_assets)) {
+                        matchInRelated = s.related_assets.some(ra => {
+                            const normRa = String(ra).toLowerCase().replace(/[\s\-_]/g, '');
+                            return normRa === normAssetName || normRa.includes(normAssetName) || normAssetName.includes(normRa);
+                        });
+                    }
+                    
+                    // 防呆: 避免字數太短造成全部誤配對
+                    if (normAssetName.length < 3) {
+                        return matchInRelated || normTitle.includes(normAssetName);
+                    }
+                    return matchInRelated || sStr.includes(normAssetName);
                 });
 
                 // Fuzzy match log guides
                 const matchingLogs = logGuides.filter(l => {
-                    const lStr = JSON.stringify(l).toLowerCase();
-                    return lStr.includes(assetNameLower) || l.system.toLowerCase().includes(assetCatLower);
+                    const normSys = String(l.system).toLowerCase().replace(/[\s\-_]/g, '');
+                    const lStr = String(JSON.stringify(l)).toLowerCase().replace(/[\s\-_]/g, '');
+                    
+                    if (normAssetName.length < 3) {
+                        return normSys === normAssetName || normSys.includes(normAssetName);
+                    }
+                    return normSys.includes(normAssetName) || normAssetName.includes(normSys) || lStr.includes(normAssetName);
                 });
 
                 // Get CDM and RACI from matching scenarios
                 const matchingCDM = matchingScenarios.map(s => getCDMCell(s));
                 
-                // 產生 Mermaid 樹狀圖代碼
+                // 產生 Mermaid 樹狀圖代碼 (過濾掉會破壞語法的特殊字元)
+                const safeName = assetName.replace(/["\\]/g, '');
                 let mermaidStr = `graph LR\n`;
-                mermaidStr += `  Root("${asset.name}\\n(${asset.category})"):::rootNode\n`;
+                mermaidStr += `  Root("${safeName}"):::rootNode\n`;
                 mermaidStr += `  Root --> L(Log 收集):::branch\n`;
                 mermaidStr += `  Root --> T(風險情境):::branch\n`;
                 mermaidStr += `  Root --> C(CDM 矩陣):::branch\n`;
@@ -1105,27 +1163,27 @@
                 mermaidStr += `  classDef leafRACI fill:#fdf4ff,stroke:#fbcfe8,color:#86198f\n\n`;
 
                 matchingLogs.slice(0, 4).forEach((l, i) => {
-                    const shortName = l.system.substring(0, 10);
+                    const shortName = (l.system || 'System').replace(/["\\]/g, '').substring(0, 15);
                     mermaidStr += `  L --> L${i}["${shortName}..."]:::leafLog\n`;
                 });
                 if(matchingLogs.length > 4) mermaidStr += `  L --> LMore["+${matchingLogs.length - 4} 更多..."]:::leafLog\n`;
 
                 matchingScenarios.slice(0, 4).forEach((s, i) => {
-                    const shortTitle = s.title.substring(0, 12);
+                    const shortTitle = (s.title || '').replace(/["\\]/g, '').substring(0, 15);
                     mermaidStr += `  T --> T${i}["[${s.severity}] ${shortTitle}"]:::leafThreat\n`;
                 });
                 if(matchingScenarios.length > 4) mermaidStr += `  T --> TMore["+${matchingScenarios.length - 4} 更多..."]:::leafThreat\n`;
 
                 const uniqueCDM = [...new Set(matchingCDM.map(c => `${c.functionType} - ${c.assetType}`))];
                 uniqueCDM.slice(0, 4).forEach((cdmStr, i) => {
-                    mermaidStr += `  C --> C${i}["${cdmStr}"]:::leafCDM\n`;
+                    mermaidStr += `  C --> C${i}["${cdmStr.replace(/["\\]/g, '')}"]:::leafCDM\n`;
                 });
 
                 mermaidStr += `  R --> R1["SOC (R, C)"]:::leafRACI\n`;
                 mermaidStr += `  R --> R2["Admin (I, A)"]:::leafRACI\n`;
 
-                return { asset, matchingScenarios, matchingLogs, matchingCDM, mermaidStr };
-            }, [selectedAssetFor360, assetList, aggregatedHistory, logGuides]);
+                return { assetName, matchingScenarios, matchingLogs, matchingCDM, mermaidStr };
+            }, [selectedAssetFor360, aggregatedHistory, logGuides]);
 
             const handleGeneratePlaybook = async () => {
                 let inputToUse = systemInput; if (!inputToUse.trim() && assetList.length > 0) inputToUse = assetList.map(a => a.name).join(', ');
@@ -2473,14 +2531,14 @@
                                                 onChange={(e) => setSelectedAssetFor360(e.target.value)}
                                             >
                                                 <option value="" disabled>請選擇資產...</option>
-                                                {assetList.map(a => <option key={a.id} value={a.id}>{a.name} ({a.category})</option>)}
+                                                {combined360Assets.map((a, idx) => <option key={`${a.id}_${idx}`} value={a.name}>{a.name} ({a.category})</option>)}
                                             </select>
                                         </div>
                                     </div>
 
                                     {!selectedAssetFor360 ? (
                                         <div className="flex flex-col items-center justify-center h-80 text-gray-400 border-2 border-dashed border-gray-300 rounded-2xl bg-slate-50">
-                                            <Network size={64} className="mb-4 opacity-30"/>
+                                            <NetworkIcon size={64} className="mb-4 opacity-30"/>
                                             <p className="font-bold text-lg">請從上方選擇一個資產來展開全景圖</p>
                                             <p className="text-sm mt-2">系統將自動彙整該資產所有的防護脈絡</p>
                                         </div>
@@ -2527,7 +2585,7 @@
                                                         ) : (
                                                             <div className="space-y-4">
                                                                 <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-                                                                    <div className="text-sm font-bold text-slate-700 mb-3 border-b pb-2">針對 {asset360Data.asset.name} 的標準應變配置</div>
+                                                                    <div className="text-sm font-bold text-slate-700 mb-3 border-b pb-2">針對 {asset360Data.assetName} 的標準應變配置</div>
                                                                     <div className="grid grid-cols-2 gap-4 text-sm">
                                                                         <div className="bg-rose-50 p-2 rounded"><span className="font-bold text-rose-700">R (執行):</span> SOC 分析師</div>
                                                                         <div className="bg-amber-50 p-2 rounded"><span className="font-bold text-amber-700">A (當責):</span> 系統管理員 (Admin)</div>
@@ -2536,7 +2594,7 @@
                                                                     </div>
                                                                 </div>
                                                                 <p className="text-xs text-gray-500 px-2 leading-relaxed">
-                                                                    * 此 RACI 架構涵蓋了該資產在「監控、分析、圍堵、復原」階段的標準作業程序。當 {asset360Data.asset.name} 發生異常時，應嚴格遵循此通報與執行鏈。
+                                                                    * 此 RACI 架構涵蓋了該資產在「監控、分析、圍堵、復原」階段的標準作業程序。當 {asset360Data.assetName} 發生異常時，應嚴格遵循此通報與執行鏈。
                                                                 </p>
                                                             </div>
                                                         )}
