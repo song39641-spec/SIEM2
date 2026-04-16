@@ -69,18 +69,17 @@
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
         
-        /* 避免多個 absolute main 互相遮擋滑鼠事件 */
         main { position: absolute; inset: 0; transition: opacity 0.3s; z-index: 0; }
         main.active-view { z-index: 10; opacity: 1; pointer-events: auto; }
         main:not(.active-view) { opacity: 0; pointer-events: none; }
 
-        /* 🌟 權限管理相關 CSS */
         body:not(.is-admin) .admin-only {
             display: none !important;
         }
+        body.is-admin .hide-in-admin { display: none !important; }
     </style>
 </head>
-<body class="text-slate-800 flex flex-col h-screen overflow-hidden"> <!-- 預設為唯讀模式 -->
+<body class="text-slate-800 flex flex-col h-screen overflow-hidden">
 
     <!-- 頂部導航欄 -->
     <nav class="bg-slate-900 text-white p-4 shadow-md z-20 relative flex-shrink-0">
@@ -96,8 +95,8 @@
                     <button onclick="window.switchView('mitre')" id="tab-mitre" class="view-tab flex items-center px-3 py-1.5 rounded-md text-sm cursor-pointer whitespace-nowrap"><i data-lucide="radar" class="w-4 h-4 mr-1.5"></i> MITRE</button>
                 </div>
                 
-                <!-- 🌟 新增：AI 虛擬資安長總結報告按鈕 -->
-                <button onclick="window.openExecutiveReportModal()" class="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white px-3 py-1.5 rounded-md flex items-center shadow-sm transition-all text-sm whitespace-nowrap flex-shrink-0 group">
+                <!-- 🌟 新增 admin-only 權限控管：AI 虛擬資安長總結報告按鈕 -->
+                <button onclick="window.openExecutiveReportModal()" class="admin-only bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white px-3 py-1.5 rounded-md flex items-center shadow-sm transition-all text-sm whitespace-nowrap flex-shrink-0 group">
                     <i data-lucide="sparkles" class="w-4 h-4 mr-1.5 group-hover:animate-pulse text-yellow-300"></i> <span class="hidden md:inline">AI 總結報告</span>
                 </button>
 
@@ -107,6 +106,11 @@
                 <button onclick="window.openAssetModal()" class="bg-blue-600 hover:bg-blue-500 text-white px-3 py-1.5 rounded-md flex items-center shadow-sm transition-colors text-sm whitespace-nowrap flex-shrink-0">
                     <i data-lucide="database" class="w-4 h-4 mr-1.5"></i> <span class="hidden md:inline">伺服器資產</span><span class="md:hidden">資產</span>
                 </button>
+                
+                <button onclick="window.openApiSettingsModal()" class="bg-slate-700 hover:bg-slate-600 text-slate-200 px-3 py-1.5 rounded-md flex items-center shadow-sm transition-colors text-sm whitespace-nowrap flex-shrink-0" title="API 引擎設定">
+                    <i data-lucide="settings" class="w-4 h-4 mr-1.5"></i> <span class="hidden md:inline">API 設定</span>
+                </button>
+                
                 <button onclick="window.toggleAdminMode()" id="btn-admin-login" class="bg-slate-700 hover:bg-slate-600 text-slate-200 px-3 py-1.5 rounded-md flex items-center shadow-sm transition-colors text-sm whitespace-nowrap flex-shrink-0" title="切換管理員模式">
                     <i data-lucide="lock" class="w-4 h-4 mr-1.5"></i> <span class="hidden md:inline">唯讀模式</span>
                 </button>
@@ -117,11 +121,8 @@
     <!-- 主體內容區 -->
     <div class="flex-1 overflow-hidden relative bg-[#f8fafc]">
         
-        <!-- ========================================== -->
-        <!-- 視角一：威脅情境視角 (Scenario View) -->
-        <!-- ========================================== -->
+        <!-- 視角一：威脅情境視角 -->
         <main id="view-container-scenario" class="active-view max-w-7xl mx-auto p-4 md:p-6 grid grid-cols-1 lg:grid-cols-12 gap-8 overflow-hidden">
-            <!-- 左側面板：情境選擇 -->
             <div class="lg:col-span-4 xl:col-span-3 space-y-6 flex flex-col h-full overflow-hidden pb-4">
                 <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 md:p-5 flex-1 flex flex-col overflow-hidden">
                     <h2 class="text-lg font-semibold border-b pb-3 mb-3 flex items-center justify-between flex-shrink-0">
@@ -137,9 +138,7 @@
                 </div>
             </div>
 
-            <!-- 右側面板：詳細資訊展示 -->
             <div class="lg:col-span-8 xl:col-span-9 space-y-6 overflow-y-auto h-full pb-10 no-scrollbar pr-2 custom-scrollbar">
-                <!-- 動態標題區 -->
                 <div class="bg-white rounded-xl shadow-sm border-l-4 border-blue-600 p-6 flex justify-between items-start fade-in relative" id="detail-header">
                     <div class="flex-1 pr-4">
                         <div class="flex flex-wrap items-center gap-2 mb-3" id="scenario-badges-container">
@@ -152,7 +151,8 @@
                     <div class="text-right flex-col items-end hidden sm:flex">
                         <div class="flex space-x-2 mb-3 relative z-10 flex-wrap justify-end gap-y-2">
                             <button id="optimize-scenario-btn" onclick="window.optimizeScenarioWithAI()" class="admin-only text-xs bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-200 px-3 py-1.5 rounded flex items-center transition-colors shadow-sm hidden group"><i data-lucide="refresh-cw" class="w-4 h-4 mr-1 group-hover:rotate-180 transition-transform duration-500"></i> ✨ 依現有資產最佳化</button>
-                            <button id="attack-sim-btn" onclick="window.openAttackSimModal()" class="text-xs bg-purple-50 text-purple-600 hover:bg-purple-100 border border-purple-200 px-3 py-1.5 rounded flex items-center transition-colors shadow-sm hidden group"><i data-lucide="swords" class="w-4 h-4 mr-1 group-hover:scale-110 transition-transform"></i> ✨ 攻擊模擬</button>
+                            <!-- 🌟 新增 admin-only 權限控管：攻擊模擬按鈕 -->
+                            <button id="attack-sim-btn" onclick="window.openAttackSimModal()" class="admin-only text-xs bg-purple-50 text-purple-600 hover:bg-purple-100 border border-purple-200 px-3 py-1.5 rounded flex items-center transition-colors shadow-sm hidden group"><i data-lucide="swords" class="w-4 h-4 mr-1 group-hover:scale-110 transition-transform"></i> ✨ 攻擊模擬</button>
                             <button id="edit-scenario-btn" onclick="window.openEditScenarioModal()" class="admin-only text-xs bg-indigo-50 text-indigo-600 hover:bg-indigo-100 border border-indigo-200 px-3 py-1.5 rounded flex items-center transition-colors shadow-sm hidden group"><i data-lucide="settings-2" class="w-4 h-4 mr-1 group-hover:rotate-90 transition-transform duration-300"></i> ⚙️ 進階設定</button>
                             <button id="delete-scenario-btn" onclick="window.deleteScenario(window.currentSelectedScenarioId)" class="admin-only text-xs bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700 border border-red-200 px-3 py-1.5 rounded flex items-center transition-colors shadow-sm hidden group"><i data-lucide="trash-2" class="w-4 h-4 mr-1 group-hover:animate-bounce"></i> 刪除情境</button>
                         </div>
@@ -160,14 +160,12 @@
                     </div>
                 </div>
 
-                <!-- NIST CSF 核心功能對應 -->
                 <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
                     <h3 class="text-lg font-semibold mb-4 flex items-center border-b pb-3"><i data-lucide="layers" class="w-5 h-5 mr-2 text-slate-500"></i>NIST CSF 2.0 核心功能映射與分析</h3>
                     <div class="grid grid-cols-3 md:grid-cols-6 gap-3 mb-5" id="csf-nodes-container"></div>
                     <div id="csf-explanations-container" class="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4 pt-4 border-t border-slate-100"></div>
                 </div>
 
-                <!-- 執行層面：設備與日誌矩陣 -->
                 <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
                     <div class="bg-slate-50 p-4 border-b flex flex-wrap justify-between items-center gap-3">
                         <h3 class="text-lg font-semibold flex items-center"><i data-lucide="terminal-square" class="w-5 h-5 mr-2 text-slate-500"></i>執行層面：角色範圍與 RACI 權責劃分</h3>
@@ -185,7 +183,6 @@
                     </div>
                 </div>
                 
-                <!-- 偵測邏輯與 KQL 區塊 -->
                 <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden hidden" id="detection-logic-container">
                     <div class="bg-slate-50 p-4 border-b border-slate-200 flex justify-between items-center">
                         <h3 class="text-lg font-semibold flex items-center text-slate-800"><i data-lucide="microscope" class="w-5 h-5 mr-2 text-indigo-600"></i>實際偵測與判斷邏輯 (Detection Strategy)</h3>
@@ -195,7 +192,8 @@
                         <div class="px-5 py-3 border-b border-slate-700 flex justify-between items-center">
                             <div class="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center"><i data-lucide="code-2" class="w-3 h-3 mr-1.5 text-green-400"></i> ELK / BiMAP KQL 實作語法</div>
                             <div class="flex space-x-2">
-                                <button onclick="window.aiExplainKQL()" id="ai-explain-kql-btn" class="text-xs bg-indigo-600 hover:bg-indigo-500 text-white px-2 py-1 rounded transition-colors flex items-center shadow-sm"><i data-lucide="sparkles" class="w-3 h-3 mr-1"></i> AI 語法翻譯與解析</button>
+                                <!-- 🌟 新增 admin-only 權限控管：AI 語法翻譯與解析按鈕 -->
+                                <button onclick="window.aiExplainKQL()" id="ai-explain-kql-btn" class="admin-only text-xs bg-indigo-600 hover:bg-indigo-500 text-white px-2 py-1 rounded transition-colors flex items-center shadow-sm"><i data-lucide="sparkles" class="w-3 h-3 mr-1"></i> AI 語法翻譯與解析</button>
                                 <button onclick="window.copyKQLData()" class="text-xs bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white px-2 py-1 rounded transition-colors flex items-center"><i data-lucide="copy" class="w-3 h-3 mr-1"></i> 複製語法</button>
                             </div>
                         </div>
@@ -209,23 +207,18 @@
                     </div>
                 </div>
 
-                <!-- 防禦與應變指南 (Playbook) 區塊 -->
                 <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden" id="playbook-container">
                     <div class="bg-slate-50 p-4 border-b border-slate-200 flex justify-between items-center">
                         <h3 class="text-lg font-semibold flex items-center text-slate-800"><i data-lucide="book-open-check" class="w-5 h-5 mr-2 text-emerald-600"></i>防禦與應變指南 (Playbook)</h3>
                         <button onclick="window.generatePlaybookWithAI()" id="btn-generate-playbook" class="admin-only text-xs bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 px-3 py-1.5 rounded flex items-center transition-colors shadow-sm"><i data-lucide="sparkles" class="w-4 h-4 mr-1"></i> AI 撰寫指南</button>
                     </div>
-                    <div class="p-6 bg-white" id="playbook-content">
-                        <!-- JS 動態填入 -->
-                    </div>
+                    <div class="p-6 bg-white" id="playbook-content"></div>
                 </div>
 
             </div>
         </main>
 
-        <!-- ========================================== -->
-        <!-- 視角二：系統設備視角 (System View) -->
-        <!-- ========================================== -->
+        <!-- 視角二：系統設備視角 -->
         <main id="view-container-system" class="max-w-7xl mx-auto p-4 md:p-6 grid grid-cols-1 lg:grid-cols-12 gap-8 overflow-hidden">
             <div class="lg:col-span-4 xl:col-span-3 space-y-6 flex flex-col h-full overflow-hidden pb-4">
                 <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 md:p-5 flex-1 flex flex-col overflow-hidden">
@@ -260,22 +253,16 @@
             </div>
         </main>
 
-        <!-- ========================================== -->
-        <!-- 🌟 視角三：MITRE ATT&CK 視角 (MITRE View) -->
-        <!-- ========================================== -->
+        <!-- 🌟 視角三：MITRE ATT&CK 視角 -->
         <main id="view-container-mitre" class="max-w-7xl mx-auto p-4 md:p-6 grid grid-cols-1 lg:grid-cols-12 gap-8 overflow-hidden">
-            <!-- 左側面板：MITRE 戰術清單 -->
             <div class="lg:col-span-4 xl:col-span-4 space-y-6 flex flex-col h-full overflow-hidden pb-4">
                 <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 flex-1 flex flex-col overflow-hidden">
                     <h2 class="text-lg font-semibold border-b pb-3 mb-3 flex items-center flex-shrink-0 text-slate-800"><i data-lucide="radar" class="w-5 h-5 mr-2 text-rose-500"></i>MITRE ATT&CK 戰術矩陣</h2>
                     <p class="text-xs text-slate-500 mb-3 flex-shrink-0 leading-relaxed">選擇駭客可能採取的攻擊戰術，AI 將評估您的現有資產，為您量身打造防禦情境。</p>
-                    <div class="overflow-y-auto no-scrollbar flex-1 space-y-2 pr-1 custom-scrollbar" id="mitre-list-container">
-                        <!-- JS 動態產生 -->
-                    </div>
+                    <div class="overflow-y-auto no-scrollbar flex-1 space-y-2 pr-1 custom-scrollbar" id="mitre-list-container"></div>
                 </div>
             </div>
             
-            <!-- 右側面板：戰術詳情與 AI 關聯分析 -->
             <div class="lg:col-span-8 xl:col-span-8 space-y-6 overflow-y-auto h-full pb-10 no-scrollbar pr-2 custom-scrollbar">
                 <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden fade-in" id="mitre-detail-header">
                     <div class="bg-gradient-to-r from-rose-900 to-slate-900 p-6 text-white relative">
@@ -287,20 +274,15 @@
                     </div>
                 </div>
 
-                <!-- 資產關聯分析區塊 -->
                 <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 relative overflow-hidden">
                     <div class="absolute top-0 right-0 w-32 h-32 bg-blue-50 rounded-bl-full -z-10 opacity-50"></div>
                     <h3 class="text-lg font-semibold mb-4 flex items-center border-b pb-3 text-slate-800">
-                        <i data-lucide="cpu" class="w-5 h-5 mr-2 text-blue-600"></i>
-                        現有資產盤點與關聯分析
+                        <i data-lucide="cpu" class="w-5 h-5 mr-2 text-blue-600"></i>現有資產盤點與關聯分析
                     </h3>
                     <p class="text-sm text-slate-600 mb-4">系統已自動掃描您註冊的伺服器與設備角色。AI 將僅利用以下**現有資源**，為您設計最具成本效益的偵測邏輯：</p>
                     
-                    <div id="mitre-assets-summary" class="flex flex-wrap gap-2 mb-6 p-4 bg-slate-50 rounded-lg border border-slate-100">
-                        <!-- JS 動態產生資產 Tag -->
-                    </div>
+                    <div id="mitre-assets-summary" class="flex flex-wrap gap-2 mb-6 p-4 bg-slate-50 rounded-lg border border-slate-100"></div>
 
-                    <!-- AI 觸發按鈕區 -->
                     <div class="bg-indigo-50 border border-indigo-100 rounded-xl p-5 text-center admin-only">
                         <h4 class="font-bold text-indigo-800 mb-2">準備好建立防禦機制了嗎？</h4>
                         <p class="text-xs text-indigo-600 mb-4">點擊下方按鈕，AI 將立刻結合您的「實際設備」與選定的「攻擊戰術」，自動撰寫 KQL 語法與日誌派工單，並儲存至您的情境庫中。</p>
@@ -322,7 +304,7 @@
     <!-- 所有 Modals 區塊 -->
     <!-- ========================================== -->
 
-    <!-- 🌟 新增：高階總結報告 Modal -->
+    <!-- 高階總結報告 Modal -->
     <div id="executive-report-modal" class="fixed inset-0 bg-slate-900/80 z-[80] flex items-center justify-center hidden p-4">
         <div class="bg-white rounded-xl shadow-2xl w-full max-w-4xl overflow-hidden flex flex-col max-h-[90vh]">
             <div class="p-5 border-b bg-gradient-to-r from-purple-700 to-indigo-800 flex items-center justify-between">
@@ -339,15 +321,45 @@
                 <p class="text-sm text-slate-500">正在整理情境涵蓋率與資產缺口，為您產出高階報告。</p>
             </div>
 
-            <div id="executive-report-content" class="p-8 bg-white overflow-y-auto custom-scrollbar flex-grow hidden">
-                <!-- AI 回傳的 HTML 會塞在這裡 -->
-            </div>
+            <div id="executive-report-content" class="p-8 bg-white overflow-y-auto custom-scrollbar flex-grow hidden"></div>
 
             <div class="p-4 border-t bg-slate-50 flex justify-between items-center">
                 <button onclick="window.generateExecutiveReport()" id="btn-refresh-report" class="text-purple-600 hover:text-purple-700 text-sm font-medium flex items-center transition-colors">
                     <i data-lucide="refresh-cw" class="w-4 h-4 mr-1.5"></i> 重新生成報告
                 </button>
                 <button onclick="window.closeExecutiveReportModal()" class="bg-slate-200 hover:bg-slate-300 text-slate-800 px-6 py-2 rounded-md text-sm font-bold transition-colors shadow-sm">關閉報告</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 安全的 API 自帶金鑰設定 Modal -->
+    <div id="api-settings-modal" class="fixed inset-0 bg-slate-900/60 z-[90] flex items-center justify-center hidden p-4">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col">
+            <div class="p-5 border-b bg-slate-50 flex items-center justify-between">
+                <h3 class="text-lg font-bold text-slate-800 flex items-center"><i data-lucide="settings" class="w-5 h-5 mr-2 text-indigo-600"></i>系統 AI 引擎設定</h3>
+                <button onclick="window.closeApiSettingsModal()" class="text-slate-400 hover:text-slate-600"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+            <div class="p-6 bg-white space-y-4">
+                <div class="bg-blue-50 text-blue-800 text-xs p-3 rounded-md mb-4 border border-blue-100 leading-relaxed">
+                    <i data-lucide="info" class="w-4 h-4 inline mr-1 mb-0.5"></i>您的金鑰只會安全地儲存在您當前瀏覽器的 LocalStorage 中，不會上傳至任何伺服器。這確保了放置於 GitHub Pages 等公開環境時的絕對安全。
+                </div>
+                <div>
+                    <label class="block text-sm font-bold text-slate-700 mb-1">Gemini API 金鑰 (API Key) <span class="text-red-500">*</span></label>
+                    <input type="password" id="setting-api-key" class="w-full text-sm border-slate-300 rounded-md p-2 border focus:ring-2 focus:ring-indigo-500 focus:outline-none" placeholder="AIzaSy...">
+                </div>
+                <div>
+                    <label class="block text-sm font-bold text-slate-700 mb-1">AI 驅動模型 (Model Version)</label>
+                    <select id="setting-api-model" class="w-full text-sm border-slate-300 rounded-md p-2 border focus:ring-2 focus:ring-indigo-500 bg-white">
+                        <option value="gemini-1.5-pro">Gemini 1.5 Pro (最強推理能力，適合複雜情境)</option>
+                        <option value="gemini-1.5-flash">Gemini 1.5 Flash (極速反應，成本最低)</option>
+                        <option value="gemini-2.5-flash-preview-09-2025">Gemini 2.5 Flash Preview (預覽版)</option>
+                        <option value="gemini-3.1-pro-preview" selected>Gemini 3.1 Pro Preview (實驗性/未來看齊)</option>
+                    </select>
+                </div>
+            </div>
+            <div class="p-4 border-t bg-slate-50 flex justify-end space-x-3">
+                <button onclick="window.closeApiSettingsModal()" class="bg-slate-200 hover:bg-slate-300 text-slate-800 px-4 py-2 rounded-md text-sm transition-colors">取消</button>
+                <button onclick="window.saveApiSettings()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2 rounded-md text-sm shadow-sm transition-colors">儲存設定</button>
             </div>
         </div>
     </div>
@@ -505,7 +517,6 @@ service cloud.firestore {
                 <div class="lg:col-span-4 flex flex-col gap-6">
                     <div><h4 class="font-bold text-sm mb-3 flex items-center border-b pb-2"><i data-lucide="server" class="w-4 h-4 mr-1.5 text-blue-500"></i> 1. 系統角色</h4><div id="edit-scope-checkboxes" class="space-y-4 max-h-[250px] overflow-y-auto custom-scrollbar"></div></div>
                     <div><h4 class="font-bold text-sm mb-3 flex items-center border-b pb-2"><i data-lucide="pie-chart" class="w-4 h-4 mr-1.5 text-pink-500"></i> 2. 管理元素 (5M)</h4><div id="edit-fivem-checkboxes" class="flex flex-col gap-2"></div></div>
-                    <!-- 🌟 新增：NIST CSF 設定區塊 -->
                     <div><h4 class="font-bold text-sm mb-3 flex items-center border-b pb-2"><i data-lucide="layers" class="w-4 h-4 mr-1.5 text-emerald-500"></i> 3. NIST CSF 核心功能</h4><div id="edit-csf-checkboxes" class="grid grid-cols-2 gap-2"></div></div>
                 </div>
                 <div class="lg:col-span-8 flex flex-col h-full space-y-4">
@@ -562,7 +573,7 @@ service cloud.firestore {
         </div>
     </div>
 
-    <!-- 🌟 新增：管理員登入 Modal -->
+    <!-- 管理員登入 Modal -->
     <div id="admin-login-modal" class="fixed inset-0 bg-slate-900/60 z-[70] flex items-center justify-center hidden p-4">
         <div class="bg-white rounded-xl shadow-2xl w-full max-w-sm overflow-hidden flex flex-col">
             <div class="p-5 border-b bg-slate-50 flex items-center justify-between">
@@ -583,20 +594,13 @@ service cloud.firestore {
     <!-- Toast -->
     <div id="toast" class="fixed bottom-5 right-5 bg-green-600 text-white px-4 py-2 rounded shadow-lg transform transition-transform translate-y-20 opacity-0 flex items-center z-50 transition-colors duration-300"><i data-lucide="info" class="w-5 h-5 mr-2" id="toast-icon"></i><span id="toast-message">完成！</span></div>
 
-    <style>
-        /* 控制唯讀模式提示的文字隱藏 */
-        body.is-admin .hide-in-admin { display: none !important; }
-    </style>
-
     <script>
         // ==========================================
         // 基礎配置與變數
         // ==========================================
-        // 🌟 透過反轉與拆分字串來去識別化 API Key，完美避開爬蟲的 "AIza" 特徵掃描
-        const _p1 = "pih8dHDySazIA".split('').reverse().join('');
-        const _p2 = "DnJFwYNn0cpYy".split('').reverse().join('');
-        const _p3 = "0RpWOdLcIwcxcX".split('').reverse().join('');
-        const apiKey = _p1 + _p2 + _p3;
+        // 🌟 透過全域變數存取 API Key，不再寫死在程式碼中以確保 GitHub 發布安全
+        window.apiKey = localStorage.getItem('siem_gemini_api_key') || "";
+        window.apiModel = localStorage.getItem('siem_gemini_api_model') || "gemini-1.5-pro";
 
         const categoriesDef = [
             { id: 'identity', name: '身分與存取威脅', icon: 'user-x', colorClass: 'text-indigo-600', bgClass: 'bg-indigo-50', borderClass: 'border-indigo-100' },
@@ -808,7 +812,39 @@ service cloud.firestore {
             document.getElementById('admin-login-modal').classList.add('hidden');
         }
 
-        // 🌟 更新：導入 SHA-256 密碼雜湊驗證機制 (已改為 sony168)
+        // 🌟 更新：安全自帶金鑰功能 Modal
+        window.openApiSettingsModal = function() {
+            document.getElementById('setting-api-key').value = window.apiKey || '';
+            document.getElementById('setting-api-model').value = window.apiModel || 'gemini-1.5-pro';
+            const modal = document.getElementById('api-settings-modal');
+            modal.classList.remove('hidden');
+            modal.children[0].classList.add('modal-enter');
+            requestAnimationFrame(() => { 
+                modal.children[0].classList.add('modal-enter-active'); 
+                modal.children[0].classList.remove('modal-enter'); 
+            });
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+        }
+
+        window.closeApiSettingsModal = function() {
+            document.getElementById('api-settings-modal').classList.add('hidden');
+        }
+
+        window.saveApiSettings = function() {
+            const key = document.getElementById('setting-api-key').value.trim();
+            const model = document.getElementById('setting-api-model').value;
+            if (!key) {
+                window.showToast("⚠️ API 金鑰不能為空！", true);
+                return;
+            }
+            window.apiKey = key;
+            window.apiModel = model;
+            localStorage.setItem('siem_gemini_api_key', key);
+            localStorage.setItem('siem_gemini_api_model', model);
+            window.closeApiSettingsModal();
+            window.showToast("✅ AI 引擎設定儲存成功！");
+        }
+
         window.submitAdminPassword = async function() {
             const pwdInput = document.getElementById('admin-password-input').value;
             
@@ -818,7 +854,7 @@ service cloud.firestore {
             const hashArray = Array.from(new Uint8Array(hashBuffer));
             const inputHashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 
-            // 2. 為了不讓密碼明文被直接看到，我們用 Base64 幫您藏起來 (解碼後即為 sony168)
+            // 2. 為了不讓密碼明文被直接看到，我們用 Base64 幫您藏起來
             // 並讓瀏覽器動態計算它的 Hash 值作為標準答案 (targetHash)
             const secretWord = atob("c29ueTE2OA=="); 
             const targetMsgUint8 = new TextEncoder().encode(secretWord);
@@ -890,9 +926,17 @@ service cloud.firestore {
         }
 
         async function fetchWithRetry(url, options, maxRetries = 5) {
-            // 🌟 攔截 API 請求，強制升級為 Gemini 3.1 Pro Preview 模型
+            // 🌟 防呆：若無金鑰則中斷請求並引導設定
+            if (!window.apiKey) {
+                window.showToast("⚠️ 尚未設定 Gemini API 金鑰！請先設定。", true);
+                window.openApiSettingsModal();
+                throw new Error("Missing API Key");
+            }
+
+            // 🌟 攔截 API 請求，強制替換為設定的 API Key 與 模型版本
             if (url.includes("generativelanguage.googleapis.com")) {
-                url = url.replace(/models\/[a-zA-Z0-9.-]+:generateContent/, "models/gemini-3.1-pro-preview:generateContent");
+                url = url.replace(/key=[^&]*/, "key=" + window.apiKey);
+                url = url.replace(/models\/[a-zA-Z0-9.-]+:generateContent/, `models/${window.apiModel}:generateContent`);
             }
 
             // 🌟 攔截 Payload，在系統指令中強制追加「繁體中文」的最高指導原則
@@ -981,7 +1025,8 @@ service cloud.firestore {
 
             const schema = { type: "OBJECT", properties: { reportHtml: { type: "STRING" } }, required: ["reportHtml"] };
             const payload = { contents: [{ parts: [{ text: userPrompt }] }], systemInstruction: { parts: [{ text: systemInstruction }] }, generationConfig: { responseMimeType: "application/json", responseSchema: schema } };
-            const url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=" + apiKey;
+            // 注意：這裡的 key 是預留位，稍後會被 fetchWithRetry 攔截並替換為使用者設定的金鑰
+            const url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=DUMMY";
 
             try {
                 const result = await fetchWithRetry(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
@@ -994,7 +1039,7 @@ service cloud.firestore {
                 contentDiv.classList.remove('hidden');
             } catch (error) {
                 console.error("報告生成失敗:", error);
-                contentDiv.innerHTML = `<div class="text-center text-red-500 p-8 bg-red-50 rounded-xl border border-red-200"><i data-lucide="alert-triangle" class="w-10 h-10 mx-auto mb-3"></i>報告生成失敗，請稍後再試。</div>`;
+                contentDiv.innerHTML = `<div class="text-center text-red-500 p-8 bg-red-50 rounded-xl border border-red-200"><i data-lucide="alert-triangle" class="w-10 h-10 mx-auto mb-3"></i>報告生成失敗，請檢查 API Key 額度或網路狀態。</div>`;
                 loadingDiv.classList.add('hidden');
                 contentDiv.classList.remove('hidden');
                 if (typeof lucide !== 'undefined') lucide.createIcons();
@@ -1189,15 +1234,15 @@ service cloud.firestore {
             };
             
             const payload = { contents: [{ parts: [{ text: userPrompt }] }], systemInstruction: { parts: [{ text: systemInstruction }] }, generationConfig: { responseMimeType: "application/json", responseSchema: schema } };
-            const url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=" + apiKey;
+            // 注意：這裡的 key 是預留位，稍後會被 fetchWithRetry 攔截並替換為使用者設定的金鑰
+            const url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=DUMMY";
 
             try {
                 const result = await fetchWithRetry(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
                 const textResp = result.candidates?.[0]?.content?.parts?.[0]?.text; if (!textResp) throw new Error("無效的回傳");
                 let newScenarioData = JSON.parse(textResp);
                 
-                if (selectedDirectionValue !== 'random' && selectedDirectionValue !== 'auto') { newScenarioData.categoryId = selectedDirectionValue; } 
-                else if (!categoriesDef.find(c => c.id === newScenarioData.categoryId)) { newScenarioData.categoryId = 'uncategorized'; }
+                if (!categoriesDef.find(c => c.id === newScenarioData.categoryId)) { newScenarioData.categoryId = 'uncategorized'; }
 
                 if (Array.isArray(newScenarioData.scope)) {
                     let customGroup = rolesDef.find(g => g.group === '自訂新增 (Custom)');
@@ -1210,7 +1255,7 @@ service cloud.firestore {
                 
                 if(window.db && window.fs) {
                     try {
-                        const docRef = await window.fs.addDoc(window.db, "scenarios"), newScenario);
+                        const docRef = await window.fs.addDoc(window.fs.collection(window.db, "scenarios"), newScenario);
                         newScenario.docId = docRef.id;
                     } catch(e) { console.error(e); }
                 }
@@ -1227,7 +1272,7 @@ service cloud.firestore {
                 }, 1500);
 
             } catch (error) {
-                console.error("生成失敗:", error); window.showToast("⚠️ AI 生成失敗，請檢查網路狀態或稍後再試。", true);
+                console.error("生成失敗:", error); window.showToast("⚠️ AI 生成失敗，請檢查 API Key 額度或網路狀態。", true);
             } finally {
                 btn.disabled = false;
                 btn.classList.remove('animate-pulse');
@@ -1813,7 +1858,7 @@ service cloud.firestore {
 
             const schema = { type: "OBJECT", properties: { updatedLogs: { type: "ARRAY", items: { type: "STRING" } }, detectionStrategy: { type: "STRING" }, kqlLogic: { type: "STRING" } } };
             const payload = { contents: [{ parts: [{ text: `現有日誌：\n${currentLogs || '無'}` }] }], systemInstruction: { parts: [{ text: systemInstruction }] }, generationConfig: { responseMimeType: "application/json", responseSchema: schema } };
-            const url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=" + apiKey;
+            const url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=" + window.apiKey;
 
             try {
                 const result = await fetchWithRetry(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
@@ -1868,7 +1913,7 @@ service cloud.firestore {
             };
             
             const payload = { contents: [{ parts: [{ text: userPrompt }] }], systemInstruction: { parts: [{ text: systemInstruction }] }, generationConfig: { responseMimeType: "application/json", responseSchema: schema } };
-            const url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=" + apiKey;
+            const url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=" + window.apiKey;
 
             try {
                 const result = await fetchWithRetry(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
@@ -1905,7 +1950,7 @@ service cloud.firestore {
             const userPrompt = `情境標題：${scenario.title}\n偵測邏輯：${scenario.detectionStrategy}\nKQL 語法：${scenario.detectionLogic}`;
             const schema = { type: "OBJECT", properties: { command: { type: "STRING" }, explanation: { type: "STRING" } }, required: ["command", "explanation"] };
             const payload = { contents: [{ parts: [{ text: userPrompt }] }], systemInstruction: { parts: [{ text: systemInstruction }] }, generationConfig: { responseMimeType: "application/json", responseSchema: schema } };
-            const url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=" + apiKey;
+            const url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=" + window.apiKey;
 
             try {
                 const result = await fetchWithRetry(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
@@ -1931,7 +1976,7 @@ service cloud.firestore {
             const userPrompt = `請用白話文解釋以下 KQL 語法的運作邏輯，並提供一個對應的 Splunk SPL 等效語法範例：\n${scenario.detectionLogic}`;
             const schema = { type: "OBJECT", properties: { explanation: { type: "STRING" }, splunkSPL: { type: "STRING" } }, required: ["explanation", "splunkSPL"] };
             const payload = { contents: [{ parts: [{ text: userPrompt }] }], systemInstruction: { parts: [{ text: systemInstruction }] }, generationConfig: { responseMimeType: "application/json", responseSchema: schema } };
-            const url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=" + apiKey;
+            const url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=" + window.apiKey;
 
             try {
                 const result = await fetchWithRetry(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
@@ -2011,7 +2056,7 @@ service cloud.firestore {
             };
             
             const payload = { contents: [{ parts: [{ text: userPrompt }] }], systemInstruction: { parts: [{ text: systemInstruction }] }, generationConfig: { responseMimeType: "application/json", responseSchema: schema } };
-            const url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=" + apiKey;
+            const url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=" + window.apiKey;
 
             try {
                 const result = await fetchWithRetry(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
@@ -2032,7 +2077,7 @@ service cloud.firestore {
                 
                 if(window.db && window.fs) {
                     try {
-                        const docRef = await window.fs.addDoc(window.db, "scenarios"), newScenario);
+                        const docRef = await window.fs.addDoc(window.fs.collection(window.db, "scenarios"), newScenario);
                         newScenario.docId = docRef.id;
                     } catch(e) { console.error(e); }
                 }
@@ -2116,7 +2161,7 @@ service cloud.firestore {
             };
 
             const payload = { contents: [{ parts: [{ text: userPrompt }] }], systemInstruction: { parts: [{ text: systemInstruction }] }, generationConfig: { responseMimeType: "application/json", responseSchema: schema } };
-            const url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=" + apiKey;
+            const url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=" + window.apiKey;
 
             try {
                 const result = await fetchWithRetry(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
@@ -2347,7 +2392,7 @@ service cloud.firestore {
             
             const schema = { type: "OBJECT", properties: { role: { type: "STRING" }, category: { type: "STRING" } }, required: ["role", "category"] };
             const payload = { contents: [{ parts: [{ text: `關鍵字：${keyword}` }] }], systemInstruction: { parts: [{ text: systemInstruction }] }, generationConfig: { responseMimeType: "application/json", responseSchema: schema } };
-            const url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=" + apiKey;
+            const url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=" + window.apiKey;
 
             try {
                 const result = await fetchWithRetry(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
@@ -2411,7 +2456,7 @@ service cloud.firestore {
 
             const schema = { type: "OBJECT", properties: { assetName: { type: "STRING" }, role: { type: "STRING" }, category: { type: "STRING" }, matchedScenarios: { type: "ARRAY", items: { type: "OBJECT", properties: { scenarioId: { type: "STRING" }, addedLogs: { type: "ARRAY", items: { type: "STRING" } }, addedNotes: { type: "STRING" } } } } }, required: ["assetName", "role", "category", "matchedScenarios"] };
             const payload = { contents: [{ parts: [{ text: promptInput }] }], systemInstruction: { parts: [{ text: systemInstruction }] }, generationConfig: { responseMimeType: "application/json", responseSchema: schema } };
-            const url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=" + apiKey;
+            const url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=" + window.apiKey;
 
             try {
                 const result = await fetchWithRetry(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
