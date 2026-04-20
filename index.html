@@ -1375,11 +1375,17 @@
                 const response = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
                 if (!response.ok) throw new Error("API 調用失敗");
                 const result = await response.json();
-                const text = result.candidates[0].content.parts[0].text;
-                return jsonMode ? JSON.parse(text) : text;
+                let text = result.candidates[0].content.parts[0].text;
+                
+                if (jsonMode) {
+                    // 確保移除 AI 偶爾會加上的 Markdown 標記，避免 JSON.parse 報錯
+                    text = text.replace(/```json/gi, '').replace(/```/g, '').trim();
+                    return JSON.parse(text);
+                }
+                return text;
             } catch (e) {
                 console.error(e);
-                window.showToast("❌ AI 調用失敗：" + e.message, true);
+                window.showToast("❌ AI 調用或解析失敗：" + e.message, true);
                 return null;
             }
         };
@@ -1390,26 +1396,60 @@
         window.generateAIScenario = async function() {
             const direction = document.getElementById('ai-threat-direction').value;
             const risk = document.getElementById('ai-risk-level').value;
-            const prompt = document.getElementById('ai-prompt').value;
+            const promptInput = document.getElementById('ai-prompt').value;
             
             document.getElementById('ai-loading').classList.remove('hidden');
             
-            const systemPrompt = `你是一位 SIEM 資安策略官。請生成一個威脅監控情境。
-            輸出格式 JSON: { "id": "s_new", "categoryId": "string", "title": "string", "shortName": "string", "desc": "string", "risk": "string", "riskColor": "string", "csf": ["string"], "fiveM": ["string"], "scope": ["string"], "logs": ["string"], "detectionStrategy": "string", "detectionLogic": "string", "notes": "string" }`;
+            const activeRoles = [...new Set(window.assets.map(a => a.role))];
+            const validCategories = window.categoriesDef.map(c => c.id).join(', ');
+            const validCSF = window.csfFunctions.map(c => c.id).join(', ');
+            const valid5M = window.fiveMDef.map(m => m.id).join(', ');
+
+            const systemPrompt = `你是一位 SIEM 資安架構專家。請根據要求生成一個完整且符合現實環境的威脅監控情境。
+            必須嚴格遵守以下選項範圍：
+            - categoryId 只能從中挑選: [${validCategories}]
+            - csf 陣列元素只能從中挑選: [${validCSF}]
+            - fiveM 陣列元素只能從中挑選: [${valid5M}]
+            - scope (系統角色) 陣列請【務必優先】從使用者現有資產角色中挑選: [${activeRoles.join(', ')}]，如果現有資產不足以支撐防禦，再自行補充新角色。
+            - logs 陣列請列出針對 scope 中每個角色必須收集的具體日誌，格式必須為 "[角色名稱] 日誌詳細說明"。
+            - risk 只能填寫: "極高 (Critical)", "高 (High)", "中 (Medium)", "低 (Low)"。
+            - detectionLogic 必須是可直接在 ELK (Elastic Stack / Kibana) 上執行的 KQL (Kibana Query Language) 語法。
+            - detectionStrategy 則是對該 KQL 偵測邏輯的詳細中文原理解釋與判斷說明。
+
+            請輸出純 JSON 格式，必須包含以下所有欄位，絕不可遺漏或留空：
+            { 
+              "id": "s_new", 
+              "categoryId": "string", 
+              "title": "string", 
+              "shortName": "string", 
+              "desc": "string", 
+              "risk": "string", 
+              "csf": ["string"], 
+              "fiveM": ["string"], 
+              "scope": ["string"], 
+              "logs": ["string"], 
+              "detectionStrategy": "string", 
+              "detectionLogic": "string", 
+              "notes": "string", 
+              "mitigation": ["string"], 
+              "response": ["string"] 
+            }`;
             
-            const res = await window.callGemini(`方向: ${direction}, 等級: ${risk}, 需求: ${prompt}`, systemPrompt);
+            const res = await window.callGemini(`方向分類: ${direction}, 指定風險等級: ${risk}, 使用者補充情境需求: ${promptInput || '無'}`, systemPrompt);
             
             if (res) {
                 res.id = 's' + Date.now();
                 if (window.db && window.fs) {
-                    const docRef = await window.fs.addDoc(window.fs.collection(window.db, "scenarios"), res);
-                    res.docId = docRef.id;
+                    try {
+                        const docRef = await window.fs.addDoc(window.fs.collection(window.db, "scenarios"), res);
+                        res.docId = docRef.id;
+                    } catch(e) { console.warn('Firebase save failed', e); }
                 }
                 window.scenarios.push(res);
                 window.renderScenarioButtons();
                 window.selectScenario(res.id);
                 window.closeAIModal();
-                window.showToast("✨ AI 已成功生成並建檔情境！");
+                window.showToast("✨ AI 已成功為您量身打造新情境！");
             }
             document.getElementById('ai-loading').classList.add('hidden');
         };
@@ -1484,22 +1524,68 @@
             const tactic = window.mitreTactics.find(t => t.id === window.currentSelectedMitreId);
             const activeRoles = [...new Set(window.assets.map(a => a.role))];
             const btn = document.getElementById('btn-mitre-generate');
-            btn.disabled = true; btn.textContent = "分析中...";
+            btn.disabled = true; 
+            const origHtml = btn.innerHTML;
+            btn.innerHTML = `<i data-lucide="loader-2" class="w-5 h-5 mr-2 animate-spin"></i><span>AI 分析與生成中...</span>`;
 
-            const prompt = `根據 MITRE 戰術 [${tactic.name}] 與現有資產 [${activeRoles.join(', ')}]，設計一個偵測情境。`;
-            const systemPrompt = `輸出 JSON 與 generateAIScenario 格式相同。`;
+            const validCategories = window.categoriesDef.map(c => c.id).join(', ');
+            const validCSF = window.csfFunctions.map(c => c.id).join(', ');
+            const valid5M = window.fiveMDef.map(m => m.id).join(', ');
+
+            const prompt = `針對 MITRE ATT&CK 戰術 [${tactic.name} (${tactic.en})]：${tactic.desc}
+            請設計一個能有效偵測此戰術的最佳 SIEM 防禦情境。
+            【極度重要】：請務必最大化利用以下使用者的「現有資產角色」來設計偵測邏輯與分配日誌收集：[${activeRoles.join(', ')}]。`;
+            
+            const systemPrompt = `你是一位頂尖的 SIEM 架構專家。請根據 MITRE 戰術與現有設備，為使用者量身打造監控情境。
+            必須嚴格遵守選項範圍：
+            - categoryId: [${validCategories}]
+            - csf: [${validCSF}]
+            - fiveM: [${valid5M}]
+            - risk 只能填寫: "極高 (Critical)", "高 (High)", "中 (Medium)", "低 (Low)"。
+            - scope 陣列請優先對應使用者的現有資產角色。
+            - logs 陣列格式必須為 "[角色名稱] 需收集的日誌細節"。
+            - detectionLogic 必須是符合 ELK (Elastic Stack) 規範的 KQL (Kibana Query Language) 語法。
+            - detectionStrategy 則是對該 KQL 偵測邏輯的中文原理解釋與判斷說明。
+
+            輸出格式必須為完整 JSON Object，不可遺漏欄位：
+            { 
+              "id": "m_new", 
+              "categoryId": "string", 
+              "title": "string", 
+              "shortName": "string", 
+              "desc": "string", 
+              "risk": "string", 
+              "csf": ["string"], 
+              "fiveM": ["string"], 
+              "scope": ["string"], 
+              "logs": ["string"], 
+              "detectionStrategy": "string", 
+              "detectionLogic": "string", 
+              "notes": "string", 
+              "mitigation": ["string"], 
+              "response": ["string"] 
+            }`;
             
             const res = await window.callGemini(prompt, systemPrompt);
             if (res) {
                 res.id = 'm' + Date.now();
                 window.scenarios.push(res);
-                if (window.db && window.fs) await window.fs.addDoc(window.fs.collection(window.db, "scenarios"), res);
-                window.showToast("🎯 戰術對應情境已加入情境庫！");
+                if (window.db && window.fs) {
+                    try {
+                        const docRef = await window.fs.addDoc(window.fs.collection(window.db, "scenarios"), res);
+                        res.docId = docRef.id;
+                    } catch(e) { console.warn('Firebase save failed', e); }
+                }
+                window.showToast("🎯 戰術對應防護情境已成功生成！");
                 window.switchView('scenario');
                 window.renderScenarioButtons();
                 window.selectScenario(res.id);
+            } else {
+                window.showToast("⚠️ 生成失敗，請重試。", true);
             }
-            btn.disabled = false; btn.textContent = "生成專屬防護情境";
+            btn.disabled = false; 
+            btn.innerHTML = origHtml;
+            if (typeof lucide !== 'undefined') lucide.createIcons();
         };
 
         window.openAttackSimModal = async function() {
@@ -1712,20 +1798,74 @@
             if (!scenario) return;
 
             const btn = document.getElementById('optimize-scenario-btn'); const originalHtml = btn.innerHTML;
-            btn.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 mr-1 animate-spin"></i> 最佳化中...`;
+            btn.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 mr-1 animate-spin"></i> 全面最佳化中...`;
             btn.disabled = true;
 
             const activeRoles = [...new Set(window.assets.map(a => a.role))];
-            const systemPrompt = `你是 SIEM 專家。根據現有資產[${activeRoles.join(',')}]，優化此情境的 KQL 與收集日誌，補充欠缺的邏輯與設備。回傳 JSON: {"logs": ["string"], "detectionLogic": "string"}`;
-            const prompt = `情境: ${scenario.title}\n目前日誌: ${scenario.logs}\n目前KQL: ${scenario.detectionLogic}`;
+            const validCSF = window.csfFunctions.map(c => c.id).join(', ');
+            const valid5M = window.fiveMDef.map(m => m.id).join(', ');
+
+            const systemPrompt = `你是一位頂尖的 SIEM 架構專家。請根據使用者【目前的實體資產角色清單】：[${activeRoles.join(', ')}]，全面重新掃描並最佳化此威脅情境的內容。
+            必須嚴格遵守：
+            - scope 陣列請【務必優先】只包含在上述現有資產中能對應到的角色。拔除不合理或不存在的設備，並加入現有可用來防禦此情境的設備。若現有設備完全無法防禦，才建議必要的外部角色。
+            - csf 元素只能從: [${validCSF}] 挑選。
+            - fiveM 元素只能從: [${valid5M}] 挑選。
+            - logs 陣列請根據更新後的 scope，列出對應的日誌收集需求，格式為 "[角色名稱] 日誌詳細說明"。
+            - detectionLogic 必須是優化後、可直接在 ELK 上執行的 KQL 語法，並且只能使用有在 logs 收集範圍內的資料。
+            - detectionStrategy 是對優化後邏輯的中文解釋。
+            - 同步檢視並更新 mitigation, response (防禦與應變指南) 以符合最新的資產與防禦邏輯。
+
+            回傳純 JSON 格式：
+            {
+              "scope": ["string"],
+              "csf": ["string"],
+              "fiveM": ["string"],
+              "logs": ["string"],
+              "detectionStrategy": "string",
+              "detectionLogic": "string",
+              "mitigation": ["string"],
+              "response": ["string"]
+            }`;
+            
+            const prompt = `目前情境內容：
+            標題: ${scenario.title}
+            描述: ${scenario.desc}
+            目前的 scope: ${JSON.stringify(scenario.scope || [])}
+            目前的 csf: ${JSON.stringify(scenario.csf || [])}
+            目前的 fiveM: ${JSON.stringify(scenario.fiveM || [])}
+            目前的 logs: ${JSON.stringify(scenario.logs || [])}
+            目前的 detectionStrategy: ${scenario.detectionStrategy || ''}
+            目前的 detectionLogic: ${scenario.detectionLogic || ''}
+            目前的 mitigation: ${JSON.stringify(scenario.mitigation || [])}
+            目前的 response: ${JSON.stringify(scenario.response || [])}
+            
+            請依據現有資產全面重新生成並優化上述內容。`;
 
             const res = await window.callGemini(prompt, systemPrompt, true);
             if (res) {
+                scenario.scope = res.scope || scenario.scope;
+                scenario.csf = res.csf || scenario.csf;
+                scenario.fiveM = res.fiveM || scenario.fiveM;
                 scenario.logs = res.logs || scenario.logs;
+                scenario.detectionStrategy = res.detectionStrategy || scenario.detectionStrategy;
                 scenario.detectionLogic = res.detectionLogic || scenario.detectionLogic;
-                if (window.db && window.fs && scenario.docId) { await window.fs.updateDoc(window.fs.doc(window.db, "scenarios", scenario.docId), { logs: scenario.logs, detectionLogic: scenario.detectionLogic }); }
+                scenario.mitigation = res.mitigation || scenario.mitigation;
+                scenario.response = res.response || scenario.response;
+                
+                if (window.db && window.fs && scenario.docId) { 
+                    await window.fs.updateDoc(window.fs.doc(window.db, "scenarios", scenario.docId), { 
+                        scope: scenario.scope,
+                        csf: scenario.csf,
+                        fiveM: scenario.fiveM,
+                        logs: scenario.logs, 
+                        detectionStrategy: scenario.detectionStrategy,
+                        detectionLogic: scenario.detectionLogic,
+                        mitigation: scenario.mitigation,
+                        response: scenario.response
+                    }); 
+                }
                 window.selectScenario(scenario.id);
-                window.showToast("✨ AI 已成功依現有資產最佳化情境！");
+                window.showToast("✨ AI 已成功依現有資產全面最佳化情境內容！");
             }
             btn.innerHTML = originalHtml; btn.disabled = false;
             if (typeof lucide !== 'undefined') lucide.createIcons();
