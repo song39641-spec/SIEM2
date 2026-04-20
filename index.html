@@ -10,11 +10,12 @@
     <!-- 🌟 新增：SheetJS 匯出 Excel 套件 -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     
-    <!-- 🌟 Firebase 模組化引入與去識別化配置 -->
+    <!-- 🌟 Firebase 模組化引入與高安全性 Email/Password 登入配置 -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getFirestore, collection, getDocs, addDoc, updateDoc, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+        // 變更為使用正規帳密登入與狀態監聽
+        import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
         const _fc = {
             a: 'QUl6YVN5QUVvLXNGcVI3VDFCV0gzclBza2VXLU9saDFUd0JmNDM4', d: 'c2llbTItYzQ0ZGIuZmlyZWJhc2VhcHAuY29t', p: 'c2llbTItYzQ0ZGI=',
@@ -30,15 +31,30 @@
             const app = initializeApp(firebaseConfig);
             window.db = getFirestore(app);
             window.fs = { collection, getDocs, addDoc, updateDoc, deleteDoc, doc };
-            
             const auth = getAuth(app);
-            signInAnonymously(auth).then(() => {
-                console.log("Firebase Auth initialized.");
-                window.dispatchEvent(new Event('firebase-loaded'));
-            }).catch((err) => {
-                console.warn("Firebase Auth failed:", err);
-                window.dispatchEvent(new Event('firebase-loaded'));
+
+            // 匯出驗證函式給 UI 使用
+            window.handleFirebaseLogin = (email, pwd) => signInWithEmailAndPassword(auth, email, pwd);
+            window.handleFirebaseLogout = () => signOut(auth);
+
+            // 監聽登入狀態：決定是否顯示滿版登入畫面
+            onAuthStateChanged(auth, (user) => {
+                const overlay = document.getElementById('auth-overlay');
+                if (user) {
+                    if(overlay) overlay.classList.add('hidden'); // 登入成功，隱藏蓋板
+                    console.log("🔒 Firebase 驗證通過，使用者已登入。");
+                    
+                    // 確保只觸發一次資料載入
+                    if (!window.isFirebaseLoadedFired) {
+                        window.isFirebaseLoadedFired = true;
+                        window.dispatchEvent(new Event('firebase-loaded'));
+                    }
+                } else {
+                    if(overlay) overlay.classList.remove('hidden'); // 未登入，強制顯示蓋板
+                    console.log("🔒 使用者未登入，系統已鎖定。");
+                }
             });
+
         } catch(e) {
             console.warn("Firebase init failed:", e);
             window.dispatchEvent(new Event('firebase-loaded'));
@@ -79,11 +95,43 @@
         body.is-admin .hide-in-admin { display: none !important; }
     </style>
 </head>
-<body class="text-slate-800 flex flex-col h-screen overflow-hidden">
+<body class="text-slate-800 flex flex-col h-screen overflow-hidden relative">
+
+    <!-- 🔒 滿版強制登入蓋板 (Authentication Overlay) -->
+    <div id="auth-overlay" class="fixed inset-0 bg-slate-900/95 backdrop-blur-sm z-[9999] flex items-center justify-center">
+        <div class="bg-white p-8 rounded-2xl shadow-2xl w-full max-w-md flex flex-col items-center border border-slate-200">
+            <div class="bg-indigo-100 p-4 rounded-full mb-5 shadow-inner">
+                <i data-lucide="shield-check" class="w-10 h-10 text-indigo-600"></i>
+            </div>
+            <h2 class="text-2xl font-black text-slate-800 mb-2 tracking-tight">SIEM 戰略規劃儀表板</h2>
+            <p class="text-slate-500 text-sm mb-8 text-center leading-relaxed">這是高度機密的安全架構管理系統。<br>請輸入經授權的帳號密碼以繼續存取。</p>
+
+            <div class="w-full space-y-5">
+                <div>
+                    <label class="block text-sm font-bold text-slate-700 mb-1.5 flex items-center"><i data-lucide="mail" class="w-4 h-4 mr-1.5 text-slate-400"></i>電子郵件</label>
+                    <input type="email" id="login-email" class="w-full border-slate-300 rounded-lg p-3 border focus:ring-2 focus:ring-indigo-500 outline-none transition-all bg-slate-50 font-mono text-sm" placeholder="admin@yourcompany.com">
+                </div>
+                <div>
+                    <label class="block text-sm font-bold text-slate-700 mb-1.5 flex items-center"><i data-lucide="key" class="w-4 h-4 mr-1.5 text-slate-400"></i>密碼</label>
+                    <input type="password" id="login-password" class="w-full border-slate-300 rounded-lg p-3 border focus:ring-2 focus:ring-indigo-500 outline-none transition-all bg-slate-50 font-mono" placeholder="••••••••" onkeypress="if(event.key === 'Enter') window.executeLogin()">
+                </div>
+                
+                <!-- 登入錯誤訊息區 -->
+                <div id="login-error" class="text-red-600 text-sm font-bold hidden text-center bg-red-50 py-2.5 rounded-lg border border-red-200">
+                    <i data-lucide="alert-circle" class="w-4 h-4 inline mr-1 -mt-0.5"></i> 帳號或密碼錯誤，請重試
+                </div>
+
+                <button id="btn-execute-login" onclick="window.executeLogin()" class="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold py-3.5 rounded-lg transition-all shadow-md mt-2 flex justify-center items-center group">
+                    <i data-lucide="log-in" class="w-5 h-5 mr-2 group-hover:translate-x-1 transition-transform"></i> 進入系統
+                </button>
+            </div>
+            <div class="mt-6 text-[10px] text-slate-400 uppercase tracking-widest font-bold">Powered by Google Firebase Auth</div>
+        </div>
+    </div>
 
     <!-- 頂部導航欄 -->
     <nav class="bg-slate-900 text-white p-4 shadow-md z-20 relative flex-shrink-0">
-        <div class="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div class="w-full max-w-[1600px] mx-auto flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div class="flex items-center space-x-3">
                 <i data-lucide="shield-alert" class="w-8 h-8 text-blue-400"></i>
                 <h1 class="text-xl md:text-2xl font-bold tracking-wide">SIEM 導入戰略與規劃儀表板</h1>
@@ -95,7 +143,6 @@
                     <button onclick="window.switchView('mitre')" id="tab-mitre" class="view-tab flex items-center px-3 py-1.5 rounded-md text-sm cursor-pointer whitespace-nowrap"><i data-lucide="radar" class="w-4 h-4 mr-1.5"></i> MITRE</button>
                 </div>
                 
-                <!-- 🌟 新增 admin-only 權限控管：AI 虛擬資安長總結報告按鈕 -->
                 <button onclick="window.openExecutiveReportModal()" class="admin-only bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white px-3 py-1.5 rounded-md flex items-center shadow-sm transition-all text-sm whitespace-nowrap flex-shrink-0 group">
                     <i data-lucide="sparkles" class="w-4 h-4 mr-1.5 group-hover:animate-pulse text-yellow-300"></i> <span class="hidden md:inline">AI 總結報告</span>
                 </button>
@@ -114,6 +161,11 @@
                 <button onclick="window.toggleAdminMode()" id="btn-admin-login" class="bg-slate-700 hover:bg-slate-600 text-slate-200 px-3 py-1.5 rounded-md flex items-center shadow-sm transition-colors text-sm whitespace-nowrap flex-shrink-0" title="切換管理員模式">
                     <i data-lucide="lock" class="w-4 h-4 mr-1.5"></i> <span class="hidden md:inline">唯讀模式</span>
                 </button>
+                
+                <!-- 🌟 新增：系統登出按鈕 -->
+                <button onclick="window.executeLogout()" class="bg-rose-600 hover:bg-rose-500 text-white px-3 py-1.5 rounded-md flex items-center shadow-sm transition-colors text-sm whitespace-nowrap flex-shrink-0" title="安全登出系統">
+                    <i data-lucide="log-out" class="w-4 h-4 mr-1.5"></i> <span class="hidden md:inline">登出</span>
+                </button>
             </div>
         </div>
     </nav>
@@ -122,8 +174,8 @@
     <div class="flex-1 overflow-hidden relative bg-[#f8fafc]">
         
         <!-- 視角一：威脅情境視角 -->
-        <main id="view-container-scenario" class="active-view max-w-7xl mx-auto p-4 md:p-6 grid grid-cols-1 lg:grid-cols-12 gap-8 overflow-hidden">
-            <div class="lg:col-span-4 xl:col-span-3 space-y-6 flex flex-col h-full overflow-hidden pb-4">
+        <main id="view-container-scenario" class="active-view w-full max-w-[1600px] mx-auto p-4 md:p-6 grid grid-cols-1 lg:grid-cols-12 gap-8 overflow-hidden">
+            <div class="lg:col-span-4 xl:col-span-4 space-y-6 flex flex-col h-full overflow-hidden pb-4">
                 <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 md:p-5 flex-1 flex flex-col overflow-hidden">
                     <h2 class="text-lg font-semibold border-b pb-3 mb-3 flex items-center justify-between flex-shrink-0">
                         <div class="flex items-center"><i data-lucide="layout-list" class="w-5 h-5 mr-2 text-slate-500"></i>威脅監控情境庫</div>
@@ -138,7 +190,7 @@
                 </div>
             </div>
 
-            <div class="lg:col-span-8 xl:col-span-9 space-y-6 overflow-y-auto h-full pb-10 no-scrollbar pr-2 custom-scrollbar">
+            <div class="lg:col-span-8 xl:col-span-8 space-y-6 overflow-y-auto h-full pb-10 no-scrollbar pr-2 custom-scrollbar">
                 <div class="bg-white rounded-xl shadow-sm border-l-4 border-blue-600 p-6 flex justify-between items-start fade-in relative" id="detail-header">
                     <div class="flex-1 pr-4">
                         <div class="flex flex-wrap items-center gap-2 mb-3" id="scenario-badges-container">
@@ -151,7 +203,6 @@
                     <div class="text-right flex-col items-end hidden sm:flex">
                         <div class="flex space-x-2 mb-3 relative z-10 flex-wrap justify-end gap-y-2">
                             <button id="optimize-scenario-btn" onclick="window.optimizeScenarioWithAI()" class="admin-only text-xs bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-200 px-3 py-1.5 rounded flex items-center transition-colors shadow-sm hidden group"><i data-lucide="refresh-cw" class="w-4 h-4 mr-1 group-hover:rotate-180 transition-transform duration-500"></i> ✨ 依現有資產最佳化</button>
-                            <!-- 🌟 新增 admin-only 權限控管：攻擊模擬按鈕 -->
                             <button id="attack-sim-btn" onclick="window.openAttackSimModal()" class="admin-only text-xs bg-purple-50 text-purple-600 hover:bg-purple-100 border border-purple-200 px-3 py-1.5 rounded flex items-center transition-colors shadow-sm hidden group"><i data-lucide="swords" class="w-4 h-4 mr-1 group-hover:scale-110 transition-transform"></i> ✨ 攻擊模擬</button>
                             <button id="edit-scenario-btn" onclick="window.openEditScenarioModal()" class="admin-only text-xs bg-indigo-50 text-indigo-600 hover:bg-indigo-100 border border-indigo-200 px-3 py-1.5 rounded flex items-center transition-colors shadow-sm hidden group"><i data-lucide="settings-2" class="w-4 h-4 mr-1 group-hover:rotate-90 transition-transform duration-300"></i> ⚙️ 進階設定</button>
                             <button id="delete-scenario-btn" onclick="window.deleteScenario(window.currentSelectedScenarioId)" class="admin-only text-xs bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700 border border-red-200 px-3 py-1.5 rounded flex items-center transition-colors shadow-sm hidden group"><i data-lucide="trash-2" class="w-4 h-4 mr-1 group-hover:animate-bounce"></i> 刪除情境</button>
@@ -192,7 +243,6 @@
                         <div class="px-5 py-3 border-b border-slate-700 flex justify-between items-center">
                             <div class="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center"><i data-lucide="code-2" class="w-3 h-3 mr-1.5 text-green-400"></i> ELK / BiMAP KQL 實作語法</div>
                             <div class="flex space-x-2">
-                                <!-- 🌟 新增 admin-only 權限控管：AI 語法翻譯與解析按鈕 -->
                                 <button onclick="window.aiExplainKQL()" id="ai-explain-kql-btn" class="admin-only text-xs bg-indigo-600 hover:bg-indigo-500 text-white px-2 py-1 rounded transition-colors flex items-center shadow-sm"><i data-lucide="sparkles" class="w-3 h-3 mr-1"></i> AI 語法翻譯與解析</button>
                                 <button onclick="window.copyKQLData()" class="text-xs bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white px-2 py-1 rounded transition-colors flex items-center"><i data-lucide="copy" class="w-3 h-3 mr-1"></i> 複製語法</button>
                             </div>
@@ -219,15 +269,15 @@
         </main>
 
         <!-- 視角二：系統設備視角 -->
-        <main id="view-container-system" class="max-w-7xl mx-auto p-4 md:p-6 grid grid-cols-1 lg:grid-cols-12 gap-8 overflow-hidden">
-            <div class="lg:col-span-4 xl:col-span-3 space-y-6 flex flex-col h-full overflow-hidden pb-4">
+        <main id="view-container-system" class="w-full max-w-[1600px] mx-auto p-4 md:p-6 grid grid-cols-1 lg:grid-cols-12 gap-8 overflow-hidden">
+            <div class="lg:col-span-4 xl:col-span-4 space-y-6 flex flex-col h-full overflow-hidden pb-4">
                 <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 md:p-5 flex-1 flex flex-col overflow-hidden">
                     <h2 class="text-lg font-semibold border-b pb-3 mb-3 flex items-center flex-shrink-0 text-slate-800"><i data-lucide="server" class="w-5 h-5 mr-2 text-indigo-500"></i>系統/設備日誌清單</h2>
                     <p class="text-xs text-slate-500 mb-3 flex-shrink-0">依照系統角色查詢必須開啟的 Log 清單與負責人。</p>
                     <div class="overflow-y-auto no-scrollbar flex-1 space-y-5 pr-1 custom-scrollbar" id="role-list-container"></div>
                 </div>
             </div>
-            <div class="lg:col-span-8 xl:col-span-9 space-y-6 overflow-y-auto h-full pb-10 no-scrollbar pr-2 custom-scrollbar">
+            <div class="lg:col-span-8 xl:col-span-8 space-y-6 overflow-y-auto h-full pb-10 no-scrollbar pr-2 custom-scrollbar">
                 <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden fade-in" id="system-detail-header">
                     <div class="bg-gradient-to-r from-slate-800 to-indigo-900 p-6 text-white relative">
                         <div class="absolute right-6 top-6 opacity-20"><i data-lucide="database" class="w-24 h-24"></i></div>
@@ -254,7 +304,7 @@
         </main>
 
         <!-- 🌟 視角三：MITRE ATT&CK 視角 -->
-        <main id="view-container-mitre" class="max-w-7xl mx-auto p-4 md:p-6 grid grid-cols-1 lg:grid-cols-12 gap-8 overflow-hidden">
+        <main id="view-container-mitre" class="w-full max-w-[1600px] mx-auto p-4 md:p-6 grid grid-cols-1 lg:grid-cols-12 gap-8 overflow-hidden">
             <div class="lg:col-span-4 xl:col-span-4 space-y-6 flex flex-col h-full overflow-hidden pb-4">
                 <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 flex-1 flex flex-col overflow-hidden">
                     <h2 class="text-lg font-semibold border-b pb-3 mb-3 flex items-center flex-shrink-0 text-slate-800"><i data-lucide="radar" class="w-5 h-5 mr-2 text-rose-500"></i>MITRE ATT&CK 戰術矩陣</h2>
@@ -318,6 +368,7 @@
                     <div><h4 class="font-bold text-sm mb-3 flex items-center border-b pb-2"><i data-lucide="layers" class="w-4 h-4 mr-1.5 text-emerald-500"></i> 3. NIST CSF 核心功能</h4><div id="edit-csf-checkboxes" class="grid grid-cols-2 gap-2"></div></div>
                 </div>
                 <div class="lg:col-span-8 flex flex-col h-full space-y-4">
+                    <div class="flex flex-col"><div class="flex justify-between items-center mb-2 border-b pb-2"><h4 class="font-bold text-sm flex items-center"><i data-lucide="tag" class="w-4 h-4 mr-1.5 text-orange-500"></i> 自訂側邊欄簡稱 (選填)</h4></div><input type="text" id="edit-scenario-shortname" class="w-full text-sm border-slate-300 rounded-md p-2.5 border focus:ring-indigo-500" placeholder="例如：VPN 暴力破解 (留空則顯示完整標題)"></div>
                     <div class="flex flex-col"><div class="flex justify-between items-center mb-2 border-b pb-2"><h4 class="font-bold text-sm flex items-center"><i data-lucide="file-code" class="w-4 h-4 mr-1.5 text-blue-500"></i> 4. 收集日誌</h4><button onclick="window.aiAutoFillLogs(event)" class="text-xs bg-indigo-50 text-indigo-700 px-2 py-1 rounded"><i data-lucide="sparkles" class="w-3 h-3 mr-1 inline"></i>AI 補齊</button></div><textarea id="edit-scenario-logs" rows="3" class="w-full text-sm font-mono border-slate-300 rounded-md p-3 border"></textarea></div>
                     <div class="flex flex-col"><div class="flex justify-between items-center mb-2 border-b pb-2"><h4 class="font-bold text-sm flex items-center"><i data-lucide="microscope" class="w-4 h-4 mr-1.5 text-indigo-500"></i> 5. 判斷邏輯說明</h4></div><textarea id="edit-scenario-strategy" rows="2" class="w-full text-sm border-slate-300 rounded-md p-3 border"></textarea></div>
                     <div class="flex flex-col"><div class="flex justify-between items-center mb-2 border-b pb-2"><h4 class="font-bold text-sm flex items-center"><i data-lucide="code-2" class="w-4 h-4 mr-1.5 text-green-500"></i> 6. KQL 邏輯</h4></div><textarea id="edit-scenario-kql" rows="2" class="w-full text-sm font-mono border-slate-300 rounded-md p-3 bg-slate-900 text-green-400"></textarea></div>
@@ -462,117 +513,6 @@ service cloud.firestore {
         </div>
     </div>
 
-    <!-- 紫隊攻擊模擬腳本 Modal -->
-    <div id="attack-sim-modal" class="fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center hidden p-4">
-        <div class="bg-white rounded-xl shadow-2xl w-full max-w-3xl overflow-hidden flex flex-col max-h-[90vh]">
-            <div class="p-5 flex items-center justify-between border-b bg-purple-50">
-                <div class="flex items-center text-purple-700 font-bold text-lg"><i data-lucide="swords" class="w-6 h-6 mr-2 text-purple-600"></i><h3>紫隊測試：AI 攻擊模擬指令生成</h3></div>
-                <button onclick="window.closeAttackSimModal()" class="text-slate-400 hover:text-slate-600 focus:outline-none"><i data-lucide="x" class="w-6 h-6"></i></button>
-            </div>
-            <div class="p-8 bg-white flex flex-col items-center justify-center min-h-[300px]" id="attack-sim-loading">
-                <i data-lucide="loader-2" class="w-10 h-10 text-purple-600 animate-spin mb-4"></i><span class="text-base font-bold text-slate-700 mb-2">AI 正在生成安全測試指令...</span>
-            </div>
-            <div class="p-6 bg-white hidden flex-col space-y-5 overflow-y-auto custom-scrollbar flex-grow" id="attack-sim-content">
-                <div class="bg-yellow-50 border border-yellow-200 text-yellow-800 text-sm p-4 rounded-lg flex items-start shadow-sm"><i data-lucide="alert-triangle" class="w-5 h-5 mr-3 flex-shrink-0 text-yellow-600 mt-0.5"></i><span class="leading-relaxed font-medium">警告：請僅在授權的「安全測試環境」中執行以下指令。</span></div>
-                <div>
-                    <h4 class="font-bold text-sm text-slate-800 mb-2 flex items-center"><i data-lucide="terminal" class="w-4 h-4 mr-1.5 text-purple-500"></i> 可執行測試指令 (PowerShell / Bash)</h4>
-                    <div class="relative group"><pre class="bg-slate-900 text-green-400 p-5 rounded-lg text-sm font-mono whitespace-pre-wrap leading-relaxed border border-slate-700 shadow-inner" id="attack-sim-command"></pre><button onclick="window.copyAttackSim()" class="absolute top-3 right-3 text-slate-400 hover:text-white bg-slate-700 hover:bg-slate-600 px-3 py-1.5 rounded text-xs transition-colors flex items-center opacity-0 group-hover:opacity-100 shadow-sm"><i data-lucide="copy" class="w-3 h-3 mr-1.5"></i> 複製指令</button></div>
-                </div>
-                <div><h4 class="font-bold text-sm text-slate-800 mb-2 flex items-center"><i data-lucide="info" class="w-4 h-4 mr-1.5 text-purple-500"></i> AI 模擬原理解析</h4><p class="text-sm text-slate-600 leading-relaxed bg-slate-50 p-4 rounded-lg border border-slate-100" id="attack-sim-explanation"></p></div>
-            </div>
-            <div class="p-4 border-t bg-slate-50 flex justify-end"><button onclick="window.closeAttackSimModal()" class="bg-slate-200 hover:bg-slate-300 text-slate-800 px-6 py-2 rounded-md text-sm font-medium transition-colors shadow-sm">完成並關閉</button></div>
-        </div>
-    </div>
-
-    <!-- 資產管理 Modal -->
-    <div id="asset-modal" class="fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center hidden p-4">
-        <div class="bg-white rounded-xl shadow-2xl w-full max-w-4xl overflow-hidden flex flex-col max-h-[90vh]">
-            <div class="p-5 border-b bg-slate-50 flex justify-between items-center">
-                <h3 class="text-lg font-bold flex items-center text-slate-800"><i data-lucide="server-cog" class="w-5 h-5 mr-2 text-blue-600"></i>SIEM 伺服器資產管理</h3>
-                <button onclick="window.closeAssetModal()" class="text-slate-400 hover:text-slate-600"><i data-lucide="x" class="w-6 h-6"></i></button>
-            </div>
-            <div class="flex-grow flex flex-col overflow-hidden">
-                <div class="flex border-b bg-white px-5 pt-3 admin-only">
-                    <button onclick="window.switchAssetMode('smart')" id="asset-tab-smart" class="tab-btn active px-4 py-2 text-sm font-medium transition-colors flex items-center"><i data-lucide="sparkles" class="w-4 h-4 mr-1.5 text-indigo-500"></i> ✨ AI 分析與連動</button>
-                    <button onclick="window.switchAssetMode('manual')" id="asset-tab-manual" class="tab-btn px-4 py-2 text-sm font-medium text-slate-500 transition-colors">手動新增資產</button>
-                </div>
-                <div class="p-5 overflow-y-auto bg-slate-50/50 flex-grow custom-scrollbar">
-                    <div id="asset-mode-smart" class="space-y-4 admin-only">
-                        <div class="bg-indigo-50 border border-indigo-100 rounded-lg p-5">
-                            <h4 class="text-sm font-bold text-indigo-800 mb-2 flex items-center"><i data-lucide="bot" class="w-5 h-5 mr-2"></i> 請描述您要納管的新系統</h4>
-                            <textarea id="ai-asset-prompt" rows="2" class="w-full text-sm border-indigo-200 rounded-md p-3" placeholder="例如：我有一台負責跑資料庫的 Oracle..."></textarea>
-                            <div class="mt-3 flex justify-end"><button onclick="window.analyzeAssetWithAI()" id="ai-asset-submit-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 px-5 rounded-md text-sm flex items-center"><i data-lucide="zap" class="w-4 h-4 mr-2"></i> 深度分析</button></div>
-                        </div>
-                        <div id="ai-asset-loading" class="hidden flex-col items-center py-6 bg-white rounded-lg border border-slate-200"><i data-lucide="loader-2" class="w-8 h-8 text-indigo-600 animate-spin mb-3"></i><div class="text-sm font-bold">辨識中...</div></div>
-                    </div>
-                    
-                    <form id="asset-mode-manual" class="hidden bg-white p-5 rounded-lg border border-slate-200 shadow-sm admin-only">
-                        <div class="grid grid-cols-1 sm:grid-cols-12 gap-3 items-start">
-                            <div class="sm:col-span-3">
-                                <label class="block text-xs font-medium text-slate-500 mb-1">主機/群組名稱</label>
-                                <input type="text" id="asset-name" class="w-full text-sm border-slate-300 rounded-md p-2 border" placeholder="如: DB-01 或 SAP群組">
-                            </div>
-                            <div class="sm:col-span-3 flex flex-col gap-1">
-                                <label class="block text-xs font-medium text-slate-500 flex justify-between items-center mb-0.5">
-                                    <span>系統角色</span>
-                                    <span class="text-[10px] text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded cursor-pointer flex items-center hover:bg-indigo-100 transition-colors shadow-sm" onclick="window.aiSuggestRole()"><i data-lucide="sparkles" class="w-3 h-3 mr-0.5"></i>AI 幫我選</span>
-                                </label>
-                                <div id="ai-role-search-box" class="hidden flex gap-1 mb-1">
-                                    <input type="text" id="ai-role-keyword" placeholder="關鍵字 (如: Oracle)" class="w-full text-xs border-indigo-200 rounded p-1.5 border bg-indigo-50/50 focus:ring-1 focus:ring-indigo-400 focus:outline-none">
-                                    <button type="button" onclick="window.executeAiRoleSearch()" id="ai-role-search-exec-btn" class="bg-indigo-100 text-indigo-700 px-2 rounded hover:bg-indigo-200 transition-colors flex items-center justify-center"><i data-lucide="search" class="w-3 h-3"></i></button>
-                                </div>
-                                <select id="asset-role" onchange="window.toggleCustomRoleInput()" class="w-full text-sm border-slate-300 rounded-md p-2 border bg-white"></select>
-                                <input type="text" id="custom-role-input" class="hidden w-full text-sm border-indigo-300 rounded-md p-2 border bg-indigo-50" placeholder="自訂角色">
-                            </div>
-                            <div class="sm:col-span-2">
-                                <label class="block text-xs font-medium text-slate-500 mb-1">資產大類</label>
-                                <select id="asset-category" class="w-full text-sm border-slate-300 rounded-md p-2 border bg-white">
-                                    <option value="伺服器">伺服器</option>
-                                    <option value="網路設備">網路設備</option>
-                                    <option value="應用程式">應用程式</option>
-                                    <option value="軟體服務">軟體服務</option>
-                                    <option value="資料庫">資料庫</option>
-                                    <option value="端點設備">端點設備</option>
-                                    <option value="資安設備">資安設備</option>
-                                    <option value="其他">其他</option>
-                                </select>
-                            </div>
-                            <div class="sm:col-span-1">
-                                <label class="block text-xs font-medium text-slate-500 mb-1">數量</label>
-                                <input type="number" id="asset-quantity" min="1" value="1" class="w-full text-sm border-slate-300 rounded-md p-2 border">
-                            </div>
-                            <div class="sm:col-span-2">
-                                <label class="block text-xs font-medium text-slate-500 mb-1">狀態</label>
-                                <select id="asset-status" class="w-full text-sm border-slate-300 rounded-md p-2 border bg-white">
-                                    <option value="未接取">未接取</option>
-                                    <option value="設定中">設定中</option>
-                                    <option value="已接取">已接取</option>
-                                </select>
-                            </div>
-                            <div class="sm:col-span-1 flex items-end h-full">
-                                <button type="button" onclick="window.handleAddAssetManual()" class="w-full bg-slate-800 hover:bg-slate-700 text-white font-medium py-2 px-2 rounded-md text-sm mb-0.5 transition-colors">新增</button>
-                            </div>
-                        </div>
-                    </form>
-                    
-                    <div class="mt-6 bg-white p-5 rounded-lg border border-slate-200 shadow-sm">
-                        <div class="flex justify-between items-center mb-3">
-                            <h4 class="text-sm font-semibold text-slate-700 flex items-center"><i data-lucide="list" class="w-4 h-4 mr-1.5"></i> 已註冊清單</h4>
-                            <span class="text-xs text-amber-500 bg-amber-50 px-2 py-1 rounded font-bold border border-amber-200 admin-only-reverse hide-in-admin"><i data-lucide="eye" class="w-3 h-3 inline mr-1"></i>目前為唯讀模式</span>
-                        </div>
-                        <div class="overflow-x-auto border rounded-lg">
-                            <table class="w-full text-left text-sm whitespace-nowrap">
-                                <thead class="bg-slate-50 text-slate-600"><tr><th class="p-3 border-b">主機/群組名稱</th><th class="p-3 border-b">系統角色</th><th class="p-3 border-b">資產分類</th><th class="p-3 border-b">數量</th><th class="p-3 border-b">狀態</th><th class="p-3 border-b text-center admin-only">操作</th></tr></thead>
-                                <tbody id="asset-list-tbody" class="divide-y divide-slate-100"></tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="p-4 border-t bg-white text-right"><button onclick="window.closeAssetModal()" class="bg-slate-200 hover:bg-slate-300 text-slate-800 px-5 py-2 rounded-md text-sm font-medium">關閉</button></div>
-        </div>
-    </div>
-
     <!-- 管理員登入 Modal -->
     <div id="admin-login-modal" class="fixed inset-0 bg-slate-900/60 z-[70] flex items-center justify-center hidden p-4">
         <div class="bg-white rounded-xl shadow-2xl w-full max-w-sm overflow-hidden flex flex-col">
@@ -595,6 +535,45 @@ service cloud.firestore {
     <div id="toast" class="fixed bottom-5 right-5 bg-green-600 text-white px-4 py-2 rounded shadow-lg transform transition-transform translate-y-20 opacity-0 flex items-center z-50 transition-colors duration-300"><i data-lucide="info" class="w-5 h-5 mr-2" id="toast-icon"></i><span id="toast-message">完成！</span></div>
 
     <script>
+        // ==========================================
+        // Firebase Email/Password 登入處理邏輯
+        // ==========================================
+        window.executeLogin = async function() {
+            const email = document.getElementById('login-email').value.trim();
+            const pwd = document.getElementById('login-password').value;
+            const btn = document.getElementById('btn-execute-login');
+            const err = document.getElementById('login-error');
+
+            if(!email || !pwd) return;
+
+            btn.innerHTML = `<i data-lucide="loader-2" class="w-5 h-5 mr-2 animate-spin"></i> 驗證中...`;
+            btn.disabled = true;
+            err.classList.add('hidden');
+
+            try {
+                await window.handleFirebaseLogin(email, pwd);
+                // onAuthStateChanged 會自動處理後續隱藏蓋板的動作
+                if (typeof lucide !== 'undefined') lucide.createIcons();
+            } catch(e) {
+                console.error("Login failed:", e);
+                err.classList.remove('hidden');
+                btn.innerHTML = `<i data-lucide="log-in" class="w-5 h-5 mr-2 group-hover:translate-x-1 transition-transform"></i> 進入系統`;
+                btn.disabled = false;
+                if (typeof lucide !== 'undefined') lucide.createIcons();
+            }
+        };
+
+        window.executeLogout = async function() {
+            if(confirm('確定要登出安全系統嗎？')) {
+                try {
+                    await window.handleFirebaseLogout();
+                    window.location.reload(); // 登出後強制重整以確保記憶體狀態重置
+                } catch(e) {
+                    console.error(e);
+                }
+            }
+        };
+
         // ==========================================
         // 基礎配置與變數
         // ==========================================
@@ -664,7 +643,7 @@ service cloud.firestore {
 
         let scenarios = [
             {
-                id: 's1', categoryId: 'data', title: '營業秘密外洩 (Trade Secret)',
+                id: 's1', categoryId: 'data', title: '營業秘密外洩 (Trade Secret)', shortName: '機密檔案外傳',
                 desc: '監控核心資料夾存取與異常外傳，預防內部人員非法攜出，記錄「誰、何時、拿走什麼」。', risk: '極高 (Critical)', riskColor: 'bg-red-600',
                 csf: ['protect', 'detect'], 
                 csfExplanations: { 'protect': '實施存取控制與檔案稽核(SACL)，限制並保護核心營業秘密資料夾。', 'detect': '持續監控檔案讀取(4663)與網路外連流量，及時發現並識別潛在的資料外洩活動。' },
@@ -681,7 +660,7 @@ service cloud.firestore {
                 notes: '必須先透過 GPO 開啟進階稽核，並針對特定研發/財務資料夾設定 SACL。'
             },
             {
-                id: 's2', categoryId: 'identity', title: '暴力破解與外部入侵',
+                id: 's2', categoryId: 'identity', title: '暴力破解與外部入侵', shortName: 'VPN 暴力破解',
                 desc: '防止外部攻擊者透過密碼噴灑等方式入侵帳號，縮短帳號被盜用的偵測時間。', risk: '高 (High)', riskColor: 'bg-orange-500',
                 csf: ['detect', 'respond'],
                 csfExplanations: { 'detect': '分析連續登入失敗與異常來源 IP，迅速識別惡意的暴力破解與連線嘗試。', 'respond': '觸發告警並提供關聯日誌，協助資安團隊封鎖攻擊來源。' },
@@ -699,7 +678,7 @@ service cloud.firestore {
                 notes: '需設定關聯規則：同一來源 IP 對多帳號嘗試，或單一帳號短時間連續失敗後成功。'
             },
             {
-                id: 's3', categoryId: 'compliance', title: '內部特權濫用 (Privilege Abuse)',
+                id: 's3', categoryId: 'compliance', title: '內部特權濫用 (Privilege Abuse)', shortName: '特權帳號異常',
                 desc: '監控管理員與關鍵群組異動，確保每一筆權限提升都有對應的申請與授權。', risk: '中 (Medium)', riskColor: 'bg-yellow-500',
                 csf: ['govern', 'protect', 'detect'],
                 csfExplanations: { 'govern': '落實最小權限原則與特權帳號管理政策。', 'protect': '防護 AD 核心群組免受未經授權的變更。', 'detect': '即時監控敏感群組異動，抓出內部潛在的惡意提權行為。' },
@@ -715,7 +694,7 @@ service cloud.firestore {
                 notes: '重點監控 Domain Admins 等高權限群組，結合非營業時間登入進行分析。'
             },
             {
-                id: 's4', categoryId: 'endpoint', title: '勒索軟體早期活動',
+                id: 's4', categoryId: 'endpoint', title: '勒索軟體早期活動', shortName: '勒索軟體活動',
                 desc: '偵測大規模檔案加密與破壞行為，在大規模加密發生前強行阻斷，減少資料損失。', risk: '極高 (Critical)', riskColor: 'bg-red-600',
                 csf: ['detect', 'respond'],
                 csfExplanations: { 'detect': '透過 EDR 行為分析與伺服器大量重新命名特徵，早期發現勒索軟體執行跡象。', 'respond': '連動 SOAR 或網路設備自動隔離受感染主機。' },
@@ -731,7 +710,7 @@ service cloud.firestore {
                 notes: '需設定閾值告警（例如 1 分鐘內變更 100 個檔案），可連動 SOAR 進行帳號隔離。'
             },
             {
-                id: 's5', categoryId: 'health', title: '備份系統防護與破壞',
+                id: 's5', categoryId: 'health', title: '備份系統防護與破壞', shortName: '備份破壞行為',
                 desc: '確保遭遇毀滅性攻擊後仍可復原，監控最後一道防線(備份)是否遭停用或竄改。', risk: '高 (High)', riskColor: 'bg-orange-500',
                 csf: ['identify', 'recover'],
                 csfExplanations: { 'identify': '盤點並將備份基礎設施納入重點監控資產。', 'recover': '確保備份系統未遭惡意停用或刪除，保障災難發生時的資料復原能力。' },
@@ -758,6 +737,7 @@ service cloud.firestore {
         window.assetToDelete = null; 
         window.editingAssetId = null;
         window.isFirebaseInitialized = false;
+        window.isFirebaseLoadedFired = false;
         window.radarChart = null;
 
         // 🌟 新增：全域摺疊面板控制函式 (Accordion Toggle)
@@ -1235,18 +1215,19 @@ service cloud.firestore {
             6. detectionStrategy: 撰寫一段白話文的具體偵測與判斷邏輯說明。
             7. detectionLogic: 撰寫一段對應的 ELK KQL 語法。
             8. fiveM: 從資安管理角度標示此情境屬於「人機料法環」的哪些層面，使用代碼陣列。可用代碼：['man', 'machine', 'material', 'method', 'environment']。
-            9. riskColor: 請務必提供 tailwind CSS 的顏色類別，例如極高風險使用 "bg-red-600"，高風險使用 "bg-orange-500"，中風險使用 "bg-yellow-500"。`;
+            9. riskColor: 請務必提供 tailwind CSS 的顏色類別，例如極高風險使用 "bg-red-600"，高風險使用 "bg-orange-500"，中風險使用 "bg-yellow-500"。
+            10. shortName: 請為此情境提供一個「簡短的繁體中文標籤」(約 4~10 個字)，方便在左側選單顯示，例如「外部服務漏洞利用」、「VPN暴力破解」等。`;
 
             const schema = { 
                 type: "OBJECT", 
                 properties: { 
-                    categoryId: { type: "STRING" }, title: { type: "STRING" }, desc: { type: "STRING" }, risk: { type: "STRING" }, riskColor: { type: "STRING" }, 
+                    categoryId: { type: "STRING" }, title: { type: "STRING" }, shortName: { type: "STRING" }, desc: { type: "STRING" }, risk: { type: "STRING" }, riskColor: { type: "STRING" }, 
                     csf: { type: "ARRAY", items: { type: "STRING" } }, csfExplanations: { type: "OBJECT" }, 
                     fiveM: { type: "ARRAY", items: { type: "STRING" } }, 
                     scope: { type: "ARRAY", items: { type: "STRING" } }, logs: { type: "ARRAY", items: { type: "STRING" } }, 
                     detectionStrategy: { type: "STRING" }, detectionLogic: { type: "STRING" }, notes: { type: "STRING" } 
                 }, 
-                required: ["categoryId", "title", "desc", "risk", "riskColor", "csf", "csfExplanations", "fiveM", "scope", "logs", "detectionStrategy", "detectionLogic", "notes"] 
+                required: ["categoryId", "title", "shortName", "desc", "risk", "riskColor", "csf", "csfExplanations", "fiveM", "scope", "logs", "detectionStrategy", "detectionLogic", "notes"] 
             };
             
             const payload = { contents: [{ parts: [{ text: userPrompt }] }], systemInstruction: { parts: [{ text: systemInstruction }] }, generationConfig: { responseMimeType: "application/json", responseSchema: schema } };
@@ -1331,7 +1312,7 @@ service cloud.firestore {
                 const groupContainer = document.getElementById(`group-cat-${cat.id}`);
                 categoryScenarios.forEach(s => {
                     const btn = document.createElement('button');
-                    btn.className = `scenario-btn w-full text-left px-3 py-2.5 rounded-md border border-slate-200 hover:border-${cat.colorClass.split('-')[1]}-400 focus:outline-none flex justify-between items-center bg-white shadow-sm transition-all`;
+                    btn.className = `scenario-btn w-full text-left px-3 py-2.5 rounded-md border border-slate-200 hover:border-${cat.colorClass.split('-')[1]}-400 focus:outline-none flex justify-between items-start bg-white shadow-sm transition-all`;
                     btn.id = `btn-${s.id}`; btn.onclick = () => window.selectScenario(s.id);
                     
                     // 確保 riskColor 正確，加入 Fallback 防呆
@@ -1343,7 +1324,11 @@ service cloud.firestore {
                         else rColor = 'bg-slate-600';
                     }
 
-                    btn.innerHTML = `<div class="flex items-center overflow-hidden"><i data-lucide="${cat.icon}" class="w-4 h-4 mr-2 text-slate-400 btn-icon flex-shrink-0"></i><span class="font-medium text-sm truncate">${s.title}</span></div><span class="w-2.5 h-2.5 rounded-full ${rColor} flex-shrink-0 ml-2 shadow-sm"></span>`;
+                    // 🌟 新增：簡稱渲染邏輯
+                    const displayTitle = s.shortName ? s.shortName : s.title;
+                    const subTitleHtml = s.shortName ? `<span class="text-[10px] text-slate-400 truncate w-full block mt-0.5" title="${s.title}">${s.title}</span>` : '';
+
+                    btn.innerHTML = `<div class="flex items-start overflow-hidden w-full"><i data-lucide="${cat.icon}" class="w-4 h-4 mr-2 mt-0.5 text-slate-400 btn-icon flex-shrink-0"></i><div class="flex flex-col min-w-0 flex-1"><span class="font-bold text-sm truncate text-slate-700">${displayTitle}</span>${subTitleHtml}</div></div><span class="w-2.5 h-2.5 rounded-full ${rColor} flex-shrink-0 ml-2 mt-1 shadow-sm"></span>`;
                     groupContainer.appendChild(btn);
                 });
             });
@@ -1848,6 +1833,7 @@ service cloud.firestore {
                 });
             }
 
+            document.getElementById('edit-scenario-shortname').value = scenario.shortName || '';
             document.getElementById('edit-scenario-logs').value = scenario.logs.join('\n');
             document.getElementById('edit-scenario-strategy').value = scenario.detectionStrategy || '';
             document.getElementById('edit-scenario-kql').value = scenario.detectionLogic || '';
@@ -1873,18 +1859,19 @@ service cloud.firestore {
             const csfCheckboxes = document.querySelectorAll('.csf-checkbox'); const newCsf = [];
             csfCheckboxes.forEach(cb => { if (cb.checked) newCsf.push(cb.value); });
 
+            const newShortName = document.getElementById('edit-scenario-shortname').value.trim();
             const logsText = document.getElementById('edit-scenario-logs').value;
             const newLogs = logsText.split('\n').map(l => l.trim()).filter(l => l);
             const newStrategy = document.getElementById('edit-scenario-strategy').value.trim();
             const newKql = document.getElementById('edit-scenario-kql').value.trim();
             const newNotes = document.getElementById('edit-scenario-notes').value;
 
-            scenario.scope = newScope; scenario.fiveM = newFiveM; scenario.csf = newCsf; scenario.logs = newLogs; scenario.detectionStrategy = newStrategy; scenario.detectionLogic = newKql; scenario.notes = newNotes;
+            scenario.shortName = newShortName; scenario.scope = newScope; scenario.fiveM = newFiveM; scenario.csf = newCsf; scenario.logs = newLogs; scenario.detectionStrategy = newStrategy; scenario.detectionLogic = newKql; scenario.notes = newNotes;
             
             if (window.db && window.fs && scenario.docId) {
                 try {
                     await window.fs.updateDoc(window.fs.doc(window.db, "scenarios", scenario.docId), {
-                        scope: newScope, fiveM: newFiveM, csf: newCsf, logs: newLogs, detectionStrategy: newStrategy, detectionLogic: newKql, notes: newNotes
+                        shortName: newShortName, scope: newScope, fiveM: newFiveM, csf: newCsf, logs: newLogs, detectionStrategy: newStrategy, detectionLogic: newKql, notes: newNotes
                     });
                 } catch(e) { console.error(e); }
             }
@@ -2097,18 +2084,19 @@ service cloud.firestore {
             6. detectionStrategy: 撰寫一段白話文的具體偵測與判斷邏輯說明。
             7. detectionLogic: 撰寫一段對應的 ELK KQL 語法。
             8. fiveM: 從資安管理角度標示此情境屬於「人機料法環」的哪些層面，使用代碼陣列。可用代碼：['man', 'machine', 'material', 'method', 'environment']。
-            9. riskColor: 請務必提供 tailwind CSS 的顏色類別，例如極高風險使用 "bg-red-600"，高風險使用 "bg-orange-500"，中風險使用 "bg-yellow-500"。`;
+            9. riskColor: 請務必提供 tailwind CSS 的顏色類別，例如極高風險使用 "bg-red-600"，高風險使用 "bg-orange-500"，中風險使用 "bg-yellow-500"。
+            10. shortName: 請為此情境提供一個「簡短的繁體中文標籤」(約 4~10 個字)，方便在側邊欄顯示。`;
 
             const schema = { 
                 type: "OBJECT", 
                 properties: { 
-                    categoryId: { type: "STRING" }, title: { type: "STRING" }, desc: { type: "STRING" }, risk: { type: "STRING" }, riskColor: { type: "STRING" }, 
+                    categoryId: { type: "STRING" }, title: { type: "STRING" }, shortName: { type: "STRING" }, desc: { type: "STRING" }, risk: { type: "STRING" }, riskColor: { type: "STRING" }, 
                     csf: { type: "ARRAY", items: { type: "STRING" } }, csfExplanations: { type: "OBJECT" }, 
                     fiveM: { type: "ARRAY", items: { type: "STRING" } }, 
                     scope: { type: "ARRAY", items: { type: "STRING" } }, logs: { type: "ARRAY", items: { type: "STRING" } }, 
                     detectionStrategy: { type: "STRING" }, detectionLogic: { type: "STRING" }, notes: { type: "STRING" } 
                 }, 
-                required: ["categoryId", "title", "desc", "risk", "riskColor", "csf", "csfExplanations", "fiveM", "scope", "logs", "detectionStrategy", "detectionLogic", "notes"] 
+                required: ["categoryId", "title", "shortName", "desc", "risk", "riskColor", "csf", "csfExplanations", "fiveM", "scope", "logs", "detectionStrategy", "detectionLogic", "notes"] 
             };
             
             const payload = { contents: [{ parts: [{ text: userPrompt }] }], systemInstruction: { parts: [{ text: systemInstruction }] }, generationConfig: { responseMimeType: "application/json", responseSchema: schema } };
