@@ -595,7 +595,7 @@ service cloud.firestore {
                 id: 's1', categoryId: 'data', title: '營業秘密外洩 (Trade Secret)', shortName: '機密檔案外傳',
                 desc: '監控核心資料夾存取與異常外傳，預防內部人員非法攜出，記錄「誰、何時、拿走什麼」。', risk: '極高 (Critical)', riskColor: 'bg-red-600',
                 csf: ['protect', 'detect'], 
-                csfExplanations: { 'protect': '實施存取控制與檔案稽核(SACL)，限制並保護核心營業秘密資料夾。', 'detect': '持續監控檔案讀取(4663)與網路外連流量，及時發現並識別潛在的資料外洩活動。' },
+                csfExplanations: { 'protect': '實施存取控制與檔案稽核(SACL)，限制並保護核心營業秘密資料夾。', 'detect': '持續監控檔案讀取(4663)與網路外連流量，及時發現並識別潛東的資料外洩活動。' },
                 fiveM: ['material'],
                 scope: ['檔案伺服器 (Windows File Server)', 'Palo Alto NGFW', 'Fortinet FortiGate'],
                 logs: [
@@ -822,7 +822,7 @@ service cloud.firestore {
             setTimeout(() => toast.classList.add('translate-y-20', 'opacity-0'), 3000);
         };
 
-        async function fetchWithRetry(url, options, maxRetries = 5) {
+        window.fetchWithRetry = async function(url, options, maxRetries = 5) {
             if (!window.apiKey) {
                 window.showToast("⚠️ 尚未設定 Gemini API 金鑰！請先設定。", true);
                 window.openApiSettingsModal(); throw new Error("Missing API Key");
@@ -851,7 +851,7 @@ service cloud.firestore {
                     await new Promise(res => setTimeout(res, delays[i])); 
                 }
             }
-        }
+        };
 
         window.loadDataFromFirebase = async function() {
             try {
@@ -1453,7 +1453,7 @@ service cloud.firestore {
             const url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=" + window.apiKey;
 
             try {
-                const result = await fetchWithRetry(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                const result = await window.fetchWithRetry(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
                 const textResp = result.candidates?.[0]?.content?.parts?.[0]?.text; let data = JSON.parse(textResp);
                 document.getElementById('edit-scenario-logs').value = data.updatedLogs.join('\n');
                 if(data.detectionStrategy) document.getElementById('edit-scenario-strategy').value = data.detectionStrategy;
@@ -1489,7 +1489,7 @@ service cloud.firestore {
             const url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=" + window.apiKey;
 
             try {
-                const result = await fetchWithRetry(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                const result = await window.fetchWithRetry(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
                 const textResp = result.candidates?.[0]?.content?.parts?.[0]?.text; const data = JSON.parse(textResp);
                 scenario.mitigation = data.mitigation; scenario.response = data.response;
                 if (window.db && window.fs && scenario.docId) { await window.fs.updateDoc(window.fs.doc(window.db, "scenarios", scenario.docId), { mitigation: scenario.mitigation, response: scenario.response }); }
@@ -1505,7 +1505,7 @@ service cloud.firestore {
             const url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=" + window.apiKey;
 
             try {
-                const result = await fetchWithRetry(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                const result = await window.fetchWithRetry(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
                 const textResp = result.candidates?.[0]?.content?.parts?.[0]?.text; const data = JSON.parse(textResp);
                 document.getElementById('attack-sim-command').textContent = data.command; document.getElementById('attack-sim-explanation').textContent = data.explanation;
                 document.getElementById('attack-sim-loading').classList.add('hidden'); document.getElementById('attack-sim-loading').classList.remove('flex');
@@ -1527,7 +1527,7 @@ service cloud.firestore {
             const url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=" + window.apiKey;
 
             try {
-                const result = await fetchWithRetry(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                const result = await window.fetchWithRetry(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
                 const textResp = result.candidates?.[0]?.content?.parts?.[0]?.text; const data = JSON.parse(textResp);
                 document.getElementById('ai-kql-explanation').textContent = data.explanation; document.getElementById('ai-kql-splunk').textContent = data.splunkSPL;
                 resultContainer.classList.remove('hidden'); window.showToast("✨ AI 已成功解析與轉換 KQL 語法！");
@@ -1577,7 +1577,7 @@ service cloud.firestore {
             const url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=" + window.apiKey;
 
             try {
-                const result = await fetchWithRetry(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                const result = await window.fetchWithRetry(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
                 const textResp = result.candidates?.[0]?.content?.parts?.[0]?.text; let newScenarioData = JSON.parse(textResp);
                 if (selectedDirectionValue !== 'random' && selectedDirectionValue !== 'auto') { newScenarioData.categoryId = selectedDirectionValue; } else if (!categoriesDef.find(c => c.id === newScenarioData.categoryId)) { newScenarioData.categoryId = 'uncategorized'; }
 
@@ -1634,7 +1634,7 @@ service cloud.firestore {
             const url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=" + window.apiKey;
 
             try {
-                const result = await fetchWithRetry(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                const result = await window.fetchWithRetry(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
                 const textResp = result.candidates?.[0]?.content?.parts?.[0]?.text; const data = JSON.parse(textResp);
                 scenario.scope = data.scope; scenario.logs = data.logs; scenario.detectionStrategy = data.detectionStrategy; scenario.detectionLogic = data.detectionLogic; scenario.notes = data.notes;
                 window.initRoleDropdown(); window.renderRoleButtons();
