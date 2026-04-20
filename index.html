@@ -536,28 +536,25 @@ service cloud.firestore {
 
     <script>
         // ==========================================
-        // Firebase Email/Password 登入處理邏輯
+        // Firebase Google 登入處理邏輯
         // ==========================================
         window.executeLogin = async function() {
-            const email = document.getElementById('login-email').value.trim();
-            const pwd = document.getElementById('login-password').value;
             const btn = document.getElementById('btn-execute-login');
             const err = document.getElementById('login-error');
-
-            if(!email || !pwd) return;
 
             btn.innerHTML = `<i data-lucide="loader-2" class="w-5 h-5 mr-2 animate-spin"></i> 驗證中...`;
             btn.disabled = true;
             err.classList.add('hidden');
 
             try {
-                await window.handleFirebaseLogin(email, pwd);
-                // onAuthStateChanged 會自動處理後續隱藏蓋板的動作
+                await window.handleFirebaseLogin();
+                // 登入成功後，onAuthStateChanged 會接手隱藏蓋板並檢查白名單
                 if (typeof lucide !== 'undefined') lucide.createIcons();
             } catch(e) {
                 console.error("Login failed:", e);
                 err.classList.remove('hidden');
-                btn.innerHTML = `<i data-lucide="log-in" class="w-5 h-5 mr-2 group-hover:translate-x-1 transition-transform"></i> 進入系統`;
+                err.innerHTML = `<i data-lucide="alert-circle" class="w-4 h-4 inline mr-1 -mt-0.5"></i> 登入取消或失敗，請重試`;
+                btn.innerHTML = `<img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" class="w-5 h-5 mr-3"> 使用 Google 帳號登入`;
                 btn.disabled = false;
                 if (typeof lucide !== 'undefined') lucide.createIcons();
             }
