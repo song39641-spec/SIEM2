@@ -14,8 +14,8 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getFirestore, collection, getDocs, addDoc, updateDoc, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-        // 變更為使用正規帳密登入與狀態監聽
-        import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+        // 變更為使用 Google 帳號登入與狀態監聽
+        import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
         const _fc = {
             a: 'QUl6YVN5QUVvLXNGcVI3VDFCV0gzclBza2VXLU9saDFUd0JmNDM4', d: 'c2llbTItYzQ0ZGIuZmlyZWJhc2VhcHAuY29t', p: 'c2llbTItYzQ0ZGI=',
@@ -32,22 +32,44 @@
             window.db = getFirestore(app);
             window.fs = { collection, getDocs, addDoc, updateDoc, deleteDoc, doc };
             const auth = getAuth(app);
+            const provider = new GoogleAuthProvider();
 
             // 匯出驗證函式給 UI 使用
-            window.handleFirebaseLogin = (email, pwd) => signInWithEmailAndPassword(auth, email, pwd);
+            window.handleFirebaseLogin = () => signInWithPopup(auth, provider);
             window.handleFirebaseLogout = () => signOut(auth);
 
             // 監聽登入狀態：決定是否顯示滿版登入畫面
-            onAuthStateChanged(auth, (user) => {
+            onAuthStateChanged(auth, async (user) => {
                 const overlay = document.getElementById('auth-overlay');
+                const err = document.getElementById('login-error');
+                const btn = document.getElementById('btn-execute-login');
+
                 if (user) {
-                    if(overlay) overlay.classList.add('hidden'); // 登入成功，隱藏蓋板
-                    console.log("🔒 Firebase 驗證通過，使用者已登入。");
+                    // 🔒 前端防護白名單：防止其他人用自己的 Google 帳號登入看到畫面
+                    // ⚠️ 請將 'your.email@gmail.com' 換成您的真實 Google 信箱！
+                    const allowedEmails = ['your.email@gmail.com']; 
                     
-                    // 確保只觸發一次資料載入
-                    if (!window.isFirebaseLoadedFired) {
-                        window.isFirebaseLoadedFired = true;
-                        window.dispatchEvent(new Event('firebase-loaded'));
+                    if (allowedEmails.includes('song39641@gmail.com') || allowedEmails.includes(user.email)) {
+                        if(overlay) overlay.classList.add('hidden'); 
+                        console.log("🔒 Firebase Google 驗證通過，登入信箱：", user.email);
+                        
+                        // 確保只觸發一次資料載入
+                        if (!window.isFirebaseLoadedFired) {
+                            window.isFirebaseLoadedFired = true;
+                            window.dispatchEvent(new Event('firebase-loaded'));
+                        }
+                    } else {
+                        console.warn("拒絕存取：非授權信箱", user.email);
+                        await signOut(auth); // 強制踢出非授權信箱
+                        if(overlay) overlay.classList.remove('hidden');
+                        if(err) {
+                            err.classList.remove('hidden');
+                            err.innerHTML = `<i data-lucide="alert-circle" class="w-4 h-4 inline mr-1 -mt-0.5"></i> 信箱未經授權 (${user.email})`;
+                        }
+                        if(btn) {
+                            btn.innerHTML = `<img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" class="w-5 h-5 mr-3"> 使用 Google 帳號登入`;
+                            btn.disabled = false;
+                        }
                     }
                 } else {
                     if(overlay) overlay.classList.remove('hidden'); // 未登入，強制顯示蓋板
@@ -104,25 +126,17 @@
                 <i data-lucide="shield-check" class="w-10 h-10 text-indigo-600"></i>
             </div>
             <h2 class="text-2xl font-black text-slate-800 mb-2 tracking-tight">SIEM 戰略規劃儀表板</h2>
-            <p class="text-slate-500 text-sm mb-8 text-center leading-relaxed">這是高度機密的安全架構管理系統。<br>請輸入經授權的帳號密碼以繼續存取。</p>
+            <p class="text-slate-500 text-sm mb-8 text-center leading-relaxed">這是高度機密的安全架構管理系統。<br>請使用授權的 Google 帳號登入以繼續存取。</p>
 
             <div class="w-full space-y-5">
-                <div>
-                    <label class="block text-sm font-bold text-slate-700 mb-1.5 flex items-center"><i data-lucide="mail" class="w-4 h-4 mr-1.5 text-slate-400"></i>電子郵件</label>
-                    <input type="email" id="login-email" class="w-full border-slate-300 rounded-lg p-3 border focus:ring-2 focus:ring-indigo-500 outline-none transition-all bg-slate-50 font-mono text-sm" placeholder="admin@yourcompany.com">
-                </div>
-                <div>
-                    <label class="block text-sm font-bold text-slate-700 mb-1.5 flex items-center"><i data-lucide="key" class="w-4 h-4 mr-1.5 text-slate-400"></i>密碼</label>
-                    <input type="password" id="login-password" class="w-full border-slate-300 rounded-lg p-3 border focus:ring-2 focus:ring-indigo-500 outline-none transition-all bg-slate-50 font-mono" placeholder="••••••••" onkeypress="if(event.key === 'Enter') window.executeLogin()">
-                </div>
-                
                 <!-- 登入錯誤訊息區 -->
                 <div id="login-error" class="text-red-600 text-sm font-bold hidden text-center bg-red-50 py-2.5 rounded-lg border border-red-200">
-                    <i data-lucide="alert-circle" class="w-4 h-4 inline mr-1 -mt-0.5"></i> 帳號或密碼錯誤，請重試
+                    <i data-lucide="alert-circle" class="w-4 h-4 inline mr-1 -mt-0.5"></i> 登入失敗，請重試
                 </div>
 
-                <button id="btn-execute-login" onclick="window.executeLogin()" class="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold py-3.5 rounded-lg transition-all shadow-md mt-2 flex justify-center items-center group">
-                    <i data-lucide="log-in" class="w-5 h-5 mr-2 group-hover:translate-x-1 transition-transform"></i> 進入系統
+                <button id="btn-execute-login" onclick="window.executeLogin()" class="w-full bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 font-bold py-3.5 rounded-lg transition-all shadow-sm mt-2 flex justify-center items-center group">
+                    <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" class="w-5 h-5 mr-3">
+                    使用 Google 帳號登入
                 </button>
             </div>
             <div class="mt-6 text-[10px] text-slate-400 uppercase tracking-widest font-bold">Powered by Google Firebase Auth</div>
