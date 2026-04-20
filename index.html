@@ -7,14 +7,11 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
-    <!-- 🌟 新增：SheetJS 匯出 Excel 套件 -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     
-    <!-- 🌟 Firebase 模組化引入與高安全性 Email/Password 登入配置 -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getFirestore, collection, getDocs, addDoc, updateDoc, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-        // 變更為使用 Google 帳號登入與狀態監聽
         import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
         const _fc = {
@@ -34,33 +31,29 @@
             const auth = getAuth(app);
             const provider = new GoogleAuthProvider();
 
-            // 匯出驗證函式給 UI 使用
             window.handleFirebaseLogin = () => signInWithPopup(auth, provider);
             window.handleFirebaseLogout = () => signOut(auth);
 
-            // 監聽登入狀態：決定是否顯示滿版登入畫面
             onAuthStateChanged(auth, async (user) => {
                 const overlay = document.getElementById('auth-overlay');
                 const err = document.getElementById('login-error');
                 const btn = document.getElementById('btn-execute-login');
 
                 if (user) {
-                    // 🔒 前端防護白名單：防止其他人用自己的 Google 帳號登入看到畫面
-                    // ⚠️ 請將 'your.email@gmail.com' 換成您的真實 Google 信箱！
-                    const allowedEmails = ['your.email@gmail.com']; 
+                    // 🔒 前端防護白名單：已更新為您的專屬信箱
+                    const allowedEmails = ['song39641@gmail.com']; 
                     
-                    if (allowedEmails.includes('song39641@gmail.com') || allowedEmails.includes(user.email)) {
+                    if (allowedEmails.includes(user.email)) {
                         if(overlay) overlay.classList.add('hidden'); 
                         console.log("🔒 Firebase Google 驗證通過，登入信箱：", user.email);
                         
-                        // 確保只觸發一次資料載入
                         if (!window.isFirebaseLoadedFired) {
                             window.isFirebaseLoadedFired = true;
                             window.dispatchEvent(new Event('firebase-loaded'));
                         }
                     } else {
                         console.warn("拒絕存取：非授權信箱", user.email);
-                        await signOut(auth); // 強制踢出非授權信箱
+                        await signOut(auth); 
                         if(overlay) overlay.classList.remove('hidden');
                         if(err) {
                             err.classList.remove('hidden');
@@ -72,7 +65,7 @@
                         }
                     }
                 } else {
-                    if(overlay) overlay.classList.remove('hidden'); // 未登入，強制顯示蓋板
+                    if(overlay) overlay.classList.remove('hidden'); 
                     console.log("🔒 使用者未登入，系統已鎖定。");
                 }
             });
@@ -106,20 +99,15 @@
         .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 4px;}
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
-        
         main { position: absolute; inset: 0; transition: opacity 0.3s; z-index: 0; }
         main.active-view { z-index: 10; opacity: 1; pointer-events: auto; }
         main:not(.active-view) { opacity: 0; pointer-events: none; }
-
-        body:not(.is-admin) .admin-only {
-            display: none !important;
-        }
+        body:not(.is-admin) .admin-only { display: none !important; }
         body.is-admin .hide-in-admin { display: none !important; }
     </style>
 </head>
 <body class="text-slate-800 flex flex-col h-screen overflow-hidden relative">
 
-    <!-- 🔒 滿版強制登入蓋板 (Authentication Overlay) -->
     <div id="auth-overlay" class="fixed inset-0 bg-slate-900/95 backdrop-blur-sm z-[9999] flex items-center justify-center">
         <div class="bg-white p-8 rounded-2xl shadow-2xl w-full max-w-md flex flex-col items-center border border-slate-200">
             <div class="bg-indigo-100 p-4 rounded-full mb-5 shadow-inner">
@@ -127,13 +115,8 @@
             </div>
             <h2 class="text-2xl font-black text-slate-800 mb-2 tracking-tight">SIEM 戰略規劃儀表板</h2>
             <p class="text-slate-500 text-sm mb-8 text-center leading-relaxed">這是高度機密的安全架構管理系統。<br>請使用授權的 Google 帳號登入以繼續存取。</p>
-
             <div class="w-full space-y-5">
-                <!-- 登入錯誤訊息區 -->
-                <div id="login-error" class="text-red-600 text-sm font-bold hidden text-center bg-red-50 py-2.5 rounded-lg border border-red-200">
-                    <i data-lucide="alert-circle" class="w-4 h-4 inline mr-1 -mt-0.5"></i> 登入失敗，請重試
-                </div>
-
+                <div id="login-error" class="text-red-600 text-sm font-bold hidden text-center bg-red-50 py-2.5 rounded-lg border border-red-200"></div>
                 <button id="btn-execute-login" onclick="window.executeLogin()" class="w-full bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 font-bold py-3.5 rounded-lg transition-all shadow-sm mt-2 flex justify-center items-center group">
                     <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" class="w-5 h-5 mr-3">
                     使用 Google 帳號登入
@@ -143,7 +126,6 @@
         </div>
     </div>
 
-    <!-- 頂部導航欄 -->
     <nav class="bg-slate-900 text-white p-4 shadow-md z-20 relative flex-shrink-0">
         <div class="w-full max-w-[1600px] mx-auto flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div class="flex items-center space-x-3">
@@ -175,8 +157,7 @@
                 <button onclick="window.toggleAdminMode()" id="btn-admin-login" class="bg-slate-700 hover:bg-slate-600 text-slate-200 px-3 py-1.5 rounded-md flex items-center shadow-sm transition-colors text-sm whitespace-nowrap flex-shrink-0" title="切換管理員模式">
                     <i data-lucide="lock" class="w-4 h-4 mr-1.5"></i> <span class="hidden md:inline">唯讀模式</span>
                 </button>
-                
-                <!-- 🌟 新增：系統登出按鈕 -->
+
                 <button onclick="window.executeLogout()" class="bg-rose-600 hover:bg-rose-500 text-white px-3 py-1.5 rounded-md flex items-center shadow-sm transition-colors text-sm whitespace-nowrap flex-shrink-0" title="安全登出系統">
                     <i data-lucide="log-out" class="w-4 h-4 mr-1.5"></i> <span class="hidden md:inline">登出</span>
                 </button>
@@ -184,10 +165,8 @@
         </div>
     </nav>
 
-    <!-- 主體內容區 -->
     <div class="flex-1 overflow-hidden relative bg-[#f8fafc]">
         
-        <!-- 視角一：威脅情境視角 -->
         <main id="view-container-scenario" class="active-view w-full max-w-[1600px] mx-auto p-4 md:p-6 grid grid-cols-1 lg:grid-cols-12 gap-8 overflow-hidden">
             <div class="lg:col-span-4 xl:col-span-4 space-y-6 flex flex-col h-full overflow-hidden pb-4">
                 <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 md:p-5 flex-1 flex flex-col overflow-hidden">
@@ -282,7 +261,6 @@
             </div>
         </main>
 
-        <!-- 視角二：系統設備視角 -->
         <main id="view-container-system" class="w-full max-w-[1600px] mx-auto p-4 md:p-6 grid grid-cols-1 lg:grid-cols-12 gap-8 overflow-hidden">
             <div class="lg:col-span-4 xl:col-span-4 space-y-6 flex flex-col h-full overflow-hidden pb-4">
                 <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 md:p-5 flex-1 flex flex-col overflow-hidden">
@@ -317,7 +295,6 @@
             </div>
         </main>
 
-        <!-- 🌟 視角三：MITRE ATT&CK 視角 -->
         <main id="view-container-mitre" class="w-full max-w-[1600px] mx-auto p-4 md:p-6 grid grid-cols-1 lg:grid-cols-12 gap-8 overflow-hidden">
             <div class="lg:col-span-4 xl:col-span-4 space-y-6 flex flex-col h-full overflow-hidden pb-4">
                 <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 flex-1 flex flex-col overflow-hidden">
@@ -364,11 +341,6 @@
         </main>
     </div>
 
-    <!-- ========================================== -->
-    <!-- 所有 Modals 區塊 -->
-    <!-- ========================================== -->
-
-    <!-- 進階設定 Modal -->
     <div id="edit-scenario-modal" class="fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center hidden p-4">
         <div class="bg-white rounded-xl shadow-2xl w-full max-w-5xl overflow-hidden flex flex-col max-h-[90vh]">
             <div class="p-5 flex items-center justify-between border-b bg-slate-50">
@@ -393,7 +365,6 @@
         </div>
     </div>
 
-    <!-- AI 建立情境 Modal -->
     <div id="ai-modal" class="fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center hidden p-4">
         <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col">
             <div class="p-5 border-b bg-slate-50 flex justify-between items-center"><h3 class="text-lg font-bold flex items-center"><i data-lucide="sparkles" class="w-5 h-5 mr-2 text-indigo-600"></i>AI 新情境生成</h3><button onclick="window.closeAIModal()" class="text-slate-400" id="ai-close-btn"><i data-lucide="x" class="w-6 h-6"></i></button></div>
@@ -427,7 +398,6 @@
         </div>
     </div>
 
-    <!-- 刪除確認 Modal -->
     <div id="delete-confirm-modal" class="fixed inset-0 bg-slate-900/60 z-[60] flex items-center justify-center hidden p-4">
         <div class="bg-white rounded-xl shadow-2xl w-full max-w-sm overflow-hidden flex flex-col">
             <div class="p-5 flex items-center text-red-600 border-b bg-red-50"><i data-lucide="alert-triangle" class="w-6 h-6 mr-2"></i><h3 class="text-lg font-bold">確認刪除</h3></div>
@@ -436,7 +406,6 @@
         </div>
     </div>
 
-    <!-- 高階總結報告 Modal -->
     <div id="executive-report-modal" class="fixed inset-0 bg-slate-900/80 z-[80] flex items-center justify-center hidden p-4">
         <div class="bg-white rounded-xl shadow-2xl w-full max-w-4xl overflow-hidden flex flex-col max-h-[90vh]">
             <div class="p-5 border-b bg-gradient-to-r from-purple-700 to-indigo-800 flex items-center justify-between">
@@ -464,7 +433,6 @@
         </div>
     </div>
 
-    <!-- 安全的 API 自帶金鑰設定 Modal -->
     <div id="api-settings-modal" class="fixed inset-0 bg-slate-900/60 z-[90] flex items-center justify-center hidden p-4">
         <div class="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col">
             <div class="p-5 border-b bg-slate-50 flex items-center justify-between">
@@ -496,7 +464,6 @@
         </div>
     </div>
 
-    <!-- Firebase 權限修復提示 Modal -->
     <div id="firebase-rule-modal" class="fixed inset-0 bg-slate-900/80 z-[100] flex items-center justify-center hidden p-4">
         <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col">
             <div class="p-5 border-b bg-red-50 flex items-center">
@@ -527,26 +494,114 @@ service cloud.firestore {
         </div>
     </div>
 
-    <!-- 管理員登入 Modal -->
-    <div id="admin-login-modal" class="fixed inset-0 bg-slate-900/60 z-[70] flex items-center justify-center hidden p-4">
-        <div class="bg-white rounded-xl shadow-2xl w-full max-w-sm overflow-hidden flex flex-col">
-            <div class="p-5 border-b bg-slate-50 flex items-center justify-between">
-                <h3 class="text-lg font-bold text-slate-800 flex items-center"><i data-lucide="lock" class="w-5 h-5 mr-2 text-indigo-600"></i>管理員登入</h3>
-                <button onclick="window.closeAdminLoginModal()" class="text-slate-400 hover:text-slate-600"><i data-lucide="x" class="w-5 h-5"></i></button>
+    <div id="attack-sim-modal" class="fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center hidden p-4">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-3xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div class="p-5 flex items-center justify-between border-b bg-purple-50">
+                <div class="flex items-center text-purple-700 font-bold text-lg"><i data-lucide="swords" class="w-6 h-6 mr-2 text-purple-600"></i><h3>紫隊測試：AI 攻擊模擬指令生成</h3></div>
+                <button onclick="window.closeAttackSimModal()" class="text-slate-400 hover:text-slate-600 focus:outline-none"><i data-lucide="x" class="w-6 h-6"></i></button>
             </div>
-            <div class="p-6 bg-white space-y-4">
-                <p class="text-sm text-slate-600">請輸入管理員密碼以解鎖編輯權限：</p>
-                <input type="password" id="admin-password-input" class="w-full text-sm border-slate-300 rounded-md p-2 border focus:ring-2 focus:ring-indigo-500 focus:outline-none" placeholder="輸入密碼" onkeypress="if(event.key === 'Enter') window.submitAdminPassword()">
+            <div class="p-8 bg-white flex flex-col items-center justify-center min-h-[300px]" id="attack-sim-loading">
+                <i data-lucide="loader-2" class="w-10 h-10 text-purple-600 animate-spin mb-4"></i><span class="text-base font-bold text-slate-700 mb-2">AI 正在生成安全測試指令...</span>
             </div>
-            <div class="p-4 border-t bg-slate-50 flex justify-end space-x-3">
-                <button onclick="window.closeAdminLoginModal()" class="bg-slate-200 hover:bg-slate-300 text-slate-800 px-4 py-2 rounded-md text-sm transition-colors">取消</button>
-                <button onclick="window.submitAdminPassword()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-md text-sm shadow-sm transition-colors">解鎖</button>
+            <div class="p-6 bg-white hidden flex-col space-y-5 overflow-y-auto custom-scrollbar flex-grow" id="attack-sim-content">
+                <div class="bg-yellow-50 border border-yellow-200 text-yellow-800 text-sm p-4 rounded-lg flex items-start shadow-sm"><i data-lucide="alert-triangle" class="w-5 h-5 mr-3 flex-shrink-0 text-yellow-600 mt-0.5"></i><span class="leading-relaxed font-medium">警告：請僅在授權的「安全測試環境」中執行以下指令。</span></div>
+                <div>
+                    <h4 class="font-bold text-sm text-slate-800 mb-2 flex items-center"><i data-lucide="terminal" class="w-4 h-4 mr-1.5 text-purple-500"></i> 可執行測試指令 (PowerShell / Bash)</h4>
+                    <div class="relative group"><pre class="bg-slate-900 text-green-400 p-5 rounded-lg text-sm font-mono whitespace-pre-wrap leading-relaxed border border-slate-700 shadow-inner" id="attack-sim-command"></pre><button onclick="window.copyAttackSim()" class="absolute top-3 right-3 text-slate-400 hover:text-white bg-slate-700 hover:bg-slate-600 px-3 py-1.5 rounded text-xs transition-colors flex items-center opacity-0 group-hover:opacity-100 shadow-sm"><i data-lucide="copy" class="w-3 h-3 mr-1.5"></i> 複製指令</button></div>
+                </div>
+                <div><h4 class="font-bold text-sm text-slate-800 mb-2 flex items-center"><i data-lucide="info" class="w-4 h-4 mr-1.5 text-purple-500"></i> AI 模擬原理解析</h4><p class="text-sm text-slate-600 leading-relaxed bg-slate-50 p-4 rounded-lg border border-slate-100" id="attack-sim-explanation"></p></div>
             </div>
+            <div class="p-4 border-t bg-slate-50 flex justify-end"><button onclick="window.closeAttackSimModal()" class="bg-slate-200 hover:bg-slate-300 text-slate-800 px-6 py-2 rounded-md text-sm font-medium transition-colors shadow-sm">完成並關閉</button></div>
         </div>
     </div>
 
-    <!-- Toast -->
-    <div id="toast" class="fixed bottom-5 right-5 bg-green-600 text-white px-4 py-2 rounded shadow-lg transform transition-transform translate-y-20 opacity-0 flex items-center z-50 transition-colors duration-300"><i data-lucide="info" class="w-5 h-5 mr-2" id="toast-icon"></i><span id="toast-message">完成！</span></div>
+    <div id="asset-modal" class="fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center hidden p-4">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-4xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div class="p-5 border-b bg-slate-50 flex justify-between items-center">
+                <h3 class="text-lg font-bold flex items-center text-slate-800"><i data-lucide="server-cog" class="w-5 h-5 mr-2 text-blue-600"></i>SIEM 伺服器資產管理</h3>
+                <button onclick="window.closeAssetModal()" class="text-slate-400 hover:text-slate-600"><i data-lucide="x" class="w-6 h-6"></i></button>
+            </div>
+            <div class="flex-grow flex flex-col overflow-hidden">
+                <div class="flex border-b bg-white px-5 pt-3 admin-only">
+                    <button onclick="window.switchAssetMode('smart')" id="asset-tab-smart" class="tab-btn active px-4 py-2 text-sm font-medium transition-colors flex items-center"><i data-lucide="sparkles" class="w-4 h-4 mr-1.5 text-indigo-500"></i> ✨ AI 分析與連動</button>
+                    <button onclick="window.switchAssetMode('manual')" id="asset-tab-manual" class="tab-btn px-4 py-2 text-sm font-medium text-slate-500 transition-colors">手動新增資產</button>
+                </div>
+                <div class="p-5 overflow-y-auto bg-slate-50/50 flex-grow custom-scrollbar">
+                    <div id="asset-mode-smart" class="space-y-4 admin-only">
+                        <div class="bg-indigo-50 border border-indigo-100 rounded-lg p-5">
+                            <h4 class="text-sm font-bold text-indigo-800 mb-2 flex items-center"><i data-lucide="bot" class="w-5 h-5 mr-2"></i> 請描述您要納管的新系統</h4>
+                            <textarea id="ai-asset-prompt" rows="2" class="w-full text-sm border-indigo-200 rounded-md p-3" placeholder="例如：我有一台負責跑資料庫的 Oracle..."></textarea>
+                            <div class="mt-3 flex justify-end"><button onclick="window.analyzeAssetWithAI()" id="ai-asset-submit-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 px-5 rounded-md text-sm flex items-center"><i data-lucide="zap" class="w-4 h-4 mr-2"></i> 深度分析</button></div>
+                        </div>
+                        <div id="ai-asset-loading" class="hidden flex-col items-center py-6 bg-white rounded-lg border border-slate-200"><i data-lucide="loader-2" class="w-8 h-8 text-indigo-600 animate-spin mb-3"></i><div class="text-sm font-bold">辨識中...</div></div>
+                    </div>
+                    
+                    <form id="asset-mode-manual" class="hidden bg-white p-5 rounded-lg border border-slate-200 shadow-sm admin-only">
+                        <div class="grid grid-cols-1 sm:grid-cols-12 gap-3 items-start">
+                            <div class="sm:col-span-3">
+                                <label class="block text-xs font-medium text-slate-500 mb-1">主機/群組名稱</label>
+                                <input type="text" id="asset-name" class="w-full text-sm border-slate-300 rounded-md p-2 border" placeholder="如: DB-01 或 SAP群組">
+                            </div>
+                            <div class="sm:col-span-3 flex flex-col gap-1">
+                                <label class="block text-xs font-medium text-slate-500 flex justify-between items-center mb-0.5">
+                                    <span>系統角色</span>
+                                    <span class="text-[10px] text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded cursor-pointer flex items-center hover:bg-indigo-100 transition-colors shadow-sm" onclick="window.aiSuggestRole()"><i data-lucide="sparkles" class="w-3 h-3 mr-0.5"></i>AI 幫我選</span>
+                                </label>
+                                <div id="ai-role-search-box" class="hidden flex gap-1 mb-1">
+                                    <input type="text" id="ai-role-keyword" placeholder="關鍵字 (如: Oracle)" class="w-full text-xs border-indigo-200 rounded p-1.5 border bg-indigo-50/50 focus:ring-1 focus:ring-indigo-400 focus:outline-none">
+                                    <button type="button" onclick="window.executeAiRoleSearch()" id="ai-role-search-exec-btn" class="bg-indigo-100 text-indigo-700 px-2 rounded hover:bg-indigo-200 transition-colors flex items-center justify-center"><i data-lucide="search" class="w-3 h-3"></i></button>
+                                </div>
+                                <select id="asset-role" onchange="window.toggleCustomRoleInput()" class="w-full text-sm border-slate-300 rounded-md p-2 border bg-white"></select>
+                                <input type="text" id="custom-role-input" class="hidden w-full text-sm border-indigo-300 rounded-md p-2 border bg-indigo-50" placeholder="自訂角色">
+                            </div>
+                            <div class="sm:col-span-2">
+                                <label class="block text-xs font-medium text-slate-500 mb-1">資產大類</label>
+                                <select id="asset-category" class="w-full text-sm border-slate-300 rounded-md p-2 border bg-white">
+                                    <option value="伺服器">伺服器</option>
+                                    <option value="網路設備">網路設備</option>
+                                    <option value="應用程式">應用程式</option>
+                                    <option value="軟體服務">軟體服務</option>
+                                    <option value="資料庫">資料庫</option>
+                                    <option value="端點設備">端點設備</option>
+                                    <option value="資安設備">資安設備</option>
+                                    <option value="其他">其他</option>
+                                </select>
+                            </div>
+                            <div class="sm:col-span-1">
+                                <label class="block text-xs font-medium text-slate-500 mb-1">數量</label>
+                                <input type="number" id="asset-quantity" min="1" value="1" class="w-full text-sm border-slate-300 rounded-md p-2 border">
+                            </div>
+                            <div class="sm:col-span-2">
+                                <label class="block text-xs font-medium text-slate-500 mb-1">狀態</label>
+                                <select id="asset-status" class="w-full text-sm border-slate-300 rounded-md p-2 border bg-white">
+                                    <option value="未接取">未接取</option>
+                                    <option value="設定中">設定中</option>
+                                    <option value="已接取">已接取</option>
+                                </select>
+                            </div>
+                            <div class="sm:col-span-1 flex items-end h-full">
+                                <button type="button" onclick="window.handleAddAssetManual()" class="w-full bg-slate-800 hover:bg-slate-700 text-white font-medium py-2 px-2 rounded-md text-sm mb-0.5 transition-colors">新增</button>
+                            </div>
+                        </div>
+                    </form>
+                    
+                    <div class="mt-6 bg-white p-5 rounded-lg border border-slate-200 shadow-sm">
+                        <div class="flex justify-between items-center mb-3">
+                            <h4 class="text-sm font-semibold text-slate-700 flex items-center"><i data-lucide="list" class="w-4 h-4 mr-1.5"></i> 已註冊清單</h4>
+                            <span class="text-xs text-amber-500 bg-amber-50 px-2 py-1 rounded font-bold border border-amber-200 admin-only-reverse hide-in-admin"><i data-lucide="eye" class="w-3 h-3 inline mr-1"></i>目前為唯讀模式</span>
+                        </div>
+                        <div class="overflow-x-auto border rounded-lg">
+                            <table class="w-full text-left text-sm whitespace-nowrap">
+                                <thead class="bg-slate-50 text-slate-600"><tr><th class="p-3 border-b">主機/群組名稱</th><th class="p-3 border-b">系統角色</th><th class="p-3 border-b">資產分類</th><th class="p-3 border-b">數量</th><th class="p-3 border-b">狀態</th><th class="p-3 border-b text-center admin-only">操作</th></tr></thead>
+                                <tbody id="asset-list-tbody" class="divide-y divide-slate-100"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="p-4 border-t bg-white text-right"><button onclick="window.closeAssetModal()" class="bg-slate-200 hover:bg-slate-300 text-slate-800 px-5 py-2 rounded-md text-sm font-medium">關閉</button></div>
+        </div>
+    </div>
 
     <script>
         // ==========================================
@@ -584,2189 +639,6 @@ service cloud.firestore {
                 }
             }
         };
-
-        // ==========================================
-        // 基礎配置與變數
-        // ==========================================
-        // 🌟 透過全域變數存取 API Key，不再寫死在程式碼中以確保 GitHub 發布安全
-        window.apiKey = localStorage.getItem('siem_gemini_api_key') || "";
-        window.apiModel = localStorage.getItem('siem_gemini_api_model') || "gemini-1.5-pro";
-
-        const categoriesDef = [
-            { id: 'identity', name: '身分與存取威脅', icon: 'user-x', colorClass: 'text-indigo-600', bgClass: 'bg-indigo-50', borderClass: 'border-indigo-100' },
-            { id: 'network', name: '網路邊界與異常連線', icon: 'globe-lock', colorClass: 'text-blue-600', bgClass: 'bg-blue-50', borderClass: 'border-blue-100' },
-            { id: 'endpoint', name: '端點行為與惡意程式', icon: 'monitor-x', colorClass: 'text-rose-600', bgClass: 'bg-rose-50', borderClass: 'border-rose-100' },
-            { id: 'health', name: '防禦規避與系統健康', icon: 'shield-alert', colorClass: 'text-orange-600', bgClass: 'bg-orange-50', borderClass: 'border-orange-100' },
-            { id: 'data', name: '營業秘密與資料保護', icon: 'file-lock-2', colorClass: 'text-emerald-600', bgClass: 'bg-emerald-50', borderClass: 'border-emerald-100' },
-            { id: 'cloud', name: '雲端與 SaaS 安全', icon: 'cloud-lightning', colorClass: 'text-sky-600', bgClass: 'bg-sky-50', borderClass: 'border-sky-100' },
-            { id: 'compliance', name: '合規與內控稽核', icon: 'clipboard-check', colorClass: 'text-teal-600', bgClass: 'bg-teal-50', borderClass: 'border-teal-100' },
-            { id: 'uncategorized', name: '其他未分類情境', icon: 'folder-open', colorClass: 'text-slate-600', bgClass: 'bg-slate-50', borderClass: 'border-slate-100' }
-        ];
-
-        const fiveMDef = [
-            { id: 'man', name: '人 (Man)', desc: '詐欺保護、身分鑑別、行為分析、外部入侵等屬性', icon: 'user', colorClass: 'text-pink-700', bgClass: 'bg-pink-100', borderClass: 'border-pink-200' },
-            { id: 'machine', name: '機 (Machine)', desc: '設備鑑別、機台資安、裝置管理等屬性', icon: 'server', colorClass: 'text-cyan-700', bgClass: 'bg-cyan-100', borderClass: 'border-cyan-200' },
-            { id: 'material', name: '料 (Material)', desc: '關鍵原料、關鍵資料等屬性', icon: 'file-text', colorClass: 'text-amber-700', bgClass: 'bg-amber-100', borderClass: 'border-amber-200' },
-            { id: 'method', name: '法 (Method)', desc: '異常程序、日誌分析等屬性', icon: 'git-merge', colorClass: 'text-violet-700', bgClass: 'bg-violet-100', borderClass: 'border-violet-200' },
-            { id: 'environment', name: '環 (Environment)', desc: '人臉&門禁辨識、區域告警等屬性', icon: 'cloud', colorClass: 'text-lime-700', bgClass: 'bg-lime-100', borderClass: 'border-lime-200' }
-        ];
-
-        const rolesDef = [
-            { group: '身分認證與存取控制', roles: ['Microsoft Active Directory (AD DC)', 'Azure Entra ID (Azure AD)', 'CyberArk PAM', 'Okta SSO', 'Cisco ISE (RADIUS/TACACS)'] },
-            { group: '基礎作業系統與虛擬化', roles: ['Windows Server', 'Linux (RHEL/CentOS)', 'Linux (Ubuntu/Debian)', 'VMware vCenter', 'VMware ESXi', 'Microsoft Hyper-V'] },
-            { group: '網路與邊界安全', roles: ['Palo Alto NGFW', 'Check Point Firewall', 'Fortinet FortiGate', 'Cisco ASA/Firepower', 'F5 IPSec VPN', 'Pulse Secure VPN', 'F5 BIG-IP WAF/LTM', 'Core Switch/Router'] },
-            { group: '端點安全與防護', roles: ['CrowdStrike Falcon EDR', 'SentinelOne EDR', 'Microsoft Defender for Endpoint', 'Trend Micro Apex One', 'Symantec Endpoint Protection'] },
-            { group: '應用程式與資料庫', roles: ['Microsoft SQL Server', 'Oracle Database', 'MySQL/MariaDB', '核心 ERP 系統 (SAP)', '企業內部 Portal (IIS/Apache/Nginx)', 'Microsoft Exchange Server'] },
-            { group: '儲存與備份系統', roles: ['檔案伺服器 (Windows File Server)', 'NAS 儲存設備 (Synology/QNAP)', 'Veeam Backup Server', 'Veritas NetBackup'] },
-            { group: '雲端與其他資安服務', roles: ['AWS CloudTrail/VPC', 'Microsoft Azure Activity', '電子郵件安全閘道 (SPAM/SEG)', '弱點掃描平台 (Tenable/Qualys)'] }
-        ];
-
-        // 🌟 新增：MITRE ATT&CK 核心戰術定義
-        const mitreTactics = [
-            { id: 'TA0001', name: '初期存取', en: 'Initial Access', icon: 'door-open', desc: '攻擊者嘗試進入您的網路（例如：網路釣魚、利用公開漏洞）。' },
-            { id: 'TA0002', name: '執行', en: 'Execution', icon: 'play-circle', desc: '攻擊者嘗試執行惡意程式碼（例如：PowerShell、腳本執行）。' },
-            { id: 'TA0003', name: '建立持續性', en: 'Persistence', icon: 'anchor', desc: '攻擊者試圖在系統重啟後仍保持存取權限（例如：登錄檔機碼、排程工作）。' },
-            { id: 'TA0004', name: '特權提升', en: 'Privilege Escalation', icon: 'arrow-up-circle', desc: '攻擊者嘗試獲取更高層級的權限（例如：SYSTEM 或 root 權限）。' },
-            { id: 'TA0005', name: '防禦規避', en: 'Defense Evasion', icon: 'shield-off', desc: '攻擊者嘗試躲避資安防護機制的偵測（例如：停用防毒軟體、清除日誌）。' },
-            { id: 'TA0006', name: '憑證存取', en: 'Credential Access', icon: 'key', desc: '攻擊者竊取帳號密碼或雜湊值（例如：LSASS 記憶體傾印、鍵盤側錄）。' },
-            { id: 'TA0007', name: '系統探測', en: 'Discovery', icon: 'search', desc: '攻擊者嘗試了解您的內部環境與網路架構（例如：網域群組查詢、埠掃描）。' },
-            { id: 'TA0008', name: '橫向移動', en: 'Lateral Movement', icon: 'move-right', desc: '攻擊者在您的網路內部不同系統間移動（例如：RDP、SMB、Pass-the-Hash）。' },
-            { id: 'TA0011', name: '指揮與控制', en: 'Command and Control', icon: 'radio-tower', desc: '攻擊者與受感染系統建立通訊管道（例如：中繼站 C2 流量、DNS 隧道）。' },
-            { id: 'TA0010', name: '資料外洩', en: 'Exfiltration', icon: 'upload-cloud', desc: '攻擊者將竊取到的敏感資料傳送出企業網路（例如：打包壓縮並上傳至外部雲端）。' },
-            { id: 'TA0040', name: '衝擊與破壞', en: 'Impact', icon: 'bomb', desc: '攻擊者破壞系統可用性或完整性（例如：勒索軟體加密、磁碟抹除）。' }
-        ];
-
-        let assets = [
-            { id: 1, name: 'TPE-DC-01', role: 'Microsoft Active Directory (AD DC)', category: '伺服器', status: '已接取', quantity: 1 },
-            { id: 2, name: 'KHH-DC-02', role: 'Microsoft Active Directory (AD DC)', category: '伺服器', status: '設定中', quantity: 1 },
-            { id: 3, name: 'RD-FILE-HQ', role: '檔案伺服器 (Windows File Server)', category: '伺服器', status: '已接取', quantity: 1 },
-            { id: 4, name: 'FW-CORE-01', role: 'Palo Alto NGFW', category: '網路設備', status: '已接取', quantity: 1 }
-        ];
-
-        const csfFunctions = [
-            { id: 'govern', name: '治理 (Govern)', color: 'bg-purple-100', textColor: 'text-purple-700', borderColor: 'border-purple-200', icon: 'scale' },
-            { id: 'identify', name: '識別 (Identify)', color: 'bg-blue-100', textColor: 'text-blue-700', borderColor: 'border-blue-200', icon: 'search' },
-            { id: 'protect', name: '保護 (Protect)', color: 'bg-emerald-100', textColor: 'text-emerald-700', borderColor: 'border-emerald-200', icon: 'shield' },
-            { id: 'detect', name: '偵測 (Detect)', color: 'bg-amber-100', textColor: 'text-amber-700', borderColor: 'border-amber-200', icon: 'activity' },
-            { id: 'respond', name: '回應 (Respond)', color: 'bg-red-100', textColor: 'text-red-700', borderColor: 'border-red-200', icon: 'alert-triangle' },
-            { id: 'recover', name: '復原 (Recover)', color: 'bg-teal-100', textColor: 'text-teal-700', borderColor: 'border-teal-200', icon: 'rotate-ccw' }
-        ];
-
-        let scenarios = [
-            {
-                id: 's1', categoryId: 'data', title: '營業秘密外洩 (Trade Secret)', shortName: '機密檔案外傳',
-                desc: '監控核心資料夾存取與異常外傳，預防內部人員非法攜出，記錄「誰、何時、拿走什麼」。', risk: '極高 (Critical)', riskColor: 'bg-red-600',
-                csf: ['protect', 'detect'], 
-                csfExplanations: { 'protect': '實施存取控制與檔案稽核(SACL)，限制並保護核心營業秘密資料夾。', 'detect': '持續監控檔案讀取(4663)與網路外連流量，及時發現並識別潛在的資料外洩活動。' },
-                fiveM: ['material'],
-                scope: ['檔案伺服器 (Windows File Server)', 'Palo Alto NGFW', 'Fortinet FortiGate'],
-                logs: [
-                    '[檔案伺服器 (Windows File Server)] Windows Event ID 4663 (嘗試存取物件 - 讀取/複製)', 
-                    '[檔案伺服器 (Windows File Server)] Windows Event ID 4660 (物件已刪除)', 
-                    '[Palo Alto NGFW] 防火牆出境異常大流量紀錄',
-                    '[Fortinet FortiGate] 防火牆出境異常大流量紀錄'
-                ],
-                detectionStrategy: '判斷邏輯：監控特定機密資料夾的讀取行為 (Event ID 4663)，並關聯防火牆外連日誌。若單一帳號在短時間內讀取大量機密檔案，且伴隨產生超過 500MB 的異常外部傳輸流量，即觸發高風險告警。',
-                detectionLogic: 'event.code: (4663 OR 4660) AND file.path: "*\\\\Confidential\\\\*" \nOR \n(network.direction: "outbound" AND source.bytes > 500000000)',
-                notes: '必須先透過 GPO 開啟進階稽核，並針對特定研發/財務資料夾設定 SACL。'
-            },
-            {
-                id: 's2', categoryId: 'identity', title: '暴力破解與外部入侵', shortName: 'VPN 暴力破解',
-                desc: '防止外部攻擊者透過密碼噴灑等方式入侵帳號，縮短帳號被盜用的偵測時間。', risk: '高 (High)', riskColor: 'bg-orange-500',
-                csf: ['detect', 'respond'],
-                csfExplanations: { 'detect': '分析連續登入失敗與異常來源 IP，迅速識別惡意的暴力破解與連線嘗試。', 'respond': '觸發告警並提供關聯日誌，協助資安團隊封鎖攻擊來源。' },
-                fiveM: ['man', 'environment'],
-                scope: ['Microsoft Active Directory (AD DC)', 'Pulse Secure VPN', '核心 ERP 系統 (SAP)', 'Cisco ASA/Firepower'],
-                logs: [
-                    '[Microsoft Active Directory (AD DC)] Windows Event ID 4625 (登入失敗)', 
-                    '[Microsoft Active Directory (AD DC)] Windows Event ID 4624 (登入成功 - 追蹤後續行為)', 
-                    '[Pulse Secure VPN] VPN Gateway 驗證失敗與 MFA 拒絕日誌',
-                    '[核心 ERP 系統 (SAP)] 系統驗證失敗與異常登入紀錄',
-                    '[Cisco ASA/Firepower] VPN 登入與驗證失敗連線日誌'
-                ],
-                detectionStrategy: '判斷邏輯：監控 AD 與 VPN 閘道的登入失敗日誌。設定時間窗口，若「5 分鐘內」來自「單一來源 IP」的登入失敗次數「超過 5 次」，即判定為疑似暴力破解攻擊並發出告警。',
-                detectionLogic: '// 判斷 5 分鐘內單一來源 IP 失敗超過 5 次\nevent.action: "login" AND outcome: "failure" \n| stats count() by source.ip >= 5 within 5m',
-                notes: '需設定關聯規則：同一來源 IP 對多帳號嘗試，或單一帳號短時間連續失敗後成功。'
-            },
-            {
-                id: 's3', categoryId: 'compliance', title: '內部特權濫用 (Privilege Abuse)', shortName: '特權帳號異常',
-                desc: '監控管理員與關鍵群組異動，確保每一筆權限提升都有對應的申請與授權。', risk: '中 (Medium)', riskColor: 'bg-yellow-500',
-                csf: ['govern', 'protect', 'detect'],
-                csfExplanations: { 'govern': '落實最小權限原則與特權帳號管理政策。', 'protect': '防護 AD 核心群組免受未經授權的變更。', 'detect': '即時監控敏感群組異動，抓出內部潛在的惡意提權行為。' },
-                fiveM: ['man', 'method'],
-                scope: ['Microsoft Active Directory (AD DC)', 'CyberArk PAM'],
-                logs: [
-                    '[Microsoft Active Directory (AD DC)] Windows Event ID 4728, 4732, 4756 (敏感群組成員變更)', 
-                    '[Microsoft Active Directory (AD DC)] Windows Event ID 4720 (建立新使用者帳戶)',
-                    '[CyberArk PAM] 特權帳號提權與異常存取紀錄'
-                ],
-                detectionStrategy: '判斷邏輯：鎖定高特權群組（如 Domain Admins, Enterprise Admins）。當系統偵測到有成員被加入這些高權限群組 (Event ID 4728, 4732, 4756) 或有建立新帳戶 (Event ID 4720) 的行為時，立即觸發獨立告警，以便資安團隊核對是否有對應的變更申請單。',
-                detectionLogic: 'event.code: (4728 OR 4732 OR 4756) AND group.name: ("Domain Admins" OR "Enterprise Admins" OR "Administrators")',
-                notes: '重點監控 Domain Admins 等高權限群組，結合非營業時間登入進行分析。'
-            },
-            {
-                id: 's4', categoryId: 'endpoint', title: '勒索軟體早期活動', shortName: '勒索軟體活動',
-                desc: '偵測大規模檔案加密與破壞行為，在大規模加密發生前強行阻斷，減少資料損失。', risk: '極高 (Critical)', riskColor: 'bg-red-600',
-                csf: ['detect', 'respond'],
-                csfExplanations: { 'detect': '透過 EDR 行為分析與伺服器大量重新命名特徵，早期發現勒索軟體執行跡象。', 'respond': '連動 SOAR 或網路設備自動隔離受感染主機。' },
-                fiveM: ['machine', 'material'],
-                scope: ['檔案伺服器 (Windows File Server)', 'CrowdStrike Falcon EDR', 'Microsoft Defender for Endpoint'],
-                logs: [
-                    '[檔案伺服器 (Windows File Server)] 短時間內大量 Windows Event ID 4663 (重新命名/寫入)', 
-                    '[CrowdStrike Falcon EDR] EDR 惡意行為告警 (如異常 PowerShell 腳本執行)',
-                    '[Microsoft Defender for Endpoint] 惡意行為告警 (如異常程序注入)'
-                ],
-                detectionStrategy: '判斷邏輯：監控檔案伺服器上的大量寫入與重新命名行為。若「1 分鐘內」單一使用者變更「超過 100 個檔案」，或檔案副檔名被改為已知的勒索軟體特徵（如 .crypt, .locked），並配合 EDR 的高嚴重性告警進行綜合判定。',
-                detectionLogic: '(event.code: 4663 AND file.extension: ("*.crypt" OR "*.locked" OR "*.enc"))\nOR event.provider: ("CrowdStrike" OR "Defender") AND event.severity: "High"',
-                notes: '需設定閾值告警（例如 1 分鐘內變更 100 個檔案），可連動 SOAR 進行帳號隔離。'
-            },
-            {
-                id: 's5', categoryId: 'health', title: '備份系統防護與破壞', shortName: '備份破壞行為',
-                desc: '確保遭遇毀滅性攻擊後仍可復原，監控最後一道防線(備份)是否遭停用或竄改。', risk: '高 (High)', riskColor: 'bg-orange-500',
-                csf: ['identify', 'recover'],
-                csfExplanations: { 'identify': '盤點並將備份基礎設施納入重點監控資產。', 'recover': '確保備份系統未遭惡意停用或刪除，保障災難發生時的資料復原能力。' },
-                fiveM: ['machine', 'method'],
-                scope: ['Veeam Backup Server', 'NAS 儲存設備 (Synology/QNAP)'],
-                logs: [
-                    '[Veeam Backup Server] 備份軟體任務中斷或設定異動日誌', 
-                    '[Veeam Backup Server] Windows Event 1102 (稽核記錄檔已清除)', 
-                    '[Veeam Backup Server] vssadmin 或 wbadmin 刪除陰影複製的指令執行紀錄',
-                    '[NAS 儲存設備 (Synology/QNAP)] 系統設定異動與備份刪除紀錄'
-                ],
-                detectionStrategy: '判斷邏輯：嚴密監控備份伺服器的日誌清除行為 (Event ID 1102)，以及命令列中出現「vssadmin」或「wbadmin」執行刪除陰影複製 (delete shadows) 的異常指令。這些動作通常是攻擊者發動勒索加密前，刻意破壞復原機制的標準前置手段。',
-                detectionLogic: 'event.code: 1102 \nOR (process.name: ("vssadmin.exe" OR "wbadmin.exe" OR "bcdedit.exe") AND process.command_line: "*delete*")',
-                notes: '備份系統應獨立於主網域之外(Air-Gapped)，若產生告警需直接通報最高主管。'
-            }
-        ];
-
-        window.isAdmin = false; // 🌟 預設為唯讀模式
-        window.currentViewMode = 'scenario';
-        window.currentSelectedScenarioId = null;
-        window.currentSelectedRoleName = null;
-        window.currentSelectedMitreId = null; 
-        window.scenarioToDelete = null;
-        window.assetToDelete = null; 
-        window.editingAssetId = null;
-        window.isFirebaseInitialized = false;
-        window.isFirebaseLoadedFired = false;
-        window.radarChart = null;
-
-        // 🌟 新增：全域摺疊面板控制函式 (Accordion Toggle)
-        window.toggleCategory = function(groupId) {
-            const groupEl = document.getElementById(`group-${groupId}`);
-            const iconEl = document.getElementById(`icon-${groupId}`);
-            if (groupEl) {
-                groupEl.classList.toggle('hidden');
-                if (iconEl) {
-                    if (groupEl.classList.contains('hidden')) {
-                        iconEl.classList.add('-rotate-90');
-                    } else {
-                        iconEl.classList.remove('-rotate-90');
-                    }
-                }
-            }
-        };
-
-        // ==========================================
-        // 核心邏輯與共用函式庫
-        // ==========================================
-        
-        // 🌟 新增：同步所有動態資產角色至選項選單的防呆機制
-        window.syncCustomRoles = function() {
-            let customGroup = rolesDef.find(g => g.group === '自訂新增 (Custom)');
-            if (!customGroup) {
-                customGroup = { group: '自訂新增 (Custom)', roles: [] };
-                rolesDef.push(customGroup);
-            }
-            let existingRoles = new Set();
-            rolesDef.forEach(g => { if (g.group !== '自訂新增 (Custom)') g.roles.forEach(r => existingRoles.add(r)); });
-            
-            // 將情境與資產中出現過的新角色，統一加入到清單中
-            scenarios.forEach(s => { if(s.scope) s.scope.forEach(r => { if(!existingRoles.has(r) && !customGroup.roles.includes(r)) customGroup.roles.push(r); }); });
-            assets.forEach(a => { if(a.role && !existingRoles.has(a.role) && !customGroup.roles.includes(a.role)) customGroup.roles.push(a.role); });
-        };
-
-        // 🌟 更新：使用客製化 Modal 取代原生的 prompt
-        window.toggleAdminMode = function() {
-            if (window.isAdmin) {
-                window.isAdmin = false;
-                document.body.classList.remove('is-admin');
-                document.getElementById('btn-admin-login').innerHTML = `<i data-lucide="lock" class="w-4 h-4 mr-1.5"></i> <span class="hidden md:inline">唯讀模式</span>`;
-                document.getElementById('btn-admin-login').classList.replace('bg-indigo-600', 'bg-slate-700');
-                document.getElementById('btn-admin-login').classList.replace('hover:bg-indigo-500', 'hover:bg-slate-600');
-                window.showToast("🔒 已切換為「唯讀模式」", true);
-                
-                // 強制重新渲染表格與按鈕以套用 CSS 狀態
-                if(window.currentViewMode === 'system') renderRoleButtons();
-                if(document.getElementById('asset-modal').classList.contains('hidden') === false) {
-                    renderAssetTable();
-                    window.switchAssetMode('smart'); 
-                }
-            } else {
-                document.getElementById('admin-password-input').value = '';
-                const modal = document.getElementById('admin-login-modal');
-                modal.classList.remove('hidden');
-                modal.children[0].classList.add('modal-enter');
-                requestAnimationFrame(() => { 
-                    modal.children[0].classList.add('modal-enter-active'); 
-                    modal.children[0].classList.remove('modal-enter'); 
-                    document.getElementById('admin-password-input').focus();
-                });
-            }
-        }
-
-        window.closeAdminLoginModal = function() {
-            document.getElementById('admin-login-modal').classList.add('hidden');
-        }
-
-        // 🌟 更新：安全自帶金鑰功能 Modal
-        window.openApiSettingsModal = function() {
-            document.getElementById('setting-api-key').value = window.apiKey || '';
-            document.getElementById('setting-api-model').value = window.apiModel || 'gemini-1.5-pro';
-            const modal = document.getElementById('api-settings-modal');
-            modal.classList.remove('hidden');
-            modal.children[0].classList.add('modal-enter');
-            requestAnimationFrame(() => { 
-                modal.children[0].classList.add('modal-enter-active'); 
-                modal.children[0].classList.remove('modal-enter'); 
-            });
-            if (typeof lucide !== 'undefined') lucide.createIcons();
-        }
-
-        window.closeApiSettingsModal = function() {
-            document.getElementById('api-settings-modal').classList.add('hidden');
-        }
-
-        window.saveApiSettings = function() {
-            const key = document.getElementById('setting-api-key').value.trim();
-            const model = document.getElementById('setting-api-model').value;
-            if (!key) {
-                window.showToast("⚠️ API 金鑰不能為空！", true);
-                return;
-            }
-            window.apiKey = key;
-            window.apiModel = model;
-            localStorage.setItem('siem_gemini_api_key', key);
-            localStorage.setItem('siem_gemini_api_model', model);
-            window.closeApiSettingsModal();
-            window.showToast("✅ AI 引擎設定儲存成功！");
-        }
-
-        window.submitAdminPassword = async function() {
-            const pwdInput = document.getElementById('admin-password-input').value;
-            
-            // 1. 將使用者輸入的密碼進行 SHA-256 轉換
-            const msgUint8 = new TextEncoder().encode(pwdInput);
-            const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8);
-            const hashArray = Array.from(new Uint8Array(hashBuffer));
-            const inputHashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-
-            // 2. 為了不讓密碼明文被直接看到，我們用 Base64 幫您藏起來
-            // 並讓瀏覽器動態計算它的 Hash 值作為標準答案 (targetHash)
-            const secretWord = atob("c29ueTE2OA=="); 
-            const targetMsgUint8 = new TextEncoder().encode(secretWord);
-            const targetHashBuffer = await crypto.subtle.digest('SHA-256', targetMsgUint8);
-            const targetHashArray = Array.from(new Uint8Array(targetHashBuffer));
-            const targetHash = targetHashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-
-            if (inputHashHex === targetHash) {
-                window.isAdmin = true;
-                document.body.classList.add('is-admin');
-                document.getElementById('btn-admin-login').innerHTML = `<i data-lucide="unlock" class="w-4 h-4 mr-1.5"></i> <span class="hidden md:inline">管理員模式</span>`;
-                document.getElementById('btn-admin-login').classList.replace('bg-slate-700', 'bg-indigo-600');
-                document.getElementById('btn-admin-login').classList.replace('hover:bg-slate-600', 'hover:bg-indigo-500');
-                window.showToast("🔓 密碼正確！已解鎖所有編輯與新增權限！");
-                window.closeAdminLoginModal();
-                
-                if (typeof lucide !== 'undefined') lucide.createIcons();
-                
-                // 強制重新渲染表格與按鈕以套用 CSS 狀態
-                if(window.currentViewMode === 'system') renderRoleButtons();
-                if(document.getElementById('asset-modal').classList.contains('hidden') === false) {
-                    renderAssetTable();
-                    window.switchAssetMode('smart'); 
-                }
-            } else {
-                window.showToast("⚠️ 密碼錯誤！無法解鎖。", true);
-                document.getElementById('admin-password-input').value = '';
-                document.getElementById('admin-password-input').focus();
-            }
-        }
-
-        window.loadDataFromFirebase = async function() {
-            try {
-                const metaSnapshot = await window.fs.getDocs(window.fs.collection(window.db, "meta"));
-                if (metaSnapshot.empty) {
-                    console.log("Seeding initial default data to Firebase...");
-                    await window.fs.addDoc(window.fs.collection(window.db, "meta"), { initialized: true, timestamp: Date.now() });
-                    for (let s of scenarios) { const docRef = await window.fs.addDoc(window.fs.collection(window.db, "scenarios"), s); s.docId = docRef.id; }
-                    for (let a of assets) { const docRef = await window.fs.addDoc(window.fs.collection(window.db, "assets"), a); a.docId = docRef.id; }
-                } else {
-                    console.log("Loading user data from Firebase...");
-                    const scenariosSnapshot = await window.fs.getDocs(window.fs.collection(window.db, "scenarios"));
-                    if (!scenariosSnapshot.empty) { scenarios = []; scenariosSnapshot.forEach(doc => scenarios.push({ docId: doc.id, ...doc.data() })); }
-                    const assetsSnapshot = await window.fs.getDocs(window.fs.collection(window.db, "assets"));
-                    if (!assetsSnapshot.empty) { assets = []; assetsSnapshot.forEach(doc => assets.push({ docId: doc.id, ...doc.data() })); }
-                }
-            } catch (e) { 
-                console.warn("Firebase read/write error, using default memory data.", e); 
-                if (e.message && e.message.toLowerCase().includes('permission')) {
-                    document.getElementById('firebase-rule-modal').classList.remove('hidden');
-                }
-                window.showToast("⚠️ 已切換為本地記憶體模式", true);
-            } finally {
-                // 🌟 從雲端讀取完畢後，強制盤點並同步一次自訂角色
-                window.syncCustomRoles();
-            }
-        }
-
-        window.showToast = function(msg, isError = false) {
-            const toast = document.getElementById('toast'); 
-            document.getElementById('toast-message').textContent = msg;
-            if (isError) { 
-                toast.classList.replace('bg-green-600', 'bg-red-600'); 
-            } else { 
-                toast.classList.replace('bg-red-600', 'bg-green-600'); 
-            }
-            toast.classList.remove('translate-y-20', 'opacity-0'); 
-            setTimeout(() => toast.classList.add('translate-y-20', 'opacity-0'), 3000);
-        }
-
-        async function fetchWithRetry(url, options, maxRetries = 5) {
-            // 🌟 防呆：若無金鑰則中斷請求並引導設定
-            if (!window.apiKey) {
-                window.showToast("⚠️ 尚未設定 Gemini API 金鑰！請先設定。", true);
-                window.openApiSettingsModal();
-                throw new Error("Missing API Key");
-            }
-
-            // 🌟 攔截 API 請求，強制替換為設定的 API Key 與 模型版本
-            if (url.includes("generativelanguage.googleapis.com")) {
-                url = url.replace(/key=[^&]*/, "key=" + window.apiKey);
-                url = url.replace(/models\/[a-zA-Z0-9.-]+:generateContent/, `models/${window.apiModel}:generateContent`);
-            }
-
-            // 🌟 攔截 Payload，在系統指令中強制追加「繁體中文」的最高指導原則
-            if (options && options.body) {
-                try {
-                    let payload = JSON.parse(options.body);
-                    if (payload.systemInstruction && payload.systemInstruction.parts && payload.systemInstruction.parts.length > 0) {
-                        payload.systemInstruction.parts[0].text += "\n\n【最高指導原則】：請務必全程使用「繁體中文 (zh-TW)」進行思考、回答與所有資料生成。";
-                        options.body = JSON.stringify(payload);
-                    }
-                } catch(e) { console.warn("Payload 攔截處理失敗", e); }
-            }
-
-            const delays = [1000, 2000, 4000, 8000, 16000];
-            for (let i = 0; i < maxRetries; i++) {
-                try { 
-                    const response = await fetch(url, options); 
-                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`); 
-                    return await response.json(); 
-                } catch (e) { 
-                    if (i === maxRetries - 1) throw e; 
-                    await new Promise(res => setTimeout(res, delays[i])); 
-                }
-            }
-        }
-
-        // 🌟 新增：產生與開啟 AI 虛擬資安長總結報告
-        window.openExecutiveReportModal = function() {
-            const modal = document.getElementById('executive-report-modal');
-            modal.classList.remove('hidden');
-            modal.children[0].classList.add('modal-enter');
-            requestAnimationFrame(() => {
-                modal.children[0].classList.add('modal-enter-active');
-                modal.children[0].classList.remove('modal-enter');
-            });
-
-            // 每次開啟都自動產生一次最新報告
-            window.generateExecutiveReport();
-        }
-
-        window.closeExecutiveReportModal = function() {
-            document.getElementById('executive-report-modal').classList.add('hidden');
-        }
-
-        window.generateExecutiveReport = async function() {
-            const contentDiv = document.getElementById('executive-report-content');
-            const loadingDiv = document.getElementById('executive-report-loading');
-            const actionBtn = document.getElementById('btn-refresh-report');
-
-            contentDiv.classList.add('hidden');
-            loadingDiv.classList.remove('hidden');
-            if(actionBtn) actionBtn.disabled = true;
-
-            // 統計資產狀態
-            const assetSummary = assets.reduce((acc, a) => {
-                acc[a.category || '未分類'] = (acc[a.category || '未分類'] || 0) + (Number(a.quantity) || 1);
-                return acc;
-            }, {});
-
-            // 統計風險狀態
-            const riskSummary = scenarios.reduce((acc, s) => {
-                let riskType = "其他";
-                if(s.risk.includes("極高") || s.risk.includes("Critical")) riskType = "🔴 極高風險 (Critical)";
-                else if(s.risk.includes("高") || s.risk.includes("High")) riskType = "🟠 高風險 (High)";
-                else if(s.risk.includes("中") || s.risk.includes("Medium")) riskType = "🟡 中風險 (Medium)";
-                else if(s.risk.includes("低") || s.risk.includes("Low")) riskType = "🟢 低風險 (Low)";
-                
-                acc[riskType] = (acc[riskType] || 0) + 1;
-                return acc;
-            }, {});
-
-            const userPrompt = `請根據以下我目前系統內的資安狀態，產出一份高階總結報告：
-            【現有實體資產統計】：${JSON.stringify(assetSummary)}
-            【SIEM 監控情境風險分佈】：${JSON.stringify(riskSummary)}
-            總共有 ${scenarios.length} 個監控情境、${assets.length} 種實體資產。`;
-
-            const systemInstruction = `你是一位具備20年經驗的企業級虛擬資安長 (vCISO)。請為高階主管 (C-Level) 撰寫一份「SIEM 資安防護架構總結報告」。
-            【格式要求】：
-            1. 請直接回傳可以直接放入 HTML <div> 內的程式碼 (不含 <html> 或 <body> 等外層標籤)。
-            2. 使用 Tailwind CSS class 來美化版面 (例如 text-xl, font-bold, text-slate-700, bg-slate-50, p-5, rounded-lg, 列表用 ul list-disc 等)，讓它看起來像一份精美的商業簡報。
-            
-            【內容結構需包含】：
-            1. 🛡️ 整體防護狀態概述 (Executive Summary)
-            2. 📊 關鍵風險指標 (Key Risk Indicators) - 解析目前的資產與情境比例
-            3. 🎯 未來 3 項優先改善建議 (Actionable Recommendations) - 根據不足之處給予實體建議`;
-
-            const schema = { type: "OBJECT", properties: { reportHtml: { type: "STRING" } }, required: ["reportHtml"] };
-            const payload = { contents: [{ parts: [{ text: userPrompt }] }], systemInstruction: { parts: [{ text: systemInstruction }] }, generationConfig: { responseMimeType: "application/json", responseSchema: schema } };
-            // 注意：這裡的 key 是預留位，稍後會被 fetchWithRetry 攔截並替換為使用者設定的金鑰
-            const url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=DUMMY";
-
-            try {
-                const result = await fetchWithRetry(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-                const textResp = result.candidates?.[0]?.content?.parts?.[0]?.text;
-                if (!textResp) throw new Error("無效的回傳");
-                const data = JSON.parse(textResp);
-
-                contentDiv.innerHTML = data.reportHtml;
-                loadingDiv.classList.add('hidden');
-                contentDiv.classList.remove('hidden');
-            } catch (error) {
-                console.error("報告生成失敗:", error);
-                contentDiv.innerHTML = `<div class="text-center text-red-500 p-8 bg-red-50 rounded-xl border border-red-200"><i data-lucide="alert-triangle" class="w-10 h-10 mx-auto mb-3"></i>報告生成失敗，請檢查 API Key 額度或網路狀態。</div>`;
-                loadingDiv.classList.add('hidden');
-                contentDiv.classList.remove('hidden');
-                if (typeof lucide !== 'undefined') lucide.createIcons();
-            } finally {
-                if(actionBtn) actionBtn.disabled = false;
-            }
-        }
-
-        window.init = function() {
-            window.syncCustomRoles(); // 🌟 確保初始化時先同步動態角色
-            renderScenarioButtons();
-            renderRoleButtons(); 
-            window.renderMitreButtons(); 
-            window.initRoleDropdown();
-
-            if (scenarios.length > 0) window.selectScenario(scenarios[0].id);
-            if (rolesDef.length > 0 && rolesDef[0].roles.length > 0) window.selectRole(rolesDef[0].roles[0]);
-            if (mitreTactics.length > 0) window.selectMitreTactic(mitreTactics[0].id); 
-
-            if (typeof lucide !== 'undefined') lucide.createIcons();
-        }
-
-        window.switchView = function(viewName) {
-            if (window.currentViewMode === viewName) return;
-            window.currentViewMode = viewName;
-            
-            document.getElementById('tab-scenario').classList.toggle('active', viewName === 'scenario');
-            document.getElementById('tab-system').classList.toggle('active', viewName === 'system');
-            document.getElementById('tab-mitre').classList.toggle('active', viewName === 'mitre');
-
-            ['scenario', 'system', 'mitre'].forEach(v => {
-                const el = document.getElementById(`view-container-${v}`);
-                if (el) {
-                    if (v === viewName) {
-                        el.classList.add('active-view');
-                    } else {
-                        el.classList.remove('active-view');
-                    }
-                }
-            });
-        }
-
-        function initRadarChart() {
-            const canvas = document.getElementById('csfRadarChart'); 
-            if(!canvas) return; 
-            if (typeof Chart === 'undefined') return;
-            const ctx = canvas.getContext('2d'); 
-            if (window.radarChart) window.radarChart.destroy();
-            const dataCounts = [0, 0, 0, 0, 0, 0];
-            
-            // 🌟 修正：強制轉為小寫比對以防呆
-            scenarios.forEach(scenario => { 
-                const safeCsf = (scenario.csf || []).map(c => c.toLowerCase());
-                safeCsf.forEach(c => { 
-                    const idx = csfFunctions.findIndex(cf => cf.id.toLowerCase() === c); 
-                    if(idx !== -1) dataCounts[idx]++; 
-                }); 
-            });
-            
-            window.radarChart = new Chart(ctx, {
-                type: 'radar',
-                data: { 
-                    labels: csfFunctions.map(c => c.name.split(' ')[0]), 
-                    datasets: [{ label: '涵蓋權重', data: dataCounts, backgroundColor: 'rgba(59, 130, 246, 0.2)', borderColor: 'rgba(59, 130, 246, 1)', pointBackgroundColor: 'rgba(59, 130, 246, 1)', borderWidth: 2 }] 
-                },
-                options: { 
-                    maintainAspectRatio: false, 
-                    scales: { 
-                        r: { 
-                            angleLines: { display: true, color: 'rgba(0,0,0,0.05)' }, 
-                            grid: { color: 'rgba(0,0,0,0.05)' }, 
-                            pointLabels: { font: { family: "'Noto Sans TC', sans-serif", size: 10 } }, 
-                            suggestedMin: 0, 
-                            suggestedMax: Math.max(5, ...dataCounts), 
-                            ticks: { display: false, stepSize: 1 } 
-                        } 
-                    }, 
-                    plugins: { legend: { display: false } } 
-                }
-            });
-        }
-
-        function renderCSFNodes() {
-            const container = document.getElementById('csf-nodes-container'); container.innerHTML = ''; 
-            csfFunctions.forEach(csf => { container.innerHTML += `<div class="csf-node flex flex-col items-center p-3 md:p-4 rounded-xl border-2 bg-slate-50 border-slate-100 text-slate-400 opacity-50" id="csf-node-${csf.id}"><div class="p-2 md:p-3 rounded-full mb-1 md:mb-2 bg-slate-200"><i data-lucide="${csf.icon}" class="w-5 h-5 md:w-6 md:h-6"></i></div><span class="text-xs md:text-sm font-bold text-center">${csf.name}</span></div>`; });
-        }
-
-        function getRaciForRole(roleName) {
-            const roleUpper = roleName.toUpperCase(); let raci = { R: ['系統管理員'], A: ['專案負責人'], C: ['SIEM廠商'], I: ['管理層'] };
-            if (/(AWS|AZURE|GCP|CLOUD|雲端|SAAS|ENTRA|WORKSPACE)/i.test(roleUpper)) { raci.R = ['雲端管理員']; raci.C = ['SIEM廠商', 'AP管理員']; } 
-            else if (/(ERP|SAP|CRM|SPAM|SEG|WEB|PORTAL|應用|業務系統|平台|AP|IAM|PAM|CYBERARK|OKTA|SQL|DB|DATABASE|ORACLE|MYSQL|MARIADB|EXCHANGE|IIS|APACHE|NGINX)/i.test(roleUpper)) { raci.R = ['AP/DB管理員']; raci.C = ['SIEM廠商', '系統管理員']; } 
-            else if (/(ESXI|VCENTER|VMWARE|VIRTUAL|虛擬化|虛擬機|HYPER-V|NUTANIX)/i.test(roleUpper)) { raci.R = ['虛擬化管理員']; raci.C = ['SIEM廠商', '系統管理員']; } 
-            else if (/(LINUX|UBUNTU|CENTOS|REDHAT|DEBIAN)/i.test(roleUpper)) { raci.R = ['Linux管理員']; raci.C = ['SIEM廠商']; } 
-            else if (/(FIREWALL|NGFW|VPN|WAF|ROUTER|SWITCH|PALO ALTO|CHECK POINT|FORTINET|CISCO|F5|PULSE SECURE)/i.test(roleUpper)) { raci.R = ['網路管理員']; raci.C = ['SIEM廠商', '資安團隊']; } 
-            else if (/(EDR|ENDPOINT|CROWDSTRIKE|SENTINELONE|DEFENDER|TREND MICRO|SYMANTEC|TENABLE|QUALYS)/i.test(roleUpper)) { raci.R = ['資安工程師']; raci.C = ['SIEM廠商', '系統管理員']; }
-            return raci;
-        }
-
-        // ==========================================
-        // 🌟 視角三：MITRE ATT&CK 邏輯
-        // ==========================================
-        window.renderMitreButtons = function() {
-            const container = document.getElementById('mitre-list-container'); 
-            if(!container) return;
-            container.innerHTML = '';
-            
-            mitreTactics.forEach(tactic => {
-                const btn = document.createElement('button');
-                btn.className = `mitre-btn w-full text-left px-3.5 py-3 rounded-lg border border-slate-200 hover:border-rose-400 focus:outline-none flex justify-between items-center bg-white shadow-sm transition-all mb-2`;
-                btn.id = `btn-mitre-${tactic.id}`; 
-                btn.onclick = () => window.selectMitreTactic(tactic.id);
-                btn.innerHTML = `<div class="flex items-center overflow-hidden"><i data-lucide="${tactic.icon}" class="w-4 h-4 mr-2 text-slate-400 btn-icon flex-shrink-0"></i><div class="flex flex-col"><span class="font-bold text-sm truncate text-slate-700">${tactic.name}</span><span class="text-[10px] text-slate-400 uppercase tracking-wide">${tactic.en}</span></div></div>`;
-                container.appendChild(btn);
-            });
-        }
-
-        window.selectMitreTactic = function(id) {
-            window.currentSelectedMitreId = id; 
-            const tactic = mitreTactics.find(t => t.id === id); 
-            if (!tactic) return;
-
-            document.querySelectorAll('.mitre-btn').forEach(btn => btn.classList.remove('active', 'border-rose-500', 'bg-rose-50'));
-            const activeBtn = document.getElementById(`btn-mitre-${id}`); 
-            if (activeBtn) activeBtn.classList.add('active', 'border-rose-500', 'bg-rose-50');
-
-            document.getElementById('mitre-id-badge').textContent = tactic.id;
-            document.getElementById('mitre-detail-title').textContent = tactic.name;
-            document.getElementById('mitre-detail-en').textContent = tactic.en;
-            document.getElementById('mitre-detail-desc').textContent = tactic.desc;
-
-            // 盤點當前資產
-            const assetsContainer = document.getElementById('mitre-assets-summary');
-            const activeRoles = [...new Set(assets.map(a => a.role))];
-            
-            if (activeRoles.length === 0) {
-                assetsContainer.innerHTML = '<span class="text-sm text-slate-500 italic">您尚未建立任何伺服器資產，AI 將為您建議所需的防禦設備。</span>';
-            } else {
-                let html = '';
-                activeRoles.forEach(role => {
-                    const count = assets.filter(a => a.role === role).reduce((sum, a) => sum + (Number(a.quantity) || 1), 0);
-                    html += `<span class="px-2.5 py-1 text-xs bg-white border border-blue-200 text-blue-700 rounded-md shadow-sm font-medium flex items-center"><i data-lucide="server" class="w-3 h-3 mr-1.5 opacity-70"></i>${role} <span class="ml-1.5 bg-blue-100 px-1.5 rounded text-[10px]">${count}</span></span>`;
-                });
-                assetsContainer.innerHTML = html;
-            }
-
-            document.getElementById('mitre-btn-text').textContent = `生成專屬防護情境`;
-            if (typeof lucide !== 'undefined') lucide.createIcons();
-        }
-
-        window.generateScenarioFromMitre = async function() {
-            const tactic = mitreTactics.find(t => t.id === window.currentSelectedMitreId);
-            if (!tactic) return;
-
-            const btn = document.getElementById('btn-mitre-generate');
-            const btnText = document.getElementById('mitre-btn-text');
-            const originalText = btnText.textContent;
-            
-            btn.disabled = true;
-            btnText.innerHTML = `AI 正在深度分析您的架構與 ${tactic.name} 威脅...`;
-            btn.classList.add('animate-pulse');
-
-            const validCategoryIds = categoriesDef.map(c => c.id).join(', '); 
-            const activeRoles = [...new Set(assets.map(a => a.role))];
-            const rolesContext = activeRoles.length > 0 ? `[${activeRoles.join(', ')}]` : '無 (User has NO assets currently)';
-
-            const userPrompt = `請以 MITRE ATT&CK 戰術「${tactic.name} (${tactic.en} - ${tactic.id})」為核心，為我生成一個專屬的 SIEM 監控情境。
-            【極度重要條件】：我目前的 IT 環境中「只有」以下這些系統角色：${rolesContext}。
-            請務必優先利用我現有的系統角色 (scope) 來設計防禦、日誌收集 (logs) 與偵測邏輯！如果我的現有設備絕對無法偵測此戰術，再於 notes (技術備註) 欄位中強烈建議我需要導入什麼新設備。`;
-
-            const systemInstruction = `你是一位擁有 CISSP 與 SOC 實戰經驗的頂尖 SIEM 架構專家。請生成一個符合 MITRE ATT&CK 框架的 SIEM 資安監控情境 JSON 資料。請盡量使用極度專業的資安術語（如：TTPs、Lateral Movement、Exfiltration）。
-            規則：
-            1. categoryId: 從以下範圍挑選最適合的分類 ID：[${validCategoryIds}]。
-            2. title: 請在標題中包含 MITRE 戰術名稱或手法。
-            3. scope: 優先使用使用者現有的系統角色。
-            4. logs: 必須具體說明 Event ID 或 Log 種類。重要：請務必在每個 Log 的開頭加上 [RoleName] 標籤！
-            5. csfExplanations: 針對你選擇的每一個 csf 核心功能，提供一句話的具體說明。
-            6. detectionStrategy: 撰寫一段白話文的具體偵測與判斷邏輯說明。
-            7. detectionLogic: 撰寫一段對應的 ELK KQL 語法。
-            8. fiveM: 從資安管理角度標示此情境屬於「人機料法環」的哪些層面，使用代碼陣列。可用代碼：['man', 'machine', 'material', 'method', 'environment']。
-            9. riskColor: 請務必提供 tailwind CSS 的顏色類別，例如極高風險使用 "bg-red-600"，高風險使用 "bg-orange-500"，中風險使用 "bg-yellow-500"。
-            10. shortName: 請為此情境提供一個「簡短的繁體中文標籤」(約 4~10 個字)，方便在左側選單顯示，例如「外部服務漏洞利用」、「VPN暴力破解」等。`;
-
-            const schema = { 
-                type: "OBJECT", 
-                properties: { 
-                    categoryId: { type: "STRING" }, title: { type: "STRING" }, shortName: { type: "STRING" }, desc: { type: "STRING" }, risk: { type: "STRING" }, riskColor: { type: "STRING" }, 
-                    csf: { type: "ARRAY", items: { type: "STRING" } }, csfExplanations: { type: "OBJECT" }, 
-                    fiveM: { type: "ARRAY", items: { type: "STRING" } }, 
-                    scope: { type: "ARRAY", items: { type: "STRING" } }, logs: { type: "ARRAY", items: { type: "STRING" } }, 
-                    detectionStrategy: { type: "STRING" }, detectionLogic: { type: "STRING" }, notes: { type: "STRING" } 
-                }, 
-                required: ["categoryId", "title", "shortName", "desc", "risk", "riskColor", "csf", "csfExplanations", "fiveM", "scope", "logs", "detectionStrategy", "detectionLogic", "notes"] 
-            };
-            
-            const payload = { contents: [{ parts: [{ text: userPrompt }] }], systemInstruction: { parts: [{ text: systemInstruction }] }, generationConfig: { responseMimeType: "application/json", responseSchema: schema } };
-            // 注意：這裡的 key 是預留位，稍後會被 fetchWithRetry 攔截並替換為使用者設定的金鑰
-            const url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=DUMMY";
-
-            try {
-                const result = await fetchWithRetry(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-                const textResp = result.candidates?.[0]?.content?.parts?.[0]?.text; if (!textResp) throw new Error("無效的回傳");
-                let newScenarioData = JSON.parse(textResp);
-                
-                if (!categoriesDef.find(c => c.id === newScenarioData.categoryId)) { newScenarioData.categoryId = 'uncategorized'; }
-
-                if (Array.isArray(newScenarioData.scope)) {
-                    let customGroup = rolesDef.find(g => g.group === '自訂新增 (Custom)');
-                    if (!customGroup) { customGroup = { group: '自訂新增 (Custom)', roles: [] }; rolesDef.push(customGroup); }
-                    const allRoles = rolesDef.flatMap(g => g.roles);
-                    newScenarioData.scope.forEach(role => { if (!allRoles.includes(role)) customGroup.roles.push(role); });
-                }
-                const newId = 's_ai_mitre_' + Date.now(); 
-                const newScenario = { id: newId, ...newScenarioData };
-                
-                if(window.db && window.fs) {
-                    try {
-                        const docRef = await window.fs.addDoc(window.fs.collection(window.db, "scenarios"), newScenario);
-                        newScenario.docId = docRef.id;
-                    } catch(e) { console.error(e); }
-                }
-                scenarios.push(newScenario);
-                
-                window.initRoleDropdown(); renderScenarioButtons(); renderRoleButtons(); 
-                
-                window.showToast(`🎉 成功！已根據您的資產生成【${tactic.name}】專屬情境。自動切換至情境視角...`);
-                
-                // 延遲跳轉讓使用者看到成功訊息
-                setTimeout(() => {
-                    window.switchView('scenario');
-                    window.selectScenario(newId);
-                }, 1500);
-
-            } catch (error) {
-                console.error("生成失敗:", error); window.showToast("⚠️ AI 生成失敗，請檢查 API Key 額度或網路狀態。", true);
-            } finally {
-                btn.disabled = false;
-                btn.classList.remove('animate-pulse');
-                btnText.textContent = originalText;
-            }
-        }
-
-
-        // ==========================================
-        // 視角一：威脅情境視角 (Scenario View) 邏輯
-        // ==========================================
-        function renderScenarioButtons() {
-            const container = document.getElementById('scenario-list'); container.innerHTML = '';
-            
-            // 🌟 自動計算並更新總情境數量
-            const totalSpan = document.getElementById('total-scenarios-count');
-            if (totalSpan) totalSpan.textContent = `共 ${scenarios.length} 項`;
-
-            categoriesDef.forEach(cat => {
-                const categoryScenarios = scenarios.filter(s => s.categoryId === cat.id);
-                if (categoryScenarios.length === 0) return;
-
-                const groupDiv = document.createElement('div'); groupDiv.className = 'mb-2 border border-slate-100 rounded-lg bg-slate-50/50 overflow-hidden';
-                
-                // 🌟 更新：改成無內部卷軸的可摺疊式面板 (Accordion)
-                groupDiv.innerHTML = `
-                    <div class="cursor-pointer flex items-center justify-between p-2.5 group hover:bg-slate-100 transition-colors" onclick="window.toggleCategory('cat-${cat.id}')">
-                        <h3 class="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center group-hover:text-indigo-600 transition-colors">
-                            <i data-lucide="${cat.icon}" class="w-3.5 h-3.5 mr-1.5"></i>${cat.name}
-                        </h3>
-                        <div class="flex items-center">
-                            <span class="bg-white text-slate-500 border border-slate-200 px-1.5 py-0.5 rounded text-[10px] font-bold shadow-sm mr-2">${categoryScenarios.length}</span>
-                            <i data-lucide="chevron-down" id="icon-cat-${cat.id}" class="w-4 h-4 text-slate-400 transition-transform duration-200 transform"></i>
-                        </div>
-                    </div>
-                    <div class="space-y-1.5 p-2 pt-0 category-group transition-all" id="group-cat-${cat.id}"></div>
-                `;
-                container.appendChild(groupDiv);
-
-                const groupContainer = document.getElementById(`group-cat-${cat.id}`);
-                categoryScenarios.forEach(s => {
-                    const btn = document.createElement('button');
-                    btn.className = `scenario-btn w-full text-left px-3 py-2.5 rounded-md border border-slate-200 hover:border-${cat.colorClass.split('-')[1]}-400 focus:outline-none flex justify-between items-start bg-white shadow-sm transition-all`;
-                    btn.id = `btn-${s.id}`; btn.onclick = () => window.selectScenario(s.id);
-                    
-                    // 確保 riskColor 正確，加入 Fallback 防呆
-                    let rColor = s.riskColor || 'bg-slate-600';
-                    if (!rColor.includes('bg-')) {
-                        if (s.risk && (s.risk.includes('極高') || s.risk.includes('高') || s.risk.includes('Critical') || s.risk.includes('High'))) rColor = 'bg-red-600';
-                        else if (s.risk && (s.risk.includes('中') || s.risk.includes('Medium'))) rColor = 'bg-orange-500';
-                        else if (s.risk && (s.risk.includes('低') || s.risk.includes('Low'))) rColor = 'bg-green-500';
-                        else rColor = 'bg-slate-600';
-                    }
-
-                    // 🌟 新增：簡稱渲染邏輯
-                    const displayTitle = s.shortName ? s.shortName : s.title;
-                    const subTitleHtml = s.shortName ? `<span class="text-[10px] text-slate-400 truncate w-full block mt-0.5" title="${s.title}">${s.title}</span>` : '';
-
-                    btn.innerHTML = `<div class="flex items-start overflow-hidden w-full"><i data-lucide="${cat.icon}" class="w-4 h-4 mr-2 mt-0.5 text-slate-400 btn-icon flex-shrink-0"></i><div class="flex flex-col min-w-0 flex-1"><span class="font-bold text-sm truncate text-slate-700">${displayTitle}</span>${subTitleHtml}</div></div><span class="w-2.5 h-2.5 rounded-full ${rColor} flex-shrink-0 ml-2 mt-1 shadow-sm"></span>`;
-                    groupContainer.appendChild(btn);
-                });
-            });
-            if (typeof lucide !== 'undefined') lucide.createIcons(); initRadarChart();
-        }
-
-        window.selectScenario = function(id) {
-            window.currentSelectedScenarioId = id; const scenario = scenarios.find(s => s.id === id); if (!scenario) return;
-            document.querySelectorAll('.scenario-btn').forEach(btn => btn.classList.remove('active'));
-            const activeBtn = document.getElementById(`btn-${id}`); if (activeBtn) activeBtn.classList.add('active');
-
-            const categoryInfo = categoriesDef.find(c => c.id === (scenario.categoryId || 'uncategorized'));
-            document.getElementById('detail-header').classList.remove('fade-in'); void document.getElementById('detail-header').offsetWidth; document.getElementById('detail-header').classList.add('fade-in');
-
-            // 🌟 新增：自動展開當前被選中情境所屬的分類面板
-            if (categoryInfo) {
-                const groupEl = document.getElementById(`group-cat-${categoryInfo.id}`);
-                const iconEl = document.getElementById(`icon-cat-${categoryInfo.id}`);
-                if (groupEl && groupEl.classList.contains('hidden')) {
-                    groupEl.classList.remove('hidden');
-                    if (iconEl) iconEl.classList.remove('-rotate-90');
-                }
-            }
-
-            document.getElementById('detail-title').textContent = scenario.title; document.getElementById('detail-desc').textContent = scenario.desc;
-            
-            // 確保 riskColor 正確，加入 Fallback 防呆
-            let rColor = scenario.riskColor || 'bg-slate-600';
-            if (!rColor.includes('bg-')) {
-                if (scenario.risk && (scenario.risk.includes('極高') || scenario.risk.includes('高') || scenario.risk.includes('Critical') || scenario.risk.includes('High'))) rColor = 'bg-red-600';
-                else if (scenario.risk && (scenario.risk.includes('中') || scenario.risk.includes('Medium'))) rColor = 'bg-orange-500';
-                else if (scenario.risk && (scenario.risk.includes('低') || scenario.risk.includes('Low'))) rColor = 'bg-green-500';
-                else rColor = 'bg-slate-600';
-            }
-
-            document.getElementById('risk-badge').className = `px-3 py-1 text-xs font-bold rounded-full text-white ${rColor}`; 
-            document.getElementById('risk-badge').textContent = `風險: ${scenario.risk}`;
-            
-            const catBadge = document.getElementById('category-badge');
-            catBadge.className = `px-3 py-1 text-xs font-bold rounded-full border ${categoryInfo.bgClass} ${categoryInfo.colorClass} ${categoryInfo.borderClass} inline-flex items-center`;
-            catBadge.innerHTML = `<i data-lucide="${categoryInfo.icon}" class="w-3.5 h-3.5 mr-1.5"></i> ${categoryInfo.name}`;
-
-            const badgesContainer = document.getElementById('scenario-badges-container');
-            while (badgesContainer.children.length > 2) {
-                badgesContainer.removeChild(badgesContainer.lastChild);
-            }
-            if (scenario.fiveM && Array.isArray(scenario.fiveM)) {
-                scenario.fiveM.forEach(mId => {
-                    const mDef = fiveMDef.find(m => m.id === mId);
-                    if (mDef) {
-                        const mBadge = document.createElement('span');
-                        mBadge.className = `px-3 py-1 text-xs font-medium rounded-full border ${mDef.bgClass} ${mDef.colorClass} ${mDef.borderClass} inline-flex items-center cursor-help`;
-                        mBadge.title = mDef.desc;
-                        mBadge.innerHTML = `<i data-lucide="${mDef.icon}" class="w-3 h-3 mr-1"></i> ${mDef.name}`;
-                        badgesContainer.appendChild(mBadge);
-                    }
-                });
-            }
-
-            document.getElementById('detail-hero-icon').innerHTML = `<i data-lucide="${categoryInfo.icon}" class="w-20 h-20 transform -rotate-12 translate-x-2 -translate-y-2"></i>`;
-
-            // 🌟 顯示最佳化按鈕
-            document.getElementById('optimize-scenario-btn').classList.remove('hidden'); 
-            document.getElementById('delete-scenario-btn').classList.remove('hidden'); 
-            document.getElementById('edit-scenario-btn').classList.remove('hidden'); 
-            document.getElementById('attack-sim-btn').classList.remove('hidden'); 
-
-            const kqlResult = document.getElementById('ai-kql-result'); if (kqlResult) kqlResult.classList.add('hidden');
-
-            const csfNodesContainer = document.getElementById('csf-nodes-container'); const csfExplanationsContainer = document.getElementById('csf-explanations-container');
-            csfNodesContainer.innerHTML = ''; csfExplanationsContainer.innerHTML = '';
-            let hasExplanations = false;
-
-            // 🌟 修正：將 CSF ID 全部轉為小寫比對，避免 AI 亂加大寫導致無效
-            const safeCsf = (scenario.csf || []).map(c => c.toLowerCase());
-            const safeExplanations = {};
-            if (scenario.csfExplanations) {
-                Object.keys(scenario.csfExplanations).forEach(k => {
-                    safeExplanations[k.toLowerCase()] = scenario.csfExplanations[k];
-                });
-            }
-
-            csfFunctions.forEach(csf => {
-                const isMatched = safeCsf.includes(csf.id.toLowerCase());
-                const nodeClass = isMatched ? `csf-node active flex flex-col items-center p-3 md:p-4 rounded-xl border-2 ${csf.color} ${csf.borderColor} ${csf.textColor} opacity-100` : `csf-node flex flex-col items-center p-3 md:p-4 rounded-xl border-2 bg-slate-50 border-slate-200 text-slate-400 opacity-50`;
-                const iconDivClass = isMatched ? `p-2 md:p-3 rounded-full mb-1 md:mb-2 bg-white shadow-sm` : `p-2 md:p-3 rounded-full mb-1 md:mb-2 bg-slate-200`;
-
-                csfNodesContainer.innerHTML += `<div class="${nodeClass}" id="csf-node-${csf.id}"><div class="${iconDivClass}"><i data-lucide="${csf.icon}" class="w-5 h-5 md:w-6 md:h-6"></i></div><span class="text-xs md:text-sm font-bold text-center">${csf.name}</span></div>`;
-
-                if (isMatched) {
-                    hasExplanations = true;
-                    const expText = safeExplanations[csf.id.toLowerCase()] ? safeExplanations[csf.id.toLowerCase()] : '透過收集並分析對應日誌，達成此核心功能之目標。';
-                    csfExplanationsContainer.innerHTML += `<div class="flex items-start p-3 bg-slate-50 rounded-lg border border-slate-100"><div class="p-2 rounded-full ${csf.color} ${csf.textColor} mr-3 flex-shrink-0"><i data-lucide="${csf.icon}" class="w-4 h-4"></i></div><div><h4 class="text-sm font-bold ${csf.textColor} mb-1">${csf.name.split(' ')[0]}為何重要？</h4><p class="text-xs text-slate-600 leading-relaxed">${expText}</p></div></div>`;
-                }
-            });
-            if (!hasExplanations) csfExplanationsContainer.innerHTML = '<div class="col-span-full text-sm text-slate-400 italic">尚無具體的映射說明。</div>';
-
-            const tbody = document.getElementById('execution-tbody'); tbody.innerHTML = '';
-            const tr = document.createElement('tr'); tr.className = "hover:bg-slate-50 transition-colors";
-            
-            const activeScope = scenario.scope.filter(role => assets.some(a => a.role === role));
-            const missingScope = scenario.scope.filter(role => !assets.some(a => a.role === role));
-            
-            const tdScope = document.createElement('td'); tdScope.className = "p-4 border-b align-top w-1/3";
-            let scopeHtml = '<div class="space-y-4">';
-            if (activeScope.length === 0) { scopeHtml += '<div class="text-slate-400 italic text-sm flex items-start bg-slate-50 p-3 rounded-lg border border-dashed border-slate-300"><i data-lucide="info" class="w-4 h-4 mr-1.5 mt-0.5 flex-shrink-0"></i>您尚未建立對應此情境的實體資產，請至右上角新增。</div>'; } 
-            else {
-                activeScope.forEach(item => {
-                    const raci = getRaciForRole(item);
-                    scopeHtml += `<div class="bg-white border border-indigo-100 rounded-lg p-3 shadow-sm hover:border-indigo-300 transition-colors"><div class="font-bold text-slate-800 border-b border-slate-100 pb-1.5 mb-2 text-sm flex items-center"><i data-lucide="server" class="w-4 h-4 mr-1.5 text-indigo-500"></i>${item}</div><div class="grid grid-cols-1 gap-1.5 text-xs bg-slate-50/50 p-2 rounded border border-slate-100"><div class="flex items-start"><span class="bg-blue-100 text-blue-700 font-bold px-1.5 rounded mr-2 w-5 text-center shadow-sm">R</span><span class="text-slate-700 font-semibold">${raci.R.join(', ')}</span></div><div class="flex items-start"><span class="bg-red-100 text-red-700 font-bold px-1.5 rounded mr-2 w-5 text-center shadow-sm">A</span><span class="text-slate-600">${raci.A.join(', ')}</span></div><div class="flex items-start"><span class="bg-amber-100 text-amber-700 font-bold px-1.5 rounded mr-2 w-5 text-center shadow-sm">C</span><span class="text-slate-600">${raci.C.join(', ')}</span></div><div class="flex items-start"><span class="bg-emerald-100 text-emerald-700 font-bold px-1.5 rounded mr-2 w-5 text-center shadow-sm">I</span><span class="text-slate-600">${raci.I.join(', ')}</span></div></div></div>`;
-                });
-            }
-            if (missingScope.length > 0) {
-                scopeHtml += '<div class="mt-4 pt-4 border-t border-slate-200 border-dashed"><div class="text-xs text-slate-400 font-bold mb-2 flex items-center"><i data-lucide="alert-circle" class="w-3 h-3 mr-1"></i>情境建議涵蓋但未註冊之角色：</div><div class="flex flex-wrap gap-1.5">';
-                missingScope.forEach(item => { scopeHtml += `<span class="px-2 py-1 bg-slate-50 text-slate-400 rounded text-xs border border-slate-200 opacity-80 flex items-center"><i data-lucide="server-off" class="w-3 h-3 mr-1"></i>${item}</span>`; });
-                scopeHtml += '</div></div>';
-            }
-            scopeHtml += '</div>'; tdScope.innerHTML = scopeHtml;
-            
-            let finalLogsHtml = ''; let activeLogs = [];
-            if (activeScope.length === 0) {
-                finalLogsHtml = `<div class="text-slate-400 italic text-sm bg-slate-50 p-3 rounded-lg border border-dashed border-slate-300">請先新增對應的實體資產，系統將自動列出專屬日誌收集規範。</div>`;
-            } else {
-                activeScope.forEach(activeRole => {
-                    let roleHasLog = false;
-                    scenario.logs.forEach(log => {
-                        const match = log.match(/^\[(.*?)\]/);
-                        if (match && match[1].toLowerCase().trim() === activeRole.toLowerCase().trim()) { activeLogs.push(log); roleHasLog = true; }
-                    });
-                    if (!roleHasLog) activeLogs.push(`[${activeRole}] ⚠️ 尚未定義專屬收集日誌，請點擊上方「⚙️ 進階設定」補充。`);
-                });
-                scenario.logs.forEach(log => { if (!log.match(/^\[(.*?)\]/)) activeLogs.push(log); });
-                finalLogsHtml = `<ul class="list-none space-y-2">${activeLogs.map(log => {
-                    const isHighlight = log.startsWith('['); const isWarning = log.includes('⚠️');
-                    let liClass = "bg-slate-100 border-slate-200 text-slate-700"; let iconColor = "text-blue-500"; let iconName = "file-code";
-                    if (isWarning) { liClass = "bg-amber-50 border-amber-200 text-amber-800 font-bold"; iconColor = "text-amber-500"; iconName = "alert-triangle"; } 
-                    else if (isHighlight) { liClass = "bg-indigo-50 border-indigo-200 text-indigo-800 font-medium"; iconColor = "text-indigo-500"; }
-                    return `<li class="flex items-start"><i data-lucide="${iconName}" class="w-4 h-4 mr-2 ${iconColor} mt-0.5 flex-shrink-0"></i><span class="font-mono text-xs px-2 py-1 rounded border break-words ${liClass}">${log}</span></li>`;
-                }).join('')}</ul>`;
-            }
-            const tdLogs = document.createElement('td'); tdLogs.className = "p-4 border-b align-top w-1/3"; tdLogs.innerHTML = finalLogsHtml;
-            const tdNotes = document.createElement('td'); tdNotes.className = "p-4 border-b align-top text-slate-600 text-xs leading-relaxed w-1/3 whitespace-pre-line"; tdNotes.textContent = scenario.notes;
-
-            tr.appendChild(tdScope); tr.appendChild(tdLogs); tr.appendChild(tdNotes); tbody.appendChild(tr);
-
-            const mappedAssetsContainer = document.getElementById('mapped-assets-container'); mappedAssetsContainer.innerHTML = '';
-            const matchedAssets = assets.filter(asset => scenario.scope.includes(asset.role));
-            if (matchedAssets.length === 0) { mappedAssetsContainer.innerHTML = `<div class="col-span-full text-sm text-slate-400 italic p-3 bg-slate-50 border border-dashed border-slate-300 rounded-lg text-center">目前沒有註冊對應此情境的實體伺服器，請透過右上角「管理伺服器資產」新增。</div>`; } 
-            else {
-                matchedAssets.forEach(asset => {
-                    let indicatorClass = asset.status === '已接取' ? 'bg-green-500' : (asset.status === '設定中' ? 'bg-yellow-400' : 'bg-red-500');
-                    let qtyBadge = asset.quantity > 1 ? `<span class="ml-2 text-[10px] font-bold text-indigo-600 bg-indigo-100 px-1.5 py-0.5 rounded shadow-sm">x${asset.quantity}</span>` : '';
-                    mappedAssetsContainer.innerHTML += `<div class="border rounded-lg p-3 flex items-start bg-slate-50 hover:bg-white hover:shadow-md transition-all"><div class="mt-1 mr-3 relative"><i data-lucide="server" class="w-5 h-5 text-slate-500"></i><span class="absolute -bottom-1 -right-1 w-3 h-3 border-2 border-white rounded-full ${indicatorClass}" title="${asset.status}"></span></div><div class="min-w-0"><div class="font-bold text-sm text-slate-800 truncate flex items-center">${asset.name}${qtyBadge}</div><div class="text-xs text-slate-500 mt-0.5 truncate">${asset.role}</div></div></div>`;
-                });
-            }
-
-            const detectionLogicContainer = document.getElementById('detection-logic-container');
-            const detectionStrategyText = document.getElementById('detail-detection-strategy');
-            const detectionLogicCode = document.getElementById('detection-logic-code');
-            
-            if ((scenario.detectionLogic && scenario.detectionLogic.trim() !== '') || (scenario.detectionStrategy && scenario.detectionStrategy.trim() !== '')) {
-                detectionLogicContainer.classList.remove('hidden');
-                detectionStrategyText.textContent = scenario.detectionStrategy || '尚未定義具體判斷邏輯。';
-                detectionLogicCode.textContent = scenario.detectionLogic || '// 尚未定義 KQL 語法';
-            } else {
-                detectionLogicContainer.classList.add('hidden');
-            }
-
-            // 🌟 渲染：防禦與應變指南 (Playbook)
-            const playbookContent = document.getElementById('playbook-content');
-            if ((scenario.mitigation && scenario.mitigation.length > 0) || (scenario.response && scenario.response.length > 0)) {
-                let pHTML = '<div class="grid grid-cols-1 md:grid-cols-2 gap-6">';
-                
-                // 防禦建議
-                pHTML += '<div class="bg-emerald-50/30 p-4 rounded-xl border border-emerald-100"><h4 class="font-bold text-sm text-emerald-700 mb-3 flex items-center"><i data-lucide="shield-check" class="w-4 h-4 mr-1.5"></i>事前防禦建議 (Mitigation)</h4><ul class="space-y-3">';
-                (scenario.mitigation || []).forEach(item => {
-                    pHTML += `<li class="flex items-start text-sm text-slate-700 leading-relaxed"><i data-lucide="check-circle-2" class="w-4 h-4 mr-2 text-emerald-500 mt-0.5 flex-shrink-0"></i><span>${item}</span></li>`;
-                });
-                pHTML += '</ul></div>';
-
-                // 應變處置
-                pHTML += '<div class="bg-rose-50/30 p-4 rounded-xl border border-rose-100"><h4 class="font-bold text-sm text-rose-700 mb-3 flex items-center"><i data-lucide="siren" class="w-4 h-4 mr-1.5 animate-pulse"></i>事發應變處置 (Incident Response)</h4><ul class="space-y-3">';
-                (scenario.response || []).forEach(item => {
-                    pHTML += `<li class="flex items-start text-sm text-slate-700 leading-relaxed"><i data-lucide="alert-triangle" class="w-4 h-4 mr-2 text-rose-500 mt-0.5 flex-shrink-0"></i><span>${item}</span></li>`;
-                });
-                pHTML += '</ul></div>';
-                
-                pHTML += '</div>';
-                playbookContent.innerHTML = pHTML;
-            } else {
-                playbookContent.innerHTML = `<div class="text-center py-8 text-slate-400 text-sm border-2 border-dashed border-slate-200 rounded-xl bg-slate-50/50"><i data-lucide="book-dashed" class="w-10 h-10 mx-auto mb-3 opacity-40 text-slate-500"></i>尚無定義防禦與應變指南。<br><span class="admin-only inline-block mt-3 text-emerald-600 bg-emerald-50 px-3 py-1 rounded-md border border-emerald-100"><i data-lucide="info" class="w-3 h-3 inline mr-1"></i>請點擊右上角「AI 撰寫指南」按鈕自動生成。</span></div>`;
-            }
-
-            if (typeof lucide !== 'undefined') lucide.createIcons();
-        }
-
-        // ==========================================
-        // 視角二：系統設備視角 (System View) 邏輯
-        // ==========================================
-        function renderRoleButtons() {
-            const container = document.getElementById('role-list-container'); container.innerHTML = '';
-            const activeRoles = [...new Set(assets.map(a => a.role))];
-            
-            if (activeRoles.length === 0) {
-                container.innerHTML = '<div class="text-sm text-slate-500 italic p-4 text-center border-dashed border-2 border-slate-200 rounded-lg m-2">目前尚無註冊資產<br>請由右上角新增</div>';
-                document.getElementById('system-detail-header').classList.remove('fade-in'); document.getElementById('system-group-badge').textContent = '-'; document.getElementById('system-detail-title').textContent = '尚未選擇系統'; document.getElementById('system-detail-desc').textContent = '請先建立實體資產。';
-                document.getElementById('system-raci-container').innerHTML = ''; document.getElementById('system-assets-container').innerHTML = ''; document.getElementById('system-logs-container').innerHTML = '<div class="p-4 text-center text-slate-400">無資料</div>'; document.getElementById('system-scenarios-container').innerHTML = '<div class="p-4 text-center text-slate-400">無資料</div>';
-                window.currentSelectedRoleName = null; return;
-            }
-
-            rolesDef.forEach(group => {
-                const rolesInGroup = group.roles.filter(r => activeRoles.includes(r));
-                if (rolesInGroup.length === 0) return;
-                
-                const safeGroupId = group.group.replace(/[^a-zA-Z0-9]/g, '-');
-                const groupDiv = document.createElement('div'); groupDiv.className = 'mb-2 border border-slate-100 rounded-lg bg-slate-50/50 overflow-hidden';
-                
-                // 🌟 更新：改成無內部卷軸的可摺疊式面板 (Accordion)
-                groupDiv.innerHTML = `
-                    <div class="cursor-pointer flex items-center justify-between p-2.5 group hover:bg-slate-100 transition-colors" onclick="window.toggleCategory('role-${safeGroupId}')">
-                        <h3 class="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center group-hover:text-indigo-600 transition-colors">
-                            <i data-lucide="layers" class="w-3.5 h-3.5 mr-1.5"></i>${group.group}
-                        </h3>
-                        <div class="flex items-center">
-                            <span class="bg-white text-slate-500 border border-slate-200 px-1.5 py-0.5 rounded text-[10px] font-bold shadow-sm mr-2">${rolesInGroup.length}</span>
-                            <i data-lucide="chevron-down" id="icon-role-${safeGroupId}" class="w-4 h-4 text-slate-400 transition-transform duration-200 transform"></i>
-                        </div>
-                    </div>
-                    <div class="space-y-1.5 p-2 pt-0 category-group transition-all" id="group-role-${safeGroupId}"></div>
-                `;
-                container.appendChild(groupDiv);
-
-                const groupContainer = groupDiv.querySelector('.category-group');
-                rolesInGroup.forEach(role => {
-                    const btn = document.createElement('button');
-                    btn.className = `role-btn w-full text-left px-3 py-2.5 rounded-md border border-slate-200 hover:border-indigo-400 focus:outline-none flex justify-between items-center bg-white shadow-sm transition-all`;
-                    btn.id = `btn-role-${role.replace(/[^a-zA-Z0-9]/g, '-')}`; btn.onclick = () => window.selectRole(role);
-                    
-                    // 🌟 同樣在系統視角中，如果有顯示關聯情境的狀態，也需要防呆 (這裡只處理按鈕，按鈕沒有風險顏色，所以安全)
-                    btn.innerHTML = `<div class="flex items-center overflow-hidden"><i data-lucide="server" class="w-4 h-4 mr-2 text-slate-400 btn-icon flex-shrink-0"></i><span class="font-medium text-sm truncate">${role}</span></div>`;
-                    groupContainer.appendChild(btn);
-                });
-            });
-
-            if (activeRoles.length > 0) {
-                if (!window.currentSelectedRoleName || !activeRoles.includes(window.currentSelectedRoleName)) { window.selectRole(activeRoles[0]); } 
-                else {
-                    document.querySelectorAll('.role-btn').forEach(btn => btn.classList.remove('active'));
-                    const activeBtn = document.getElementById(`btn-role-${window.currentSelectedRoleName.replace(/[^a-zA-Z0-9]/g, '-')}`); if (activeBtn) activeBtn.classList.add('active');
-                }
-            }
-            if (typeof lucide !== 'undefined') lucide.createIcons();
-        }
-
-        window.selectRole = function(roleName) {
-            window.currentSelectedRoleName = roleName;
-            document.querySelectorAll('.role-btn').forEach(btn => btn.classList.remove('active'));
-            const activeBtn = document.getElementById(`btn-role-${roleName.replace(/[^a-zA-Z0-9]/g, '-')}`); if (activeBtn) activeBtn.classList.add('active');
-
-            const header = document.getElementById('system-detail-header'); header.classList.remove('fade-in'); void header.offsetWidth; header.classList.add('fade-in');
-
-            let parentGroup = "自訂角色"; for (let g of rolesDef) { if (g.roles.includes(roleName)) { parentGroup = g.group; break; } }
-            
-            // 🌟 新增：自動展開當前被選中設備所屬的分類面板
-            const safeGroupId = parentGroup.replace(/[^a-zA-Z0-9]/g, '-');
-            const groupEl = document.getElementById(`group-role-${safeGroupId}`);
-            const iconEl = document.getElementById(`icon-role-${safeGroupId}`);
-            if (groupEl && groupEl.classList.contains('hidden')) {
-                groupEl.classList.remove('hidden');
-                if (iconEl) iconEl.classList.remove('-rotate-90');
-            }
-
-            document.getElementById('system-group-badge').textContent = parentGroup; document.getElementById('system-detail-title').textContent = roleName;
-
-            let aggregatedLogs = new Set(); let relatedScenarios = [];
-            scenarios.forEach(s => { 
-                if (s.scope.includes(roleName)) { 
-                    s.logs.forEach(log => {
-                        const match = log.match(/^\[(.*?)\]/);
-                        if (!match || match[1].toLowerCase().trim() === roleName.toLowerCase().trim()) aggregatedLogs.add(log);
-                    }); 
-                    relatedScenarios.push(s); 
-                } 
-            });
-
-            const logsContainer = document.getElementById('system-logs-container');
-            if (aggregatedLogs.size === 0) { logsContainer.innerHTML = `<div class="text-slate-500 italic text-sm py-4">此系統目前在任何情境中都沒有被要求收集日誌。</div>`; } 
-            else {
-                let logsHtml = '<ul class="list-none space-y-3">';
-                Array.from(aggregatedLogs).forEach(log => { logsHtml += `<li class="flex items-start"><i data-lucide="check-circle-2" class="w-5 h-5 mr-3 text-green-500 flex-shrink-0 mt-0.5"></i><span class="font-mono text-sm bg-slate-100 px-3 py-1.5 rounded border border-slate-200 text-slate-700">${log}</span></li>`; });
-                logsHtml += '</ul>'; logsContainer.innerHTML = logsHtml;
-            }
-
-            const scenariosContainer = document.getElementById('system-scenarios-container');
-            if (relatedScenarios.length === 0) { scenariosContainer.innerHTML = `<div class="col-span-full text-slate-400 italic text-sm">無關聯情境</div>`; } 
-            else {
-                let scHtml = '';
-                relatedScenarios.forEach(s => { 
-                    // 🌟 在系統視角的關聯情境卡片中，加入 riskColor 防呆
-                    let rColor = s.riskColor || 'bg-slate-600';
-                    if (!rColor.includes('bg-')) {
-                        if (s.risk && (s.risk.includes('極高') || s.risk.includes('高') || s.risk.includes('Critical') || s.risk.includes('High'))) rColor = 'bg-red-600';
-                        else if (s.risk && (s.risk.includes('中') || s.risk.includes('Medium'))) rColor = 'bg-orange-500';
-                        else if (s.risk && (s.risk.includes('低') || s.risk.includes('Low'))) rColor = 'bg-green-500';
-                        else rColor = 'bg-slate-600';
-                    }
-                    scHtml += `<div class="border rounded-lg p-3 bg-white shadow-sm flex flex-col cursor-pointer hover:border-blue-400 transition-colors" onclick="window.switchView('scenario'); window.selectScenario('${s.id}')"><div class="flex justify-between items-start mb-1"><span class="font-bold text-sm text-slate-800">${s.title}</span><span class="w-2.5 h-2.5 rounded-full ${rColor} flex-shrink-0 ml-2 mt-1"></span></div><div class="text-xs text-slate-500 truncate" title="點擊查看情境詳情">點擊查看此情境詳情 &rarr;</div></div>`; 
-                });
-                scenariosContainer.innerHTML = scHtml;
-            }
-
-            const raci = getRaciForRole(roleName); const raciContainer = document.getElementById('system-raci-container');
-            raciContainer.innerHTML = `<div class="flex items-center"><span class="bg-blue-100 text-blue-700 font-bold px-2 py-0.5 rounded mr-3 w-8 text-center shadow-sm">R</span><span class="font-semibold text-slate-800">${raci.R.join(', ')} <span class="text-xs font-normal text-slate-400 ml-1">(負責執行設定)</span></span></div><div class="flex items-center"><span class="bg-red-100 text-red-700 font-bold px-2 py-0.5 rounded mr-3 w-8 text-center shadow-sm">A</span><span class="text-slate-600">${raci.A.join(', ')}</span></div><div class="flex items-center"><span class="bg-amber-100 text-amber-700 font-bold px-2 py-0.5 rounded mr-3 w-8 text-center shadow-sm">C</span><span class="text-slate-600">${raci.C.join(', ')}</span></div><div class="flex items-center"><span class="bg-emerald-100 text-emerald-700 font-bold px-2 py-0.5 rounded mr-3 w-8 text-center shadow-sm">I</span><span class="text-slate-600">${raci.I.join(', ')}</span></div>`;
-
-            const matchedAssets = assets.filter(asset => asset.role === roleName); 
-            const totalCount = matchedAssets.reduce((sum, a) => sum + (Number(a.quantity) || 1), 0);
-            document.getElementById('system-asset-count').textContent = totalCount;
-            const assetsContainer = document.getElementById('system-assets-container');
-            if (matchedAssets.length === 0) { assetsContainer.innerHTML = `<span class="text-xs text-slate-400 italic py-1">尚未註冊實體主機</span>`; } 
-            else {
-                let assetsHtml = '';
-                matchedAssets.forEach(a => { 
-                    let color = a.status === '已接取' ? 'bg-green-100 text-green-700 border-green-200' : (a.status === '設定中' ? 'bg-yellow-100 text-yellow-700 border-yellow-200' : 'bg-red-100 text-red-700 border-red-200'); 
-                    let qtyStr = a.quantity > 1 ? ` <span class="ml-1 opacity-75 font-bold">(x${a.quantity})</span>` : '';
-                    assetsHtml += `<span class="px-2.5 py-1 text-xs border rounded shadow-sm ${color} flex items-center"><i data-lucide="hard-drive" class="w-3 h-3 mr-1"></i>${a.name}${qtyStr}</span>`; 
-                });
-                assetsContainer.innerHTML = assetsHtml;
-            }
-            if (typeof lucide !== 'undefined') lucide.createIcons();
-        }
-
-        // ==========================================
-        // 匯出複製模組 (包含 Excel 匯出)
-        // ==========================================
-        window.exportToExcel = function() {
-            if (scenarios.length === 0) return window.showToast('⚠️ 沒有情境資料可以匯出！', true);
-
-            // 準備給 SheetJS 的資料
-            const exportData = scenarios.map(s => {
-                const cat = categoriesDef.find(c => c.id === s.categoryId) || {name: '未分類'};
-                
-                // 將 5M 代碼轉為中文
-                const fiveM = (s.fiveM || []).map(mId => {
-                    const m = fiveMDef.find(d => d.id === mId);
-                    return m ? m.name : '';
-                }).filter(n => n).join(', ');
-                
-                // 將 CSF 代碼轉為中文
-                const csf = (s.csf || []).map(cId => {
-                    const c = csfFunctions.find(d => d.id === cId);
-                    return c ? c.name : '';
-                }).join(', ');
-                
-                const scope = (s.scope || []).join(', ');
-                const logs = (s.logs || []).join('\n'); // Excel 支援換行
-
-                return {
-                    '威脅領域 (Category)': cat.name,
-                    '情境名稱 (Title)': s.title,
-                    '情境描述 (Description)': s.desc,
-                    '風險等級 (Risk Level)': s.risk,
-                    '對應 NIST CSF': csf,
-                    '管理維度 (5M1E)': fiveM,
-                    '涵蓋系統角色 (Scope)': scope,
-                    '必須收集日誌 (Required Logs)': logs,
-                    '實際偵測策略 (Detection Strategy)': s.detectionStrategy || '',
-                    'KQL 實作語法 (KQL Logic)': s.detectionLogic || '',
-                    '技術備註 (Notes)': s.notes || ''
-                };
-            });
-
-            // 使用 SheetJS 建立工作表
-            const ws = XLSX.utils.json_to_sheet(exportData);
-            
-            // 設定各欄位的預設寬度 (更易於閱讀)
-            const wscols = [
-                {wch: 15}, // 威脅領域
-                {wch: 30}, // 情境名稱
-                {wch: 45}, // 情境描述
-                {wch: 15}, // 風險等級
-                {wch: 25}, // NIST CSF
-                {wch: 25}, // 5M1E
-                {wch: 30}, // Scope
-                {wch: 50}, // Logs
-                {wch: 50}, // Detection Strategy
-                {wch: 40}, // KQL
-                {wch: 30}  // Notes
-            ];
-            ws['!cols'] = wscols;
-
-            // 建立工作簿並寫入檔案
-            const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, "SIEM 監控情境清單");
-            XLSX.writeFile(wb, "SIEM_Strategy_Plan.xlsx");
-            
-            window.showToast('✅ 成功匯出 Excel 報表！');
-        }
-
-        window.copyScenarioTableData = function() {
-            const scenario = scenarios.find(s => s.id === window.currentSelectedScenarioId); if(!scenario) return; 
-            const cat = categoriesDef.find(c => c.id === scenario.categoryId);
-            
-            const activeScope = scenario.scope.filter(role => assets.some(a => a.role === role));
-            const activeLogs = scenario.logs.filter(log => {
-                const match = log.match(/^\[(.*?)\]/);
-                if (match) return activeScope.includes(match[1]);
-                return activeScope.length > 0;
-            });
-            
-            let textToCopy = `威脅分類\t威脅情境\t已具備之資產與RACI權責\t對應之關鍵日誌收集\t技術備註\n`;
-            let scopesWithRaci = activeScope.length > 0 ? activeScope.map(item => { const r = getRaciForRole(item); return `${item} [R: ${r.R.join(',')}]`; }).join('; ') : '尚無對應資產';
-            let logsString = activeLogs.length > 0 ? activeLogs.join('; ') : '無';
-
-            textToCopy += `${cat?cat.name:''}\t${scenario.title}\t${scopesWithRaci}\t${logsString}\t${scenario.notes}\n\n`;
-            
-            if (scenario.fiveM && scenario.fiveM.length > 0) {
-                let fiveMNames = scenario.fiveM.map(mId => { let m = fiveMDef.find(d => d.id === mId); return m ? m.name : ''; }).filter(n => n).join(', ');
-                textToCopy += `[管理維度(5M1E)]\n${fiveMNames}\n\n`;
-            }
-
-            textToCopy += `[偵測與判斷邏輯]\n${scenario.detectionStrategy || '無'}\n\n`;
-
-            const matchedAssets = assets.filter(a => activeScope.includes(a.role));
-            textToCopy += `--- 此情境對應之實體伺服器 ---\n`;
-            if(matchedAssets.length > 0) matchedAssets.forEach(a => textToCopy += `[${a.status}] ${a.name} (${a.role})\n`);
-            else textToCopy += `(目前尚無)\n`;
-
-            navigator.clipboard.writeText(textToCopy).then(() => window.showToast('已複製表格！')).catch(() => window.showToast('⚠️ 複製失敗', true));
-        }
-
-        window.copySystemTableData = function() {
-            if(!window.currentSelectedRoleName) return;
-            let textToCopy = `===== 日誌收集派工單 =====\n目標系統角色: ${window.currentSelectedRoleName}\n\n`;
-            const raci = getRaciForRole(window.currentSelectedRoleName);
-            textToCopy += `[RACI 權責]\n- 執行負責人 (R): ${raci.R.join(', ')}\n- 專案決策人 (A): ${raci.A.join(', ')}\n- 技術諮詢   (C): ${raci.C.join(', ')}\n\n`;
-
-            let aggregatedLogs = new Set();
-            scenarios.forEach(s => {
-                if (s.scope.includes(window.currentSelectedRoleName)) {
-                    s.logs.forEach(log => {
-                        const match = log.match(/^\[(.*?)\]/);
-                        if (!match || match[1].toLowerCase().trim() === window.currentSelectedRoleName.toLowerCase().trim()) aggregatedLogs.add(log);
-                    });
-                }
-            });
-            
-            textToCopy += `[必須設定與收集之日誌清單]\n`;
-            if(aggregatedLogs.size === 0) textToCopy += `無\n`;
-            else Array.from(aggregatedLogs).forEach(l => textToCopy += `- ${l}\n`);
-
-            textToCopy += `\n[對應之防護情境目標]\n`;
-            let foundScenarios = false;
-            scenarios.forEach(s => { if(s.scope.includes(window.currentSelectedRoleName)) { textToCopy += `- ${s.title}\n`; foundScenarios = true; }});
-            if(!foundScenarios) textToCopy += `無\n`;
-
-            navigator.clipboard.writeText(textToCopy).then(() => window.showToast('已成功複製派工單！')).catch(() => window.showToast('⚠️ 複製失敗', true));
-        }
-
-        window.copyKQLData = function() {
-            const codeBlock = document.getElementById('detection-logic-code');
-            if (codeBlock && codeBlock.textContent) { navigator.clipboard.writeText(codeBlock.textContent.trim()).then(() => window.showToast('✅ KQL 語法已複製！')).catch(() => window.showToast('⚠️ 複製失敗', true)); }
-        }
-
-        window.copyAttackSim = function() {
-            const cmd = document.getElementById('attack-sim-command').textContent;
-            navigator.clipboard.writeText(cmd.trim()).then(() => window.showToast('✅ 模擬測試指令已複製！')).catch(() => window.showToast('⚠️ 複製失敗', true));
-        }
-
-        // ==========================================
-        // 模組：情境進階設定與手動/AI 修復
-        // ==========================================
-        window.openEditScenarioModal = function() {
-            window.syncCustomRoles(); // 🌟 確保每次打開設定時都抓到最新資產角色
-            
-            const scenario = scenarios.find(s => s.id === window.currentSelectedScenarioId); if (!scenario) return;
-            const container = document.getElementById('edit-scope-checkboxes'); container.innerHTML = '';
-            rolesDef.forEach(group => {
-                if (group.roles.length === 0) return; // 🌟 略過空群組
-                
-                let groupHtml = `<div class="mb-5"><h4 class="font-bold text-xs text-indigo-500 uppercase mb-2 border-b pb-1">${group.group}</h4><div class="grid grid-cols-1 sm:grid-cols-2 gap-2">`;
-                group.roles.forEach(role => {
-                    const isChecked = scenario.scope.includes(role) ? 'checked' : '';
-                    groupHtml += `<label class="flex items-center space-x-2 text-sm cursor-pointer p-2 hover:bg-slate-50 rounded border border-transparent hover:border-slate-200 transition-colors"><input type="checkbox" value="${role}" class="scope-checkbox rounded text-indigo-600 focus:ring-indigo-500 w-4 h-4" ${isChecked}><span class="text-slate-700">${role}</span></label>`;
-                });
-                groupHtml += `</div></div>`; container.innerHTML += groupHtml;
-            });
-            
-            const fiveMContainer = document.getElementById('edit-fivem-checkboxes'); fiveMContainer.innerHTML = '';
-            fiveMDef.forEach(m => {
-                const isChecked = (scenario.fiveM && scenario.fiveM.includes(m.id)) ? 'checked' : '';
-                fiveMContainer.innerHTML += `<label class="flex items-center space-x-2 text-sm cursor-pointer p-2 hover:bg-slate-50 rounded border border-slate-100 hover:border-slate-300 transition-colors w-full"><input type="checkbox" value="${m.id}" class="fivem-checkbox rounded text-pink-600 focus:ring-pink-500 w-4 h-4" ${isChecked}><span class="text-slate-700 font-medium w-24">${m.name}</span><span class="text-xs text-slate-400 truncate">${m.desc}</span></label>`;
-            });
-
-            // 🌟 新增：將 NIST CSF 勾選狀態加入 Modal，讓管理員可以手動微調
-            const csfContainer = document.getElementById('edit-csf-checkboxes'); 
-            if (csfContainer) {
-                csfContainer.innerHTML = '';
-                const safeCsf = (scenario.csf || []).map(c => c.toLowerCase());
-                csfFunctions.forEach(c => {
-                    const isChecked = safeCsf.includes(c.id.toLowerCase()) ? 'checked' : '';
-                    csfContainer.innerHTML += `<label class="flex items-center space-x-2 text-sm cursor-pointer p-2 hover:bg-slate-50 rounded border border-slate-100 hover:border-slate-300 transition-colors w-full"><input type="checkbox" value="${c.id}" class="csf-checkbox rounded text-emerald-600 focus:ring-emerald-500 w-4 h-4" ${isChecked}><span class="text-slate-700 font-medium">${c.name.split(' ')[0]}</span></label>`;
-                });
-            }
-
-            document.getElementById('edit-scenario-shortname').value = scenario.shortName || '';
-            document.getElementById('edit-scenario-logs').value = scenario.logs.join('\n');
-            document.getElementById('edit-scenario-strategy').value = scenario.detectionStrategy || '';
-            document.getElementById('edit-scenario-kql').value = scenario.detectionLogic || '';
-            document.getElementById('edit-scenario-notes').value = scenario.notes;
-
-            const modal = document.getElementById('edit-scenario-modal'); modal.classList.remove('hidden'); modal.children[0].classList.add('modal-enter');
-            requestAnimationFrame(() => { modal.children[0].classList.add('modal-enter-active'); modal.children[0].classList.remove('modal-enter'); });
-            if (typeof lucide !== 'undefined') lucide.createIcons();
-        }
-
-        window.closeEditScenarioModal = function() { document.getElementById('edit-scenario-modal').classList.add('hidden'); }
-
-        window.saveScenarioSettings = async function() {
-            const scenario = scenarios.find(s => s.id === window.currentSelectedScenarioId); if (!scenario) return;
-            const checkboxes = document.querySelectorAll('.scope-checkbox'); const newScope = [];
-            checkboxes.forEach(cb => { if (cb.checked) newScope.push(cb.value); });
-            if (newScope.length === 0) return window.showToast("⚠️ 情境至少需要包含一個系統角色！", true);
-            
-            const fivemCheckboxes = document.querySelectorAll('.fivem-checkbox'); const newFiveM = [];
-            fivemCheckboxes.forEach(cb => { if (cb.checked) newFiveM.push(cb.value); });
-
-            // 🌟 新增：儲存 NIST CSF 更新
-            const csfCheckboxes = document.querySelectorAll('.csf-checkbox'); const newCsf = [];
-            csfCheckboxes.forEach(cb => { if (cb.checked) newCsf.push(cb.value); });
-
-            const newShortName = document.getElementById('edit-scenario-shortname').value.trim();
-            const logsText = document.getElementById('edit-scenario-logs').value;
-            const newLogs = logsText.split('\n').map(l => l.trim()).filter(l => l);
-            const newStrategy = document.getElementById('edit-scenario-strategy').value.trim();
-            const newKql = document.getElementById('edit-scenario-kql').value.trim();
-            const newNotes = document.getElementById('edit-scenario-notes').value;
-
-            scenario.shortName = newShortName; scenario.scope = newScope; scenario.fiveM = newFiveM; scenario.csf = newCsf; scenario.logs = newLogs; scenario.detectionStrategy = newStrategy; scenario.detectionLogic = newKql; scenario.notes = newNotes;
-            
-            if (window.db && window.fs && scenario.docId) {
-                try {
-                    await window.fs.updateDoc(window.fs.doc(window.db, "scenarios", scenario.docId), {
-                        shortName: newShortName, scope: newScope, fiveM: newFiveM, csf: newCsf, logs: newLogs, detectionStrategy: newStrategy, detectionLogic: newKql, notes: newNotes
-                    });
-                } catch(e) { console.error(e); }
-            }
-
-            window.selectScenario(window.currentSelectedScenarioId); window.closeEditScenarioModal(); window.showToast("✅ 情境設定與日誌已同步至雲端庫！");
-        }
-
-        window.aiAutoFillLogs = async function(event) {
-            const btnElement = event.currentTarget;
-            const checkboxes = document.querySelectorAll('.scope-checkbox'); 
-            const currentScope = Array.from(checkboxes).filter(cb => cb.checked).map(cb => cb.value);
-            const currentLogs = document.getElementById('edit-scenario-logs').value.trim();
-            const title = document.getElementById('detail-title').textContent;
-            
-            if(currentScope.length === 0) return window.showToast("⚠️ 請先在左側勾選涵蓋的系統角色！", true);
-            
-            btnElement.innerHTML = `<i data-lucide="loader-2" class="w-3 h-3 mr-1 animate-spin"></i> 正在分析並生成...`; btnElement.disabled = true;
-
-            const systemInstruction = `你是一位擁有 CISSP 與 SOC 實戰經驗的頂尖 SIEM 架構專家。請使用極度專業的資安術語（如：TTPs、Lateral Movement、Exfiltration）。我們正在設定「${title}」這個監控情境。
-            目前涵蓋的系統角色有：[${currentScope.join(', ')}]。
-            請檢視現有的日誌清單，如果發現有角色缺少專屬的日誌規範，請幫忙補充 1~2 條精準的日誌需求。
-            規則：
-            1. 每一條日誌都必須以 "[角色名稱] 日誌描述" 的格式呈現。
-            2. 回傳完整的陣列，包含原本好的，加上新補充的。
-            3. 同時請撰寫一段白話文的「實際偵測與判斷邏輯」(detectionStrategy)。
-            4. 請撰寫對應的 ELK KQL 邏輯 (kqlLogic)。`;
-
-            const schema = { type: "OBJECT", properties: { updatedLogs: { type: "ARRAY", items: { type: "STRING" } }, detectionStrategy: { type: "STRING" }, kqlLogic: { type: "STRING" } } };
-            const payload = { contents: [{ parts: [{ text: `現有日誌：\n${currentLogs || '無'}` }] }], systemInstruction: { parts: [{ text: systemInstruction }] }, generationConfig: { responseMimeType: "application/json", responseSchema: schema } };
-            const url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=" + window.apiKey;
-
-            try {
-                const result = await fetchWithRetry(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-                const textResp = result.candidates?.[0]?.content?.parts?.[0]?.text; let data = JSON.parse(textResp);
-                
-                document.getElementById('edit-scenario-logs').value = data.updatedLogs.join('\n');
-                if(data.detectionStrategy) document.getElementById('edit-scenario-strategy').value = data.detectionStrategy;
-                if(data.kqlLogic) document.getElementById('edit-scenario-kql').value = data.kqlLogic;
-                
-                btnElement.innerHTML = `<i data-lucide="check" class="w-3 h-3 mr-1"></i> AI 補齊成功`; btnElement.classList.replace('text-indigo-600', 'text-green-600'); btnElement.classList.replace('bg-indigo-50', 'bg-green-50'); window.showToast("✨ AI 已為您補齊對應設備的日誌與判斷邏輯！");
-            } catch (e) {
-                window.showToast("⚠️ AI 生成失敗，請稍後再試。", true); btnElement.innerHTML = `<i data-lucide="sparkles" class="w-3 h-3 mr-1"></i> AI 智慧補齊缺失日誌`;
-            } finally {
-                setTimeout(() => { btnElement.innerHTML = `<i data-lucide="sparkles" class="w-3 h-3 mr-1"></i> AI 智慧補齊缺失日誌`; btnElement.classList.replace('text-green-600', 'text-indigo-600'); btnElement.classList.replace('bg-green-50', 'bg-indigo-50'); btnElement.disabled = false; if (typeof lucide !== 'undefined') lucide.createIcons(); }, 3000);
-            }
-        }
-
-        // ==========================================
-        // 模組：AI 紫隊攻擊模擬與 KQL 解析
-        // ==========================================
-        window.openAttackSimModal = function() {
-            const scenario = scenarios.find(s => s.id === window.currentSelectedScenarioId); if (!scenario) return;
-            document.getElementById('attack-sim-loading').classList.remove('hidden'); document.getElementById('attack-sim-loading').classList.add('flex');
-            document.getElementById('attack-sim-content').classList.add('hidden'); document.getElementById('attack-sim-content').classList.remove('flex');
-            const modal = document.getElementById('attack-sim-modal'); modal.classList.remove('hidden'); modal.children[0].classList.add('modal-enter');
-            requestAnimationFrame(() => { modal.children[0].classList.add('modal-enter-active'); modal.children[0].classList.remove('modal-enter'); });
-            generateAttackSimWithAI(scenario);
-        }
-
-        window.closeAttackSimModal = function() { document.getElementById('attack-sim-modal').classList.add('hidden'); }
-
-        // 🌟 新增：AI 自動撰寫 Playbook (防禦與應變指南)
-        window.generatePlaybookWithAI = async function() {
-            const scenario = scenarios.find(s => s.id === window.currentSelectedScenarioId);
-            if (!scenario) return;
-
-            const btn = document.getElementById('btn-generate-playbook');
-            const originalHtml = btn.innerHTML;
-            btn.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 mr-1 animate-spin"></i> 撰寫中...`;
-            btn.disabled = true;
-
-            const systemInstruction = `你是一位資深的 SOC 經理與資安事件應變 (IR) 專家。請根據這個 SIEM 監控情境，提供具體且具備實戰價值的防禦與應變指南。使用專業的繁體中文資安術語。`;
-            const userPrompt = `情境名稱：${scenario.title}\n情境說明：${scenario.desc}\n偵測邏輯：${scenario.detectionStrategy}\n請為我提供 3~4 點「事前防禦建議 (Mitigation)」以及 3~4 點「事發應變處置 (Incident Response)」的具體執行步驟。`;
-            
-            const schema = { 
-                type: "OBJECT", 
-                properties: { 
-                    mitigation: { type: "ARRAY", items: { type: "STRING" } }, 
-                    response: { type: "ARRAY", items: { type: "STRING" } } 
-                }, 
-                required: ["mitigation", "response"] 
-            };
-            
-            const payload = { contents: [{ parts: [{ text: userPrompt }] }], systemInstruction: { parts: [{ text: systemInstruction }] }, generationConfig: { responseMimeType: "application/json", responseSchema: schema } };
-            const url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=" + window.apiKey;
-
-            try {
-                const result = await fetchWithRetry(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-                const textResp = result.candidates?.[0]?.content?.parts?.[0]?.text;
-                if (!textResp) throw new Error("無效的回傳");
-                const data = JSON.parse(textResp);
-
-                // 更新情境資料
-                scenario.mitigation = data.mitigation;
-                scenario.response = data.response;
-
-                // 同步至 Firebase
-                if (window.db && window.fs && scenario.docId) {
-                    await window.fs.updateDoc(window.fs.doc(window.db, "scenarios", scenario.docId), {
-                        mitigation: scenario.mitigation,
-                        response: scenario.response
-                    });
-                }
-
-                window.showToast("✨ AI 已成功為您建立防禦與應變指南 (Playbook)！");
-                window.selectScenario(scenario.id); // 重新渲染畫面以顯示成果
-            } catch (error) {
-                console.error("Playbook 生成失敗:", error);
-                window.showToast("⚠️ AI 生成指南失敗，請稍後再試。", true);
-            } finally {
-                btn.innerHTML = originalHtml;
-                btn.disabled = false;
-                if (typeof lucide !== 'undefined') lucide.createIcons();
-            }
-        }
-
-        async function generateAttackSimWithAI(scenario) {
-            const systemInstruction = `你是一位 Red Team 攻擊模擬專家。請根據提供的 SIEM 監控情境，撰寫一個可以在測試環境中安全執行的終端機指令（如 PowerShell, Bash），用以觸發該告警。請確保指令是安全、無實際破壞性的模擬測試指令。`;
-            const userPrompt = `情境標題：${scenario.title}\n偵測邏輯：${scenario.detectionStrategy}\nKQL 語法：${scenario.detectionLogic}`;
-            const schema = { type: "OBJECT", properties: { command: { type: "STRING" }, explanation: { type: "STRING" } }, required: ["command", "explanation"] };
-            const payload = { contents: [{ parts: [{ text: userPrompt }] }], systemInstruction: { parts: [{ text: systemInstruction }] }, generationConfig: { responseMimeType: "application/json", responseSchema: schema } };
-            const url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=" + window.apiKey;
-
-            try {
-                const result = await fetchWithRetry(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-                const textResp = result.candidates?.[0]?.content?.parts?.[0]?.text; if (!textResp) throw new Error("無效的回傳");
-                const data = JSON.parse(textResp);
-                document.getElementById('attack-sim-command').textContent = data.command; document.getElementById('attack-sim-explanation').textContent = data.explanation;
-                document.getElementById('attack-sim-loading').classList.add('hidden'); document.getElementById('attack-sim-loading').classList.remove('flex');
-                document.getElementById('attack-sim-content').classList.remove('hidden'); document.getElementById('attack-sim-content').classList.add('flex');
-            } catch (error) {
-                console.error("生成攻擊模擬失敗:", error); window.showToast("⚠️ 生成攻擊模擬指令失敗，請稍後再試。", true); window.closeAttackSimModal();
-            }
-        }
-
-        window.aiExplainKQL = async function() {
-            const scenario = scenarios.find(s => s.id === window.currentSelectedScenarioId);
-            if (!scenario || !scenario.detectionLogic) return window.showToast("⚠️ 此情境尚未設定 KQL 語法。", true);
-
-            const btn = document.getElementById('ai-explain-kql-btn'); const originalContent = btn.innerHTML;
-            btn.innerHTML = `<i data-lucide="loader-2" class="w-3 h-3 mr-1 animate-spin"></i> 解析轉換中...`; btn.disabled = true;
-            const resultContainer = document.getElementById('ai-kql-result'); resultContainer.classList.add('hidden');
-
-            const systemInstruction = `你是一位資安 SIEM 專家。請解析使用者提供的 ELK KQL 語法。`;
-            const userPrompt = `請用白話文解釋以下 KQL 語法的運作邏輯，並提供一個對應的 Splunk SPL 等效語法範例：\n${scenario.detectionLogic}`;
-            const schema = { type: "OBJECT", properties: { explanation: { type: "STRING" }, splunkSPL: { type: "STRING" } }, required: ["explanation", "splunkSPL"] };
-            const payload = { contents: [{ parts: [{ text: userPrompt }] }], systemInstruction: { parts: [{ text: systemInstruction }] }, generationConfig: { responseMimeType: "application/json", responseSchema: schema } };
-            const url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=" + window.apiKey;
-
-            try {
-                const result = await fetchWithRetry(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-                const textResp = result.candidates?.[0]?.content?.parts?.[0]?.text; if (!textResp) throw new Error("無效的回傳");
-                const data = JSON.parse(textResp);
-                document.getElementById('ai-kql-explanation').textContent = data.explanation; document.getElementById('ai-kql-splunk').textContent = data.splunkSPL;
-                resultContainer.classList.remove('hidden'); window.showToast("✨ AI 已成功解析與轉換 KQL 語法！");
-            } catch (error) {
-                console.error("KQL 解析失敗:", error); window.showToast("⚠️ 解析 KQL 失敗，請稍後再試。", true);
-            } finally {
-                btn.innerHTML = originalContent; btn.disabled = false; if (typeof lucide !== 'undefined') lucide.createIcons();
-            }
-        }
-
-        // ==========================================
-        // 模組：AI 智慧生成全新情境與資產分析
-        // ==========================================
-        window.openAIModal = function() {
-            document.getElementById('ai-threat-direction').value = 'auto'; document.getElementById('ai-risk-level').value = 'auto'; document.getElementById('ai-prompt').value = ''; document.getElementById('ai-loading').classList.add('hidden');
-            document.getElementById('ai-submit-btn').disabled = false; document.getElementById('ai-cancel-btn').disabled = false; document.getElementById('ai-close-btn').disabled = false;
-            const modal = document.getElementById('ai-modal'); modal.classList.remove('hidden'); modal.children[0].classList.add('modal-enter');
-            requestAnimationFrame(() => { modal.children[0].classList.add('modal-enter-active'); modal.children[0].classList.remove('modal-enter'); });
-        }
-        
-        window.closeAIModal = function() { document.getElementById('ai-modal').classList.add('hidden'); }
-
-        window.generateAIScenario = async function() {
-            const directionSelect = document.getElementById('ai-threat-direction'); const selectedDirectionValue = directionSelect.value; const selectedDirectionName = directionSelect.options[directionSelect.selectedIndex].text;
-            const riskSelect = document.getElementById('ai-risk-level'); const selectedRiskValue = riskSelect.value;
-            const promptInput = document.getElementById('ai-prompt').value.trim(); 
-            
-            document.getElementById('ai-loading').classList.remove('hidden'); document.getElementById('ai-submit-btn').disabled = true; document.getElementById('ai-cancel-btn').disabled = true;
-            
-            const validCategoryIds = categoriesDef.map(c => c.id).join(', '); 
-            const flatRoles = rolesDef.flatMap(g => g.roles); 
-            const existingTitles = scenarios.map(s => s.title).join('、');
-
-            // 🌟 新增：明確盤點使用者目前「真正擁有的資產角色」，包含所有自訂新增項目
-            const activeRoles = [...new Set(assets.map(a => a.role))];
-            const activeRolesStr = activeRoles.length > 0 ? activeRoles.join(', ') : '目前尚無註冊資產';
-
-            let userPrompt = (selectedDirectionValue === 'auto' || selectedDirectionValue === 'random') ? `請為我生成一個全新 SIEM 監控情境。` : `請為我生成一個屬於「${selectedDirectionName}」分類的全新 SIEM 監控情境。`;
-            
-            if (selectedRiskValue === 'red') {
-                userPrompt += `\n\n【強制條件】：請將此情境設計為嚴重資安事件，符合「🔴 紅燈A級：確定的入侵行為、勒索病毒、核心資料受威脅」。\n應變要求：請將風險等級(risk)設為「極高 (Critical)」，riskColor設為「bg-red-600」，並務必在 notes (技術備註) 欄位中顯眼處註明：「【應變 SLA】：🔴 紅燈A級，需立即調查，請動On-Call機制」。`;
-            } else if (selectedRiskValue === 'yellow') {
-                userPrompt += `\n\n【強制條件】：請將此情境設計為潛在威脅，符合「🟡 黃燈B級：可疑行為，需人工判斷或驗證」。\n應變要求：請將風險等級(risk)設為「中 (Medium)」或「高 (High)」，riskColor設為「bg-yellow-500」或「bg-orange-500」，並務必在 notes (技術備註) 欄位中顯眼處註明：「【應變 SLA】：🟡 黃燈B級，上班時間工單處理」。`;
-            } else if (selectedRiskValue === 'green') {
-                userPrompt += `\n\n【強制條件】：請將此情境設計為營運觀察，符合「🟢 綠燈C級：低風險異常，用於趨勢分析」。\n應變要求：請將風險等級(risk)設為「低 (Low)」，riskColor設為「bg-green-500」，並務必在 notes (技術備註) 欄位中顯眼處註明：「【應變 SLA】：🟢 綠燈C級，週報/儀錶板檢查」。`;
-            }
-
-            if (promptInput) userPrompt += `\n\n使用者的特別要求/補充說明：${promptInput}`;
-
-            const systemInstruction = `你是一位擁有 CISSP 與 SOC 實戰經驗的頂尖 SIEM 架構專家。請生成一個符合 MITRE ATT&CK 框架的 SIEM 資安監控情境 JSON 資料。請盡量使用極度專業的資安術語（如：TTPs、Lateral Movement、Exfiltration）。
-            【嚴格去重複要求】：目前系統中已經有以下情境：[${existingTitles}]。請務必構思一個「完全不同」且「具備實戰價值」的新情境！
-            規則：
-            1. categoryId: 從以下範圍挑選最適合的分類 ID：[${validCategoryIds}]。
-            2. csf: 只能從 [govern, identify, protect, detect, respond, recover] 中選擇。
-            3. scope: 【強烈要求】請絕對優先使用使用者「目前已註冊的真實資產角色：[${activeRolesStr}]」來設計防禦與偵測！如果現有設備真的無法偵測，才從備用字典庫 [${flatRoles.join(', ')}] 挑選或自創。
-            4. logs: 必須具體說明 Event ID 或 Log 種類。重要：請務必在每個 Log 的開頭加上 [RoleName] 標籤！
-            5. csfExplanations: 針對你選擇的每一個 csf 核心功能，提供一句話的具體說明。
-            6. detectionStrategy: 撰寫一段白話文的具體偵測與判斷邏輯說明。
-            7. detectionLogic: 撰寫一段對應的 ELK KQL 語法。
-            8. fiveM: 從資安管理角度標示此情境屬於「人機料法環」的哪些層面，使用代碼陣列。可用代碼：['man', 'machine', 'material', 'method', 'environment']。
-            9. riskColor: 請務必提供 tailwind CSS 的顏色類別，例如極高風險使用 "bg-red-600"，高風險使用 "bg-orange-500"，中風險使用 "bg-yellow-500"。
-            10. shortName: 請為此情境提供一個「簡短的繁體中文標籤」(約 4~10 個字)，方便在側邊欄顯示。`;
-
-            const schema = { 
-                type: "OBJECT", 
-                properties: { 
-                    categoryId: { type: "STRING" }, title: { type: "STRING" }, shortName: { type: "STRING" }, desc: { type: "STRING" }, risk: { type: "STRING" }, riskColor: { type: "STRING" }, 
-                    csf: { type: "ARRAY", items: { type: "STRING" } }, csfExplanations: { type: "OBJECT" }, 
-                    fiveM: { type: "ARRAY", items: { type: "STRING" } }, 
-                    scope: { type: "ARRAY", items: { type: "STRING" } }, logs: { type: "ARRAY", items: { type: "STRING" } }, 
-                    detectionStrategy: { type: "STRING" }, detectionLogic: { type: "STRING" }, notes: { type: "STRING" } 
-                }, 
-                required: ["categoryId", "title", "shortName", "desc", "risk", "riskColor", "csf", "csfExplanations", "fiveM", "scope", "logs", "detectionStrategy", "detectionLogic", "notes"] 
-            };
-            
-            const payload = { contents: [{ parts: [{ text: userPrompt }] }], systemInstruction: { parts: [{ text: systemInstruction }] }, generationConfig: { responseMimeType: "application/json", responseSchema: schema } };
-            const url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=" + window.apiKey;
-
-            try {
-                const result = await fetchWithRetry(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-                const textResp = result.candidates?.[0]?.content?.parts?.[0]?.text; if (!textResp) throw new Error("無效的回傳");
-                let newScenarioData = JSON.parse(textResp);
-                
-                if (selectedDirectionValue !== 'random' && selectedDirectionValue !== 'auto') { newScenarioData.categoryId = selectedDirectionValue; } 
-                else if (!categoriesDef.find(c => c.id === newScenarioData.categoryId)) { newScenarioData.categoryId = 'uncategorized'; }
-
-                if (Array.isArray(newScenarioData.scope)) {
-                    let customGroup = rolesDef.find(g => g.group === '自訂新增 (Custom)');
-                    if (!customGroup) { customGroup = { group: '自訂新增 (Custom)', roles: [] }; rolesDef.push(customGroup); }
-                    const allRoles = rolesDef.flatMap(g => g.roles);
-                    newScenarioData.scope.forEach(role => { if (!allRoles.includes(role)) customGroup.roles.push(role); });
-                }
-                const newId = 's_ai_' + Date.now(); 
-                const newScenario = { id: newId, ...newScenarioData };
-                
-                if(window.db && window.fs) {
-                    try {
-                        const docRef = await window.fs.addDoc(window.fs.collection(window.db, "scenarios"), newScenario);
-                        newScenario.docId = docRef.id;
-                    } catch(e) { console.error(e); }
-                }
-                scenarios.push(newScenario);
-                
-                window.initRoleDropdown(); renderScenarioButtons(); renderRoleButtons(); 
-                if(window.currentViewMode !== 'scenario') window.switchView('scenario');
-                window.selectScenario(newId); window.closeAIModal(); window.showToast("🎉 AI 已成功為您生成並將新情境同步至雲端庫！");
-            } catch (error) {
-                console.error("生成失敗:", error); window.showToast("⚠️ 生成失敗，請檢查網路狀態或稍後再試。", true);
-            } finally {
-                document.getElementById('ai-loading').classList.add('hidden'); document.getElementById('ai-submit-btn').disabled = false; document.getElementById('ai-cancel-btn').disabled = false;
-            }
-        }
-
-        window.fillAIPrompt = function(text) { document.getElementById('ai-prompt').value = text; document.getElementById('ai-prompt').focus(); }
-        window.generateRandomAIScenario = function() { 
-            document.getElementById('ai-threat-direction').value = 'random';
-            window.fillAIPrompt("請身為頂尖的 SIEM 架構專家，幫我隨機發想一個目前企業最需要、最前沿的『新興資安威脅監控情境』。並自動將其歸類到最適合的威脅分類中。"); 
-            window.generateAIScenario(); 
-        }
-
-        window.deleteScenario = function(id) {
-            const scenario = scenarios.find(s => s.id === id); 
-            if (!scenario) return; 
-            window.scenarioToDelete = id;
-            window.assetToDelete = null; // 重置資產刪除狀態
-            document.getElementById('delete-confirm-msg').textContent = `確定要刪除「${scenario.title}」這個情境嗎？(刪除後無法復原)`;
-            const modal = document.getElementById('delete-confirm-modal'); 
-            modal.classList.remove('hidden'); 
-            modal.children[0].classList.add('modal-enter');
-            requestAnimationFrame(() => { modal.children[0].classList.add('modal-enter-active'); modal.children[0].classList.remove('modal-enter'); });
-        }
-
-        window.closeDeleteModal = function() { 
-            document.getElementById('delete-confirm-modal').classList.add('hidden'); 
-            window.scenarioToDelete = null; 
-            window.assetToDelete = null; 
-        }
-
-        // 🌟 新增：依據現有資產重新最佳化情境
-        window.optimizeScenarioWithAI = async function() {
-            const scenario = scenarios.find(s => s.id === window.currentSelectedScenarioId);
-            if (!scenario) return;
-
-            const activeRoles = [...new Set(assets.map(a => a.role))];
-            if (activeRoles.length === 0) {
-                return window.showToast("⚠️ 目前尚無註冊任何實體資產，無法進行最佳化連動！", true);
-            }
-
-            const btn = document.getElementById('optimize-scenario-btn');
-            const originalHtml = btn.innerHTML;
-            btn.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 mr-1 animate-spin"></i> 最佳化重構中...`;
-            btn.disabled = true;
-
-            const systemInstruction = `你是一位頂尖的 SIEM 架構專家。使用者希望根據「他們目前實際擁有的 IT 資產角色」來重新最佳化一個現有的資安監控情境。
-            【強制規則】：
-            1. scope: 嚴格將防禦範圍替換或篩選為使用者「目前擁有的資產角色」。如果必須用到他們沒有的設備種類，請保留該設備名稱，但在 notes 裡強烈建議採購。
-            2. logs: 針對更新後的 scope，刪除舊設備的日誌，並提供現有設備精確的日誌收集清單 (格式務必為: [RoleName] Event/Log 說明)。
-            3. detectionStrategy & detectionLogic: 依據新的 scope 設備與日誌，重新撰寫偵測邏輯與 ELK KQL 語法。
-            4. notes: 詳細說明這次最佳化根據現有資產做了哪些調整。`;
-
-            const userPrompt = `【情境標題】：${scenario.title}
-            【情境描述】：${scenario.desc}
-            【舊的防禦範圍】：${scenario.scope.join(', ')}
-            
-            【我目前真正擁有的資產角色清單】：${activeRoles.join(', ')}
-            
-            請幫我把這個情境的防禦範圍 (scope)、日誌 (logs)、偵測邏輯 (KQL) 全部改寫，讓它完美契合我「現有的設備」！`;
-
-            const schema = { 
-                type: "OBJECT", 
-                properties: { 
-                    scope: { type: "ARRAY", items: { type: "STRING" } }, 
-                    logs: { type: "ARRAY", items: { type: "STRING" } }, 
-                    detectionStrategy: { type: "STRING" }, 
-                    detectionLogic: { type: "STRING" }, 
-                    notes: { type: "STRING" } 
-                }, 
-                required: ["scope", "logs", "detectionStrategy", "detectionLogic", "notes"] 
-            };
-
-            const payload = { contents: [{ parts: [{ text: userPrompt }] }], systemInstruction: { parts: [{ text: systemInstruction }] }, generationConfig: { responseMimeType: "application/json", responseSchema: schema } };
-            const url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=" + window.apiKey;
-
-            try {
-                const result = await fetchWithRetry(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-                const textResp = result.candidates?.[0]?.content?.parts?.[0]?.text;
-                if (!textResp) throw new Error("無效的回傳");
-                const data = JSON.parse(textResp);
-
-                // 更新情境資料
-                scenario.scope = data.scope;
-                scenario.logs = data.logs;
-                scenario.detectionStrategy = data.detectionStrategy;
-                scenario.detectionLogic = data.detectionLogic;
-                scenario.notes = data.notes;
-
-                // 防呆：同步可能出現的自訂角色
-                let customGroup = rolesDef.find(g => g.group === '自訂新增 (Custom)');
-                if (!customGroup) { customGroup = { group: '自訂新增 (Custom)', roles: [] }; rolesDef.push(customGroup); }
-                const allRoles = rolesDef.flatMap(g => g.roles);
-                scenario.scope.forEach(role => { if (!allRoles.includes(role)) customGroup.roles.push(role); });
-                window.initRoleDropdown();
-                renderRoleButtons();
-
-                // 同步至 Firebase
-                if (window.db && window.fs && scenario.docId) {
-                    await window.fs.updateDoc(window.fs.doc(window.db, "scenarios", scenario.docId), {
-                        scope: scenario.scope,
-                        logs: scenario.logs,
-                        detectionStrategy: scenario.detectionStrategy,
-                        detectionLogic: scenario.detectionLogic,
-                        notes: scenario.notes
-                    });
-                }
-
-                window.showToast("✨ AI 已成功依據您現有的資產重新最佳化此情境！");
-                window.selectScenario(scenario.id); // 重新渲染畫面
-            } catch (error) {
-                console.error("最佳化失敗:", error);
-                window.showToast("⚠️ AI 最佳化失敗，請稍後再試。", true);
-            } finally {
-                btn.innerHTML = originalHtml;
-                btn.disabled = false;
-                if (typeof lucide !== 'undefined') lucide.createIcons();
-            }
-        }
-
-        window.executeDelete = async function() {
-            if (window.scenarioToDelete) {
-                const target = scenarios.find(s => s.id === window.scenarioToDelete);
-                // 嘗試從 Firebase 刪除
-                if (window.db && window.fs && target && target.docId) {
-                    try { 
-                        await window.fs.deleteDoc(window.fs.doc(window.db, "scenarios", target.docId)); 
-                    } catch(e) { 
-                        console.warn(e); 
-                        if (e.message && e.message.toLowerCase().includes('permission')) {
-                            document.getElementById('firebase-rule-modal').classList.remove('hidden');
-                            window.closeDeleteModal();
-                            return; // 如果 Firebase 拒絕，停止本地刪除以確保資料一致性
-                        }
-                    }
-                }
-                
-                scenarios = scenarios.filter(s => s.id !== window.scenarioToDelete); 
-                renderScenarioButtons();
-                
-                if (scenarios.length > 0) { 
-                    window.selectScenario(scenarios[0].id); 
-                } else { 
-                    clearDetailView(); 
-                }
-                
-                if (window.currentSelectedRoleName) window.selectRole(window.currentSelectedRoleName); 
-                
-                window.closeDeleteModal(); 
-                window.showToast('🗑️ 已成功刪除情境');
-            } else if (window.assetToDelete) {
-                const target = assets.find(a => a.id === window.assetToDelete);
-                // 嘗試從 Firebase 刪除
-                if (window.db && window.fs && target && target.docId) {
-                    try { 
-                        await window.fs.deleteDoc(window.fs.doc(window.db, "assets", target.docId)); 
-                    } catch(e) { 
-                        console.warn(e);
-                        if (e.message && e.message.toLowerCase().includes('permission')) {
-                            document.getElementById('firebase-rule-modal').classList.remove('hidden');
-                            window.closeDeleteModal();
-                            return; 
-                        }
-                    }
-                }
-                assets = assets.filter(a => a.id !== window.assetToDelete);
-                renderAssetTable();
-                renderRoleButtons();
-                if (window.currentViewMode === 'scenario' && window.currentSelectedScenarioId) window.selectScenario(window.currentSelectedScenarioId);
-                
-                window.closeDeleteModal(); 
-                window.showToast('🗑️ 已成功刪除實體資產');
-            }
-        }
-
-        // 🌟 修正：確保函式區塊正確關閉並重置所有 UI 狀態
-        function clearDetailView() {
-            const detailTitle = document.getElementById('detail-title');
-            if (detailTitle) detailTitle.textContent = '尚無情境資料'; 
-            const detailDesc = document.getElementById('detail-desc');
-            if (detailDesc) detailDesc.textContent = '請從左側點擊「AI 輔助生成新情境」來新增。';
-            
-            const riskBadge = document.getElementById('risk-badge');
-            if (riskBadge) riskBadge.className = 'hidden'; 
-            const catBadge = document.getElementById('category-badge');
-            if (catBadge) catBadge.className = 'hidden';
-            
-            // 隱藏所有操作按鈕
-            const optimizeBtn = document.getElementById('optimize-scenario-btn'); if(optimizeBtn) optimizeBtn.classList.add('hidden');
-            const deleteBtn = document.getElementById('delete-scenario-btn'); if(deleteBtn) deleteBtn.classList.add('hidden'); 
-            const editBtn = document.getElementById('edit-scenario-btn'); if(editBtn) editBtn.classList.add('hidden'); 
-            const attackSimBtn = document.getElementById('attack-sim-btn'); if(attackSimBtn) attackSimBtn.classList.add('hidden'); 
-            
-            const heroIcon = document.getElementById('detail-hero-icon');
-            if (heroIcon) heroIcon.innerHTML = '';
-            
-            const csfExpContainer = document.getElementById('csf-explanations-container');
-            if (csfExpContainer) csfExpContainer.innerHTML = ''; 
-            const detLogicContainer = document.getElementById('detection-logic-container');
-            if (detLogicContainer) detLogicContainer.classList.add('hidden');
-            
-            const badgesContainer = document.getElementById('scenario-badges-container');
-            if (badgesContainer) badgesContainer.innerHTML = '<span id="risk-badge" class="hidden"></span><span id="category-badge" class="hidden"></span>';
-            
-            csfFunctions.forEach(csf => { 
-                const node = document.getElementById(`csf-node-${csf.id}`); 
-                if (node) { 
-                    node.className = `csf-node flex flex-col items-center p-4 rounded-xl border-2 bg-slate-50 border-slate-200 text-slate-400 opacity-50`; 
-                    const div = node.querySelector('div');
-                    if(div) div.className = `p-3 rounded-full mb-2 bg-slate-200`; 
-                } 
-            });
-            
-            const executionTbody = document.getElementById('execution-tbody');
-            if (executionTbody) executionTbody.innerHTML = `<tr><td colspan="3" class="p-8 text-center text-slate-400 border-dashed border-2">請新增情境以顯示詳細計畫</td></tr>`; 
-            
-            const mappedAssetsContainer = document.getElementById('mapped-assets-container');
-            if (mappedAssetsContainer) mappedAssetsContainer.innerHTML = '';
-            
-            const playbookContent = document.getElementById('playbook-content'); 
-            if(playbookContent) playbookContent.innerHTML = '';
-        }
-
-        // ==========================================
-        // 資產管理模組 (Asset Management)
-        // ==========================================
-        window.initRoleDropdown = function() {
-            const select = document.getElementById('asset-role');
-            select.innerHTML = '<option value="" disabled selected>選擇伺服器/系統角色</option>';
-            rolesDef.forEach(group => {
-                const optgroup = document.createElement('optgroup');
-                optgroup.label = group.group;
-                group.roles.forEach(role => {
-                    optgroup.innerHTML += `<option value="${role}">${role}</option>`;
-                });
-                select.appendChild(optgroup);
-            });
-            select.innerHTML += `<option value="__custom__" class="font-bold text-indigo-600">➕ 新增自訂角色...</option>`;
-        }
-
-        window.toggleCustomRoleInput = function() {
-            const select = document.getElementById('asset-role');
-            const customInput = document.getElementById('custom-role-input');
-            if (select.value === '__custom__') {
-                customInput.classList.remove('hidden');
-                customInput.required = true;
-                customInput.focus();
-            } else {
-                customInput.classList.add('hidden');
-                customInput.required = false;
-            }
-        }
-
-        window.openAssetModal = function() {
-            window.editingAssetId = null;
-            renderAssetTable();
-            window.switchAssetMode('smart');
-            const modal = document.getElementById('asset-modal');
-            modal.classList.remove('hidden');
-            modal.children[0].classList.add('modal-enter');
-            requestAnimationFrame(() => {
-                modal.children[0].classList.add('modal-enter-active');
-                modal.children[0].classList.remove('modal-enter');
-            });
-        }
-
-        window.closeAssetModal = function() {
-            document.getElementById('asset-modal').classList.add('hidden');
-            window.editingAssetId = null;
-            if(window.currentViewMode === 'scenario' && window.currentSelectedScenarioId) window.selectScenario(window.currentSelectedScenarioId);
-            if(window.currentViewMode === 'system' && window.currentSelectedRoleName) window.selectRole(window.currentSelectedRoleName);
-        }
-
-        window.switchAssetMode = function(mode) {
-            document.getElementById('asset-tab-smart').className = mode === 'smart' ? 'tab-btn active px-4 py-2 text-sm font-medium transition-colors flex items-center text-indigo-700' : 'tab-btn px-4 py-2 text-sm font-medium text-slate-500 transition-colors flex items-center hover:bg-slate-50';
-            document.getElementById('asset-tab-manual').className = mode === 'manual' ? 'tab-btn active px-4 py-2 text-sm font-medium transition-colors flex items-center text-indigo-700' : 'tab-btn px-4 py-2 text-sm font-medium text-slate-500 transition-colors flex items-center hover:bg-slate-50';
-            document.getElementById('asset-mode-smart').style.display = mode === 'smart' ? 'block' : 'none';
-            document.getElementById('asset-mode-manual').style.display = mode === 'manual' ? 'block' : 'none';
-        }
-
-        window.aiSuggestRole = function() {
-            const box = document.getElementById('ai-role-search-box');
-            box.classList.toggle('hidden');
-            if(!box.classList.contains('hidden')) {
-                document.getElementById('ai-role-keyword').focus();
-            }
-        }
-
-        window.executeAiRoleSearch = async function() {
-            const keyword = document.getElementById('ai-role-keyword').value.trim();
-            if (!keyword) return window.showToast("⚠️ 請先輸入系統特徵或關鍵字！", true);
-
-            const btn = document.getElementById('ai-role-search-exec-btn');
-            const originalHtml = btn.innerHTML;
-            btn.innerHTML = `<i data-lucide="loader-2" class="w-3 h-3 animate-spin"></i>`;
-            btn.disabled = true;
-
-            const flatRoles = rolesDef.flatMap(g => g.roles);
-            const systemInstruction = `你是一位 SIEM 架構專家。使用者輸入了伺服器的特徵或關鍵字。
-            請執行兩項任務：
-            1. 從現有的「系統角色清單」中，挑選出最符合的 1 個角色名稱。如果現有清單中完全沒有合適的，請回傳一個你自創的精確角色名稱（例如：虛擬化主機 ESXi）。現有清單：[${flatRoles.join(', ')}]
-            2. 判斷這個設備屬於哪一個「資產大類」。請「必須」從以下選項中挑選最適合的一個：[伺服器, 網路設備, 應用程式, 軟體服務, 資料庫, 端點設備, 資安設備, 其他]。`;
-            
-            const schema = { type: "OBJECT", properties: { role: { type: "STRING" }, category: { type: "STRING" } }, required: ["role", "category"] };
-            const payload = { contents: [{ parts: [{ text: `關鍵字：${keyword}` }] }], systemInstruction: { parts: [{ text: systemInstruction }] }, generationConfig: { responseMimeType: "application/json", responseSchema: schema } };
-            const url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=" + window.apiKey;
-
-            try {
-                const result = await fetchWithRetry(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-                const textResp = result.candidates?.[0]?.content?.parts?.[0]?.text;
-                const data = JSON.parse(textResp);
-                const suggestedRole = data.role;
-                const suggestedCategory = data.category;
-
-                const select = document.getElementById('asset-role');
-                let optionExists = false;
-                for (let i = 0; i < select.options.length; i++) {
-                    if (select.options[i].value === suggestedRole) {
-                        select.selectedIndex = i;
-                        optionExists = true;
-                        break;
-                    }
-                }
-
-                if (!optionExists) {
-                    select.value = '__custom__';
-                    window.toggleCustomRoleInput();
-                    document.getElementById('custom-role-input').value = suggestedRole;
-                } else {
-                    document.getElementById('custom-role-input').classList.add('hidden');
-                }
-                
-                document.getElementById('asset-category').value = suggestedCategory || '其他';
-
-                window.showToast(`✨ AI 已自動選定角色與分類`);
-                document.getElementById('ai-role-search-box').classList.add('hidden');
-                document.getElementById('ai-role-keyword').value = '';
-            } catch (e) {
-                console.error("AI 尋找角色失敗:", e);
-                window.showToast("⚠️ AI 尋找角色失敗，請稍後再試。", true);
-            } finally {
-                btn.innerHTML = originalHtml;
-                btn.disabled = false;
-                if (typeof lucide !== 'undefined') lucide.createIcons();
-            }
-        }
-
-        window.analyzeAssetWithAI = async function() {
-            const promptInput = document.getElementById('ai-asset-prompt').value.trim(); 
-            if (!promptInput) return window.showToast("⚠️ 請描述您要新增的系統或設備！", true);
-            
-            document.getElementById('ai-asset-submit-btn').disabled = true;
-            const loadingDiv = document.getElementById('ai-asset-loading'); loadingDiv.classList.remove('hidden'); loadingDiv.classList.add('flex');
-
-            const flatRoles = rolesDef.flatMap(g => g.roles);
-            const currentScenariosLight = scenarios.map(s => ({ id: s.id, title: s.title, desc: s.desc }));
-
-            const systemInstruction = `你是一位 SIEM 架構專家。使用者想將一個新系統/設備納入監控。
-            請根據使用者的描述判斷該系統的「角色分類」，並檢視現有「情境庫」，判斷這個新角色應該被加入到哪些現有情境中，以及在該情境下該提供什麼具體的 Log。
-            現有情境庫：${JSON.stringify(currentScenariosLight)}
-            現有角色：[${flatRoles.join(', ')}]
-            規則：
-            1. role: 若現有角色適用請直接使用，否則請自創一個精確的統一角色名稱(如：虛擬化主機 ESXi)。
-            2. category: 判斷該系統屬於哪一個「資產大類」，請「只能」從以下選項中挑選：[伺服器, 網路設備, 應用程式, 軟體服務, 資料庫, 端點設備, 資安設備, 其他]。
-            3. assetName: 從使用者描述中提取，若無則預設為 "New-Asset-01"。
-            4. matchedScenarios: 判斷該系統可能會遭遇哪些現有情境的威脅。對於每個符合的情境，提供該收的 Log (請在字首加上 [Role] 標籤，如 "[ESXi] /var/log/auth.log")，並補充 technical notes。`;
-
-            const schema = { type: "OBJECT", properties: { assetName: { type: "STRING" }, role: { type: "STRING" }, category: { type: "STRING" }, matchedScenarios: { type: "ARRAY", items: { type: "OBJECT", properties: { scenarioId: { type: "STRING" }, addedLogs: { type: "ARRAY", items: { type: "STRING" } }, addedNotes: { type: "STRING" } } } } }, required: ["assetName", "role", "category", "matchedScenarios"] };
-            const payload = { contents: [{ parts: [{ text: promptInput }] }], systemInstruction: { parts: [{ text: systemInstruction }] }, generationConfig: { responseMimeType: "application/json", responseSchema: schema } };
-            const url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=" + window.apiKey;
-
-            try {
-                const result = await fetchWithRetry(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-                const textResp = result.candidates?.[0]?.content?.parts?.[0]?.text; if (!textResp) throw new Error("無效的回傳");
-                let aiResult = JSON.parse(textResp);
-
-                let roleExists = false; rolesDef.forEach(g => { if (g.roles.includes(aiResult.role)) roleExists = true; });
-                if (!roleExists) {
-                    let customGroup = rolesDef.find(g => g.group === '自訂新增 (Custom)');
-                    if (!customGroup) { customGroup = { group: '自訂新增 (Custom)', roles: [] }; rolesDef.push(customGroup); }
-                    customGroup.roles.push(aiResult.role);
-                }
-
-                let impactedTitles = [];
-                aiResult.matchedScenarios.forEach(async match => {
-                    const sc = scenarios.find(s => s.id === match.scenarioId);
-                    if (sc) {
-                        if (!sc.scope.includes(aiResult.role)) sc.scope.push(aiResult.role);
-                        if (match.addedLogs) sc.logs.push(...match.addedLogs);
-                        if (match.addedNotes) sc.notes += `\n\n[${aiResult.role} 補充]: ${match.addedNotes}`;
-                        impactedTitles.push(sc.title);
-                        
-                        if (window.db && window.fs && sc.docId) {
-                            try { await window.fs.updateDoc(window.fs.doc(window.db, "scenarios", sc.docId), { scope: sc.scope, logs: sc.logs, notes: sc.notes }); } catch(e) {}
-                        }
-                    }
-                });
-
-                const newAsset = { id: Date.now(), name: aiResult.assetName, role: aiResult.role, category: aiResult.category || '其他', status: '未接取', quantity: 1 };
-                if(window.db && window.fs) {
-                    try {
-                        const docRef = await window.fs.addDoc(window.fs.collection(window.db, "assets"), newAsset);
-                        newAsset.docId = docRef.id;
-                    } catch(e) { console.error(e); }
-                }
-                assets.push(newAsset);
-
-                document.getElementById('ai-asset-prompt').value = ''; window.initRoleDropdown(); renderRoleButtons(); renderAssetTable(); 
-                
-                if (window.currentViewMode === 'scenario' && window.currentSelectedScenarioId) window.selectScenario(window.currentSelectedScenarioId);
-                if (window.currentViewMode === 'system') window.selectRole(aiResult.role); 
-                
-                let toastMsg = `🚀 已成功分析並建檔：${aiResult.assetName} (${aiResult.role})。`;
-                if(impactedTitles.length > 0) toastMsg += `已自動將其連動至 ${impactedTitles.length} 個威脅情境的監控範圍！`;
-                window.showToast(toastMsg);
-            } catch (error) {
-                console.error("AI 分析失敗:", error); window.showToast("⚠️ AI 分析失敗，請稍後再試。", true);
-            } finally {
-                loadingDiv.classList.add('hidden'); loadingDiv.classList.remove('flex'); document.getElementById('ai-asset-submit-btn').disabled = false;
-            }
-        }
-
-        window.handleAddAssetManual = async function() {
-            const name = document.getElementById('asset-name').value.trim();
-            let role = document.getElementById('asset-role').value;
-            const category = document.getElementById('asset-category').value;
-            const status = document.getElementById('asset-status').value;
-            const quantity = parseInt(document.getElementById('asset-quantity').value) || 1;
-
-            if (!name || !role) return window.showToast("⚠️ 請填寫完整主機名稱與角色！", true);
-
-            if (role === '__custom__') {
-                role = document.getElementById('custom-role-input').value.trim();
-                if (!role) return window.showToast("⚠️ 請輸入自訂角色名稱！", true);
-
-                let customGroup = rolesDef.find(g => g.group === '自訂新增 (Custom)');
-                if (!customGroup) {
-                    customGroup = { group: '自訂新增 (Custom)', roles: [] };
-                    rolesDef.push(customGroup);
-                }
-                if (!customGroup.roles.includes(role)) {
-                    customGroup.roles.push(role);
-                    window.initRoleDropdown();
-                    renderRoleButtons();
-                }
-            }
-
-            const newAsset = { id: Date.now(), name, role, category, status, quantity };
-            if(window.db && window.fs) {
-                try {
-                    const docRef = await window.fs.addDoc(window.fs.collection(window.db, "assets"), newAsset);
-                    newAsset.docId = docRef.id;
-                } catch(e) { console.error(e); }
-            }
-            assets.push(newAsset);
-
-            document.getElementById('asset-name').value = '';
-            document.getElementById('custom-role-input').value = '';
-            document.getElementById('asset-role').value = '';
-            document.getElementById('asset-quantity').value = '1';
-            window.toggleCustomRoleInput();
-            renderAssetTable();
-            renderRoleButtons();
-            window.showToast(`✅ 已成功同步新增資產：${name}`);
-        }
-
-        window.deleteAsset = function(id) {
-            const target = assets.find(a => a.id === id);
-            if (!target) return;
-            window.assetToDelete = id;
-            window.scenarioToDelete = null; // 重置情境刪除狀態
-            document.getElementById('delete-confirm-msg').textContent = `確定要刪除資產「${target.name}」嗎？(刪除後無法復原)`;
-            const modal = document.getElementById('delete-confirm-modal'); 
-            modal.classList.remove('hidden'); 
-            modal.children[0].classList.add('modal-enter');
-            requestAnimationFrame(() => { modal.children[0].classList.add('modal-enter-active'); modal.children[0].classList.remove('modal-enter'); });
-        }
-
-        window.editAsset = function(id) {
-            window.editingAssetId = id;
-            renderAssetTable();
-        }
-
-        window.cancelEditAsset = function() {
-            window.editingAssetId = null;
-            renderAssetTable();
-        }
-
-        window.saveAsset = async function(id) {
-            const newNameInput = document.getElementById(`edit-name-${id}`);
-            const newCategorySelect = document.getElementById(`edit-category-${id}`);
-            const newStatusSelect = document.getElementById(`edit-status-${id}`);
-            const newQuantityInput = document.getElementById(`edit-quantity-${id}`);
-
-            const newName = newNameInput.value.trim();
-            const newCategory = newCategorySelect.value;
-            const newQuantity = parseInt(newQuantityInput.value) || 1;
-
-            if (!newName) {
-                window.showToast("⚠️ 主機名稱不能為空！", true);
-                newNameInput.focus();
-                return;
-            }
-
-            const asset = assets.find(a => a.id === id);
-            if (asset) {
-                asset.name = newName;
-                asset.category = newCategory;
-                asset.status = newStatusSelect.value;
-                asset.quantity = newQuantity;
-                if(window.db && window.fs && asset.docId) {
-                    try { await window.fs.updateDoc(window.fs.doc(window.db, "assets", asset.docId), { name: newName, category: newCategory, status: asset.status, quantity: newQuantity }); } catch(e) { console.error(e); }
-                }
-                window.showToast(`✅ 資產「${newName}」已同步更新`);
-            }
-
-            window.editingAssetId = null;
-            renderAssetTable();
-
-            if (window.currentViewMode === 'system' && window.currentSelectedRoleName === asset.role) {
-                window.selectRole(window.currentSelectedRoleName);
-            }
-            if (window.currentViewMode === 'scenario' && window.currentSelectedScenarioId) {
-                const sc = scenarios.find(s => s.id === window.currentSelectedScenarioId);
-                if (sc && sc.scope.includes(asset.role)) {
-                    window.selectScenario(window.currentSelectedScenarioId);
-                }
-            }
-        }
-
-        function renderAssetTable() {
-            const tbody = document.getElementById('asset-list-tbody');
-            tbody.innerHTML = '';
-            if (assets.length === 0) return tbody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-slate-500">尚無註冊。</td></tr>`;
-
-            // 🌟 核心邏輯：將現有資產依照 AI 分類的大群組進行分類
-            const groupedAssets = {};
-            assets.forEach(asset => {
-                let groupName = asset.category;
-                if (!groupName) groupName = '未分類資產 (請編輯補上分類)';
-                if (!groupedAssets[groupName]) groupedAssets[groupName] = [];
-                groupedAssets[groupName].push(asset);
-            });
-
-            let html = '';
-            const categoryOptions = ['伺服器', '網路設備', '應用程式', '軟體服務', '資料庫', '端點設備', '資安設備', '其他', '未分類資產'];
-            
-            // 依照分類來渲染表格
-            for (const [groupName, groupAssets] of Object.entries(groupedAssets)) {
-                // 1. 渲染：分類群組的「標題列」
-                html += `
-                    <tr class="bg-slate-100">
-                        <td colspan="6" class="p-2 border-b font-bold text-slate-700 text-sm">
-                            <div class="flex items-center">
-                                <i data-lucide="layers" class="w-4 h-4 mr-2 text-indigo-500"></i>
-                                ${groupName} 
-                                <span class="ml-2 text-[10px] font-normal text-slate-500 bg-white px-2 py-0.5 rounded shadow-sm border border-slate-200">共 ${groupAssets.length} 筆</span>
-                            </div>
-                        </td>
-                    </tr>
-                `;
-
-                // 2. 渲染：該分類下的所有「資產列」(加入縮排效果)
-                groupAssets.forEach(asset => {
-                    if (window.editingAssetId === asset.id) {
-                        html += `
-                            <tr class="bg-indigo-50/50">
-                                <td class="p-2 pl-6 border-b border-indigo-100"><input type="text" id="edit-name-${asset.id}" value="${asset.name}" class="w-full text-sm border-indigo-200 rounded shadow-sm focus:border-indigo-500 p-1.5 border bg-white" placeholder="主機名稱"></td>
-                                <td class="p-2 border-b border-indigo-100 text-slate-600 text-xs">${asset.role}</td>
-                                <td class="p-2 border-b border-indigo-100">
-                                    <select id="edit-category-${asset.id}" class="w-full text-sm border-indigo-200 rounded shadow-sm focus:border-indigo-500 p-1.5 border bg-white text-xs">
-                                        ${categoryOptions.map(c => `<option value="${c}" ${asset.category === c ? 'selected' : ''}>${c}</option>`).join('')}
-                                    </select>
-                                </td>
-                                <td class="p-2 border-b border-indigo-100"><input type="number" id="edit-quantity-${asset.id}" value="${asset.quantity || 1}" min="1" class="w-full text-sm border-indigo-200 rounded shadow-sm focus:border-indigo-500 p-1.5 border bg-white text-xs"></td>
-                                <td class="p-2 border-b border-indigo-100"><select id="edit-status-${asset.id}" class="w-full text-sm border-indigo-200 rounded shadow-sm focus:border-indigo-500 p-1.5 border bg-white text-xs"><option value="未接取" ${asset.status === '未接取' ? 'selected' : ''}>未接取</option><option value="設定中" ${asset.status === '設定中' ? 'selected' : ''}>設定中</option><option value="已接取" ${asset.status === '已接取' ? 'selected' : ''}>已接取</option></select></td>
-                                <td class="p-2 border-b border-indigo-100 text-center admin-only"><div class="flex justify-center space-x-2"><button onclick="window.saveAsset(${asset.id})" class="text-green-600 hover:text-green-700 bg-green-100 hover:bg-green-200 p-1.5 rounded transition-colors" title="儲存"><i data-lucide="check" class="w-4 h-4"></i></button><button onclick="window.cancelEditAsset()" class="text-slate-500 hover:text-slate-700 bg-slate-200 hover:bg-slate-300 p-1.5 rounded transition-colors" title="取消"><i data-lucide="x" class="w-4 h-4"></i></button></div></td>
-                            </tr>
-                        `;
-                    } else {
-                        let statusColor = asset.status === '已接取' ? 'bg-green-100 text-green-700' : (asset.status === '設定中' ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700');
-                        html += `
-                            <tr class="hover:bg-slate-50">
-                                <td class="p-3 pl-6 border-b font-medium text-slate-800">
-                                    <div class="flex items-center">
-                                        <i data-lucide="corner-down-right" class="w-3 h-3 mr-2 text-slate-300"></i>
-                                        <i data-lucide="hard-drive" class="w-4 h-4 mr-2 text-slate-400 flex-shrink-0"></i> 
-                                        <span class="truncate">${asset.name}</span>
-                                    </div>
-                                </td>
-                                <td class="p-3 border-b text-slate-600 text-xs">${asset.role}</td>
-                                <td class="p-3 border-b"><span class="px-2 py-1 bg-slate-100 text-slate-600 rounded text-xs">${asset.category || '未分類'}</span></td>
-                                <td class="p-3 border-b"><span class="px-2 py-1 bg-slate-100 text-slate-600 rounded text-xs font-bold">${asset.quantity || 1}</span></td>
-                                <td class="p-3 border-b"><span class="px-2 py-1 rounded text-xs border ${statusColor}">${asset.status}</span></td>
-                                <td class="p-3 border-b text-center admin-only"><div class="flex justify-center space-x-3"><button onclick="window.editAsset(${asset.id})" class="text-indigo-500 hover:text-indigo-700 transition-colors" title="編輯"><i data-lucide="edit-2" class="w-4 h-4"></i></button><button onclick="window.deleteAsset(${asset.id})" class="text-red-500 hover:text-red-700 transition-colors" title="刪除"><i data-lucide="trash-2" class="w-4 h-4"></i></button></div></td>
-                            </tr>
-                        `;
-                    }
-                });
-            }
-            
-            tbody.innerHTML = html;
-            if (typeof lucide !== 'undefined') lucide.createIcons();
-        }
-
-        // ==========================================
-        // 應用程式入口
-        // ==========================================
-        window.addEventListener('firebase-loaded', async () => {
-            window.isFirebaseInitialized = true;
-            if(window.db && window.fs) {
-                window.showToast("正在連接並同步您的雲端資料庫...", false);
-                await window.loadDataFromFirebase();
-                window.showToast("✅ 成功載入 Firebase 雲端資料庫！");
-            }
-            window.init();
-        });
-
-        setTimeout(() => {
-            if (!window.isFirebaseInitialized) {
-                console.warn("Firebase SDK loading timeout, running in local memory mode.");
-                window.init();
-            }
-        }, 3000);
-
     </script>
 </body>
 </html>
