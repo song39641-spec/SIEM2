@@ -9,6 +9,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     
+    <!-- Firebase 模組化引入與 Google 登入配置 -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getFirestore, collection, getDocs, addDoc, updateDoc, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
@@ -109,7 +110,7 @@
 </head>
 <body class="text-slate-800 flex flex-col h-screen overflow-hidden relative">
 
-    <!-- 🔒 滿版強制登入蓋板 (Authentication Overlay) -->
+    <!-- 🔒 滿版強制登入蓋板 -->
     <div id="auth-overlay" class="fixed inset-0 bg-slate-900/95 backdrop-blur-sm z-[9999] flex items-center justify-center">
         <div class="bg-white p-8 rounded-2xl shadow-2xl w-full max-w-md flex flex-col items-center border border-slate-200">
             <div class="bg-indigo-100 p-4 rounded-full mb-5 shadow-inner">
@@ -117,7 +118,6 @@
             </div>
             <h2 class="text-2xl font-black text-slate-800 mb-2 tracking-tight">SIEM 戰略規劃儀表板</h2>
             <p class="text-slate-500 text-sm mb-8 text-center leading-relaxed">這是高度機密的安全架構管理系統。<br>請使用授權的 Google 帳號登入以繼續存取。</p>
-
             <div class="w-full space-y-5">
                 <div id="login-error" class="text-red-600 text-sm font-bold hidden text-center bg-red-50 py-2.5 rounded-lg border border-red-200"></div>
                 <button id="btn-execute-login" onclick="window.executeLogin()" class="w-full bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 font-bold py-3.5 rounded-lg transition-all shadow-sm mt-2 flex justify-center items-center group">
@@ -601,28 +601,6 @@ service cloud.firestore {
         </div>
     </div>
 
-    <!-- 紫隊攻擊模擬腳本 Modal -->
-    <div id="attack-sim-modal" class="fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center hidden p-4">
-        <div class="bg-white rounded-xl shadow-2xl w-full max-w-3xl overflow-hidden flex flex-col max-h-[90vh]">
-            <div class="p-5 flex items-center justify-between border-b bg-purple-50">
-                <div class="flex items-center text-purple-700 font-bold text-lg"><i data-lucide="swords" class="w-6 h-6 mr-2 text-purple-600"></i><h3>紫隊測試：AI 攻擊模擬指令生成</h3></div>
-                <button onclick="window.closeAttackSimModal()" class="text-slate-400 hover:text-slate-600 focus:outline-none"><i data-lucide="x" class="w-6 h-6"></i></button>
-            </div>
-            <div class="p-8 bg-white flex flex-col items-center justify-center min-h-[300px]" id="attack-sim-loading">
-                <i data-lucide="loader-2" class="w-10 h-10 text-purple-600 animate-spin mb-4"></i><span class="text-base font-bold text-slate-700 mb-2">AI 正在生成安全測試指令...</span>
-            </div>
-            <div class="p-6 bg-white hidden flex-col space-y-5 overflow-y-auto custom-scrollbar flex-grow" id="attack-sim-content">
-                <div class="bg-yellow-50 border border-yellow-200 text-yellow-800 text-sm p-4 rounded-lg flex items-start shadow-sm"><i data-lucide="alert-triangle" class="w-5 h-5 mr-3 flex-shrink-0 text-yellow-600 mt-0.5"></i><span class="leading-relaxed font-medium">警告：請僅在授權的「安全測試環境」中執行以下指令。</span></div>
-                <div>
-                    <h4 class="font-bold text-sm text-slate-800 mb-2 flex items-center"><i data-lucide="terminal" class="w-4 h-4 mr-1.5 text-purple-500"></i> 可執行測試指令 (PowerShell / Bash)</h4>
-                    <div class="relative group"><pre class="bg-slate-900 text-green-400 p-5 rounded-lg text-sm font-mono whitespace-pre-wrap leading-relaxed border border-slate-700 shadow-inner" id="attack-sim-command"></pre><button onclick="window.copyAttackSim()" class="absolute top-3 right-3 text-slate-400 hover:text-white bg-slate-700 hover:bg-slate-600 px-3 py-1.5 rounded text-xs transition-colors flex items-center opacity-0 group-hover:opacity-100 shadow-sm"><i data-lucide="copy" class="w-3 h-3 mr-1.5"></i> 複製指令</button></div>
-                </div>
-                <div><h4 class="font-bold text-sm text-slate-800 mb-2 flex items-center"><i data-lucide="info" class="w-4 h-4 mr-1.5 text-purple-500"></i> AI 模擬原理解析</h4><p class="text-sm text-slate-600 leading-relaxed bg-slate-50 p-4 rounded-lg border border-slate-100" id="attack-sim-explanation"></p></div>
-            </div>
-            <div class="p-4 border-t bg-slate-50 flex justify-end"><button onclick="window.closeAttackSimModal()" class="bg-slate-200 hover:bg-slate-300 text-slate-800 px-6 py-2 rounded-md text-sm font-medium transition-colors shadow-sm">完成並關閉</button></div>
-        </div>
-    </div>
-
     <!-- 管理員登入 Modal -->
     <div id="admin-login-modal" class="fixed inset-0 bg-slate-900/60 z-[70] flex items-center justify-center hidden p-4">
         <div class="bg-white rounded-xl shadow-2xl w-full max-w-sm overflow-hidden flex flex-col">
@@ -644,10 +622,8 @@ service cloud.firestore {
     <!-- Toast -->
     <div id="toast" class="fixed bottom-5 right-5 bg-green-600 text-white px-4 py-2 rounded shadow-lg transform transition-transform translate-y-20 opacity-0 flex items-center z-50 transition-colors duration-300"><i data-lucide="info" class="w-5 h-5 mr-2" id="toast-icon"></i><span id="toast-message">完成！</span></div>
 
+    <!-- 主核心邏輯 -->
     <script>
-        // ==========================================
-        // 登入狀態及初始化
-        // ==========================================
         window.executeLogin = async function() {
             const btn = document.getElementById('btn-execute-login');
             const err = document.getElementById('login-error');
@@ -657,7 +633,6 @@ service cloud.firestore {
                 if(window.handleFirebaseLogin) { await window.handleFirebaseLogin(); } else { throw new Error("Firebase auth not initialized"); }
                 if (typeof lucide !== 'undefined') lucide.createIcons();
             } catch(e) {
-                console.error("Login failed:", e);
                 if(err) { err.classList.remove('hidden'); err.innerHTML = `<i data-lucide="alert-circle" class="w-4 h-4 inline mr-1 -mt-0.5"></i> 登入取消或失敗，請重試`; }
                 if(btn) { btn.innerHTML = `<img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" class="w-5 h-5 mr-3"> 使用 Google 帳號登入`; btn.disabled = false; }
                 if (typeof lucide !== 'undefined') lucide.createIcons();
