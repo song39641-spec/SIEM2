@@ -9,11 +9,11 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     
-    <!-- 🌟 Firebase 背景無縫匿名連線配置 -->
+    <!-- 🌟 Firebase 背景連線與驗證配置 -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getFirestore, collection, getDocs, addDoc, updateDoc, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+        import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
         const _fc = {
             a: 'QUl6YVN5QUVvLXNGcVI3VDFCV0gzclBza2VXLU9saDFUd0JmNDM4', d: 'c2llbTItYzQ0ZGIuZmlyZWJhc2VhcHAuY29t', p: 'c2llbTItYzQ0ZGI=',
@@ -29,24 +29,32 @@
             const app = initializeApp(firebaseConfig);
             window.db = getFirestore(app);
             window.fs = { collection, getDocs, addDoc, updateDoc, deleteDoc, doc };
-            const auth = getAuth(app);
-            
-            signInAnonymously(auth).then(() => {
-                console.log("Firebase 匿名連線成功，系統已就緒。");
-                const overlay = document.getElementById('loading-overlay');
-                if (overlay) overlay.classList.add('hidden');
-                window.dispatchEvent(new Event('firebase-loaded'));
-            }).catch((err) => {
-                console.warn("Firebase 連線失敗，切換至本地模式:", err);
-                const overlay = document.getElementById('loading-overlay');
-                if (overlay) overlay.classList.add('hidden');
-                window.dispatchEvent(new Event('firebase-loaded'));
-            });
-        } catch(e) {
-            console.warn("Firebase 初始化失敗:", e);
-            const overlay = document.getElementById('loading-overlay');
-            if (overlay) overlay.classList.add('hidden');
-            window.dispatchEvent(new Event('firebase-loaded'));
+            window.auth = getAuth(app);
+            window.firebaseAuthAPI = { signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut };
+        
+        // 監聽登入狀態
+        onAuthStateChanged(window.auth, (user) => {
+            const loadingOverlay = document.getElementById('loading-overlay');
+            if (loadingOverlay) loadingOverlay.classList.add('hidden');
+
+            const appContainer = document.getElementById('app-container');
+            if (user) {
+                window.currentUser = user;
+                document.getElementById('auth-overlay').classList.add('hidden');
+                appContainer.classList.remove('hidden');
+                appContainer.classList.add('flex'); // 🔧 關鍵修復：補回 flex 排版屬性
+                window.dispatchEvent(new Event('firebase-authenticated'));
+            } else {
+                window.currentUser = null;
+                document.getElementById('auth-overlay').classList.remove('hidden');
+                appContainer.classList.add('hidden');
+                appContainer.classList.remove('flex');
+            }
+        });
+    } catch(e) {
+            console.error("Firebase 初始化失敗:", e);
+            document.getElementById('loading-overlay').innerHTML = `<div class="bg-white p-8 rounded-2xl shadow-xl text-center"><i data-lucide="wifi-off" class="w-12 h-12 text-red-500 mx-auto mb-4"></i><h2 class="text-xl font-bold text-slate-800">資料庫連線失敗</h2><p class="text-slate-500 mt-2">請確認您的網路連線或 Firebase 設定。</p></div>`;
+            if (typeof lucide !== 'undefined') lucide.createIcons();
         }
     </script>
 
@@ -78,6 +86,7 @@
         main.active-view { z-index: 10; opacity: 1; pointer-events: auto; }
         main:not(.active-view) { opacity: 0; pointer-events: none; }
 
+        /* 唯讀模式與管理員模式的顯示切換 */
         body:not(.is-admin) .admin-only { display: none !important; }
         body.is-admin .hide-in-admin { display: none !important; }
     </style>
@@ -91,250 +100,327 @@
                 <i data-lucide="shield-check" class="w-10 h-10 text-indigo-600 animate-pulse"></i>
             </div>
             <h2 class="text-2xl font-black text-slate-800 mb-2 tracking-tight">系統安全連線中...</h2>
-            <p class="text-slate-500 text-sm">正在與資料庫建立連線並同步架構資料</p>
+            <p class="text-slate-500 text-sm">正在與資料庫建立連線</p>
         </div>
     </div>
 
-    <!-- 頂部導航欄 -->
-    <nav class="bg-slate-900 text-white p-4 shadow-md z-20 relative flex-shrink-0">
-        <div class="w-full max-w-[1600px] mx-auto flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div class="flex items-center space-x-3">
-                <i data-lucide="shield-alert" class="w-8 h-8 text-blue-400"></i>
-                <h1 class="text-xl md:text-2xl font-bold tracking-wide">SIEM 導入戰略與規劃儀表板</h1>
-            </div>
-            <div class="flex items-center justify-between w-full md:w-auto space-x-3 overflow-x-auto no-scrollbar">
-                <div class="bg-slate-800 p-1 rounded-lg flex items-center shadow-inner flex-shrink-0">
-                    <button onclick="window.switchView('scenario')" id="tab-scenario" class="view-tab active flex items-center px-3 py-1.5 rounded-md text-sm cursor-pointer whitespace-nowrap"><i data-lucide="crosshair" class="w-4 h-4 mr-1.5"></i> 情境</button>
-                    <button onclick="window.switchView('system')" id="tab-system" class="view-tab flex items-center px-3 py-1.5 rounded-md text-sm cursor-pointer whitespace-nowrap"><i data-lucide="server" class="w-4 h-4 mr-1.5"></i> 設備</button>
-                    <button onclick="window.switchView('mitre')" id="tab-mitre" class="view-tab flex items-center px-3 py-1.5 rounded-md text-sm cursor-pointer whitespace-nowrap"><i data-lucide="radar" class="w-4 h-4 mr-1.5"></i> MITRE</button>
+    <!-- 🔐 登入驗證畫面 -->
+    <div id="auth-overlay" class="fixed inset-0 bg-slate-900/95 backdrop-blur-sm z-[9000] flex items-center justify-center hidden">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col">
+            <div class="p-8 pb-6 flex flex-col items-center text-center bg-gradient-to-b from-indigo-50 to-white">
+                <div class="bg-indigo-600 p-3 rounded-xl mb-4 shadow-lg">
+                    <i data-lucide="shield" class="w-8 h-8 text-white"></i>
                 </div>
-                
-                <button onclick="window.openExecutiveReportModal()" class="admin-only bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white px-3 py-1.5 rounded-md flex items-center shadow-sm transition-all text-sm whitespace-nowrap flex-shrink-0 group">
-                    <i data-lucide="sparkles" class="w-4 h-4 mr-1.5 group-hover:animate-pulse text-yellow-300"></i> <span class="hidden md:inline">AI 總結報告</span>
-                </button>
-                <button onclick="window.exportToExcel()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded-md flex items-center shadow-sm transition-colors text-sm whitespace-nowrap flex-shrink-0">
-                    <i data-lucide="file-spreadsheet" class="w-4 h-4 mr-1.5"></i> <span class="hidden md:inline">匯出 Excel</span>
-                </button>
-                <button onclick="window.openAssetModal()" class="bg-blue-600 hover:bg-blue-500 text-white px-3 py-1.5 rounded-md flex items-center shadow-sm transition-colors text-sm whitespace-nowrap flex-shrink-0">
-                    <i data-lucide="database" class="w-4 h-4 mr-1.5"></i> <span class="hidden md:inline">伺服器資產</span><span class="md:hidden">資產</span>
-                </button>
-                <button onclick="window.openApiSettingsModal()" class="bg-slate-700 hover:bg-slate-600 text-slate-200 px-3 py-1.5 rounded-md flex items-center shadow-sm transition-colors text-sm whitespace-nowrap flex-shrink-0" title="API 引擎設定">
-                    <i data-lucide="settings" class="w-4 h-4 mr-1.5"></i> <span class="hidden md:inline">API 設定</span>
-                </button>
-                <button onclick="window.toggleAdminMode()" id="btn-admin-login" class="bg-slate-700 hover:bg-slate-600 text-slate-200 px-3 py-1.5 rounded-md flex items-center shadow-sm transition-colors text-sm whitespace-nowrap flex-shrink-0" title="切換管理員模式">
-                    <i data-lucide="lock" class="w-4 h-4 mr-1.5"></i> <span class="hidden md:inline">唯讀模式</span>
-                </button>
+                <h2 class="text-2xl font-black text-slate-800 tracking-tight">SIEM 戰略協作平台</h2>
+                <p class="text-sm text-slate-500 mt-2">請登入您的授權帳號以進入系統</p>
             </div>
-        </div>
-    </nav>
-
-    <!-- 主體內容區 -->
-    <div class="flex-1 overflow-hidden relative bg-[#f8fafc]">
-        
-        <!-- 視角一：威脅情境視角 -->
-        <main id="view-container-scenario" class="active-view w-full max-w-[1600px] mx-auto p-4 md:p-6 grid grid-cols-1 lg:grid-cols-12 gap-8 overflow-hidden">
-            <div class="lg:col-span-4 xl:col-span-4 space-y-6 flex flex-col h-full overflow-hidden pb-4">
-                <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 md:p-5 flex-1 flex flex-col overflow-hidden">
-                    <h2 class="text-lg font-semibold border-b pb-3 mb-3 flex items-center justify-between flex-shrink-0">
-                        <div class="flex items-center"><i data-lucide="layout-list" class="w-5 h-5 mr-2 text-slate-500"></i>威脅監控情境庫</div>
-                        <span id="total-scenarios-count" class="text-xs font-bold bg-indigo-100 text-indigo-700 px-2 py-1 rounded-md shadow-sm">共 0 項</span>
-                    </h2>
-                    <div class="overflow-y-auto no-scrollbar flex-1 space-y-5 pr-1" id="scenario-list">
-                        <div class="p-5 text-center text-slate-400 text-sm">載入資料中...</div>
+            <div class="p-8 pt-2 space-y-4">
+                <div id="auth-error" class="hidden bg-red-50 text-red-600 text-xs p-3 rounded border border-red-100 font-medium"></div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1 uppercase tracking-wide">電子郵件 (Email)</label>
+                    <div class="relative">
+                        <i data-lucide="mail" class="w-4 h-4 absolute left-3 top-3 text-slate-400"></i>
+                        <input type="email" id="auth-email" class="w-full text-sm border-slate-300 rounded-lg pl-9 p-2.5 border focus:ring-2 focus:ring-indigo-500 focus:outline-none" placeholder="admin@company.com">
                     </div>
-                    <button onclick="window.openAIModal()" class="admin-only w-full mt-4 flex-shrink-0 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white px-4 py-3 rounded-lg shadow-sm flex justify-center items-center font-medium transition-all group">
-                        <i data-lucide="sparkles" class="w-5 h-5 mr-2 group-hover:animate-pulse text-yellow-300"></i>AI 輔助生成新情境
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1 uppercase tracking-wide">密碼 (Password)</label>
+                    <div class="relative">
+                        <i data-lucide="lock" class="w-4 h-4 absolute left-3 top-3 text-slate-400"></i>
+                        <input type="password" id="auth-password" class="w-full text-sm border-slate-300 rounded-lg pl-9 p-2.5 border focus:ring-2 focus:ring-indigo-500 focus:outline-none" placeholder="••••••••">
+                    </div>
+                </div>
+                <div class="pt-4 flex flex-col space-y-3">
+                    <button onclick="window.handleLogin()" id="btn-login" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 rounded-lg shadow-md transition-all flex items-center justify-center">
+                        登入系統
+                    </button>
+                    <button onclick="window.handleRegister()" id="btn-register" class="w-full bg-white hover:bg-slate-50 text-indigo-600 border border-indigo-200 font-bold py-2.5 rounded-lg transition-all flex items-center justify-center">
+                        註冊新帳號
                     </button>
                 </div>
-                <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5 hidden xl:block flex-shrink-0">
-                    <h2 class="text-sm font-semibold text-slate-500 mb-3 uppercase tracking-wider">NIST CSF 涵蓋率預覽</h2>
-                    <div class="h-48 flex justify-center items-center"><canvas id="csfRadarChart"></canvas></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 🚀 登入後的主要應用程式容器 -->
+    <div id="app-container" class="hidden flex-1 flex-col w-full">
+        <!-- 頂部導航欄 -->
+        <nav class="bg-slate-900 text-white p-4 shadow-md z-20 relative flex-shrink-0">
+            <div class="w-full max-w-[1600px] mx-auto flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div class="flex items-center space-x-3">
+                    <i data-lucide="shield-alert" class="w-8 h-8 text-blue-400"></i>
+                    <h1 class="text-xl md:text-2xl font-bold tracking-wide">SIEM 導入戰略與規劃儀表板</h1>
+                </div>
+                <div class="flex items-center justify-between w-full md:w-auto space-x-3 overflow-x-auto no-scrollbar">
+                    <div class="bg-slate-800 p-1 rounded-lg flex items-center shadow-inner flex-shrink-0">
+                        <button onclick="window.switchView('scenario')" id="tab-scenario" class="view-tab active flex items-center px-3 py-1.5 rounded-md text-sm cursor-pointer whitespace-nowrap"><i data-lucide="crosshair" class="w-4 h-4 mr-1.5"></i> 情境</button>
+                        <button onclick="window.switchView('system')" id="tab-system" class="view-tab flex items-center px-3 py-1.5 rounded-md text-sm cursor-pointer whitespace-nowrap"><i data-lucide="server" class="w-4 h-4 mr-1.5"></i> 設備</button>
+                        <button onclick="window.switchView('mitre')" id="tab-mitre" class="view-tab flex items-center px-3 py-1.5 rounded-md text-sm cursor-pointer whitespace-nowrap"><i data-lucide="radar" class="w-4 h-4 mr-1.5"></i> MITRE</button>
+                        <button onclick="window.switchView('recycle')" id="tab-recycle" class="view-tab flex items-center px-3 py-1.5 rounded-md text-sm cursor-pointer whitespace-nowrap text-rose-300 hover:text-rose-100"><i data-lucide="trash-2" class="w-4 h-4 mr-1.5"></i> 回收箱</button>
+                    </div>
+                    
+                    <button onclick="window.openExecutiveReportModal()" class="admin-only bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white px-3 py-1.5 rounded-md flex items-center shadow-sm transition-all text-sm whitespace-nowrap flex-shrink-0 group">
+                        <i data-lucide="sparkles" class="w-4 h-4 mr-1.5 group-hover:animate-pulse text-yellow-300"></i> <span class="hidden md:inline">AI 總結報告</span>
+                    </button>
+                    <button onclick="window.exportToExcel()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded-md flex items-center shadow-sm transition-colors text-sm whitespace-nowrap flex-shrink-0">
+                        <i data-lucide="file-spreadsheet" class="w-4 h-4 mr-1.5"></i> <span class="hidden md:inline">匯出 Excel</span>
+                    </button>
+                    <button onclick="window.openAssetModal()" class="bg-blue-600 hover:bg-blue-500 text-white px-3 py-1.5 rounded-md flex items-center shadow-sm transition-colors text-sm whitespace-nowrap flex-shrink-0">
+                        <i data-lucide="database" class="w-4 h-4 mr-1.5"></i> <span class="hidden md:inline">伺服器資產</span><span class="md:hidden">資產</span>
+                    </button>
+                    <!-- 🔓 補回：權限切換按鈕 -->
+                    <button onclick="window.toggleAdminMode()" id="btn-admin-login" class="bg-slate-700 hover:bg-slate-600 text-slate-200 px-3 py-1.5 rounded-md flex items-center shadow-sm transition-colors text-sm whitespace-nowrap flex-shrink-0" title="切換管理員模式與唯讀模式">
+                        <i data-lucide="lock" class="w-4 h-4 mr-1.5"></i> <span class="hidden md:inline">唯讀模式</span>
+                    </button>
+                    <button onclick="window.openApiSettingsModal()" class="bg-slate-700 hover:bg-slate-600 text-slate-200 px-3 py-1.5 rounded-md flex items-center shadow-sm transition-colors text-sm whitespace-nowrap flex-shrink-0" title="API 引擎設定">
+                        <i data-lucide="settings" class="w-4 h-4 mr-1.5"></i> <span class="hidden md:inline">API 設定</span>
+                    </button>
+                    <button onclick="window.handleLogout()" class="bg-slate-700 hover:bg-rose-600 text-slate-200 hover:text-white px-3 py-1.5 rounded-md flex items-center shadow-sm transition-colors text-sm whitespace-nowrap flex-shrink-0" title="安全登出">
+                        <i data-lucide="log-out" class="w-4 h-4 md:mr-1.5"></i> <span class="hidden md:inline">登出</span>
+                    </button>
                 </div>
             </div>
+        </nav>
 
-            <div class="lg:col-span-8 xl:col-span-8 space-y-6 overflow-y-auto h-full pb-10 no-scrollbar pr-2 custom-scrollbar">
-                <div class="bg-white rounded-xl shadow-sm border-l-4 border-blue-600 p-6 flex justify-between items-start fade-in relative" id="detail-header">
-                    <div class="flex-1 pr-4">
-                        <div class="flex flex-wrap items-center gap-2 mb-3" id="scenario-badges-container">
-                            <span id="risk-badge" class="px-3 py-1 text-xs font-bold rounded-full text-white bg-slate-600 inline-block">風險等級</span>
-                            <span id="category-badge" class="px-3 py-1 text-xs font-medium rounded-full bg-slate-100 text-slate-600 inline-flex items-center"><i data-lucide="folder" class="w-3 h-3 mr-1"></i> 分類名稱</span>
+        <!-- 主體內容區 -->
+        <div class="flex-1 overflow-hidden relative bg-[#f8fafc]">
+            
+            <!-- 視角一：威脅情境視角 -->
+            <main id="view-container-scenario" class="active-view w-full max-w-[1600px] mx-auto p-4 md:p-6 grid grid-cols-1 lg:grid-cols-12 gap-8 overflow-hidden">
+                <div class="lg:col-span-4 xl:col-span-4 space-y-6 flex flex-col h-full overflow-hidden pb-4">
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 md:p-5 flex-1 flex flex-col overflow-hidden">
+                        <h2 class="text-lg font-semibold border-b pb-3 mb-3 flex items-center justify-between flex-shrink-0">
+                            <div class="flex items-center"><i data-lucide="layout-list" class="w-5 h-5 mr-2 text-slate-500"></i>威脅監控情境庫</div>
+                            <span id="total-scenarios-count" class="text-xs font-bold bg-indigo-100 text-indigo-700 px-2 py-1 rounded-md shadow-sm">共 0 項</span>
+                        </h2>
+                        <div class="overflow-y-auto no-scrollbar flex-1 space-y-5 pr-1" id="scenario-list">
+                            <div class="p-5 text-center text-slate-400 text-sm">載入資料中...</div>
                         </div>
-                        <h2 class="text-2xl md:text-3xl font-bold text-slate-800 leading-tight" id="detail-title">系統連線中...</h2>
-                        <p class="text-slate-500 mt-2 text-sm md:text-base leading-relaxed" id="detail-desc">正在從 Firebase 載入您的 SIEM 戰略資料庫，請稍候。</p>
+                        <button onclick="window.openAIModal()" class="admin-only w-full mt-4 flex-shrink-0 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white px-4 py-3 rounded-lg shadow-sm flex justify-center items-center font-medium transition-all group">
+                            <i data-lucide="sparkles" class="w-5 h-5 mr-2 group-hover:animate-pulse text-yellow-300"></i>AI 輔助生成新情境
+                        </button>
                     </div>
-                    <div class="text-right flex-col items-end hidden sm:flex">
-                        <div class="flex space-x-2 mb-3 relative z-10 flex-wrap justify-end gap-y-2">
-                            <button id="optimize-scenario-btn" onclick="window.optimizeScenarioWithAI()" class="admin-only text-xs bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-200 px-3 py-1.5 rounded flex items-center transition-colors shadow-sm hidden group"><i data-lucide="refresh-cw" class="w-4 h-4 mr-1 group-hover:rotate-180 transition-transform duration-500"></i> ✨ 依現有資產最佳化</button>
-                            <button id="attack-sim-btn" onclick="window.openAttackSimModal()" class="admin-only text-xs bg-purple-50 text-purple-600 hover:bg-purple-100 border border-purple-200 px-3 py-1.5 rounded flex items-center transition-colors shadow-sm hidden group"><i data-lucide="swords" class="w-4 h-4 mr-1 group-hover:scale-110 transition-transform"></i> ✨ 攻擊模擬</button>
-                            <button id="edit-scenario-btn" onclick="window.openEditScenarioModal()" class="admin-only text-xs bg-indigo-50 text-indigo-600 hover:bg-indigo-100 border border-indigo-200 px-3 py-1.5 rounded flex items-center transition-colors shadow-sm hidden group"><i data-lucide="settings-2" class="w-4 h-4 mr-1 group-hover:rotate-90 transition-transform duration-300"></i> ⚙️ 進階設定</button>
-                            <button id="delete-scenario-btn" onclick="window.deleteScenario(window.currentSelectedScenarioId)" class="admin-only text-xs bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700 border border-red-200 px-3 py-1.5 rounded flex items-center transition-colors shadow-sm hidden group"><i data-lucide="trash-2" class="w-4 h-4 mr-1 group-hover:animate-bounce"></i> 刪除情境</button>
-                        </div>
-                        <div id="detail-hero-icon" class="mt-2 text-slate-200 opacity-40"><i data-lucide="shield" class="w-16 h-16"></i></div>
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5 hidden xl:block flex-shrink-0">
+                        <h2 class="text-sm font-semibold text-slate-500 mb-3 uppercase tracking-wider">NIST CSF 涵蓋率預覽</h2>
+                        <div class="h-48 flex justify-center items-center"><canvas id="csfRadarChart"></canvas></div>
                     </div>
                 </div>
 
-                <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-                    <div class="flex justify-between items-center border-b pb-3 mb-4">
-                        <h3 class="text-lg font-semibold flex items-center"><i data-lucide="layers" class="w-5 h-5 mr-2 text-slate-500"></i>NIST CSF 2.0 核心功能映射與分析</h3>
-                        <button id="btn-generate-csf" onclick="window.generateCSFExplanationsWithAI()" class="admin-only text-xs bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 px-3 py-1.5 rounded flex items-center transition-colors shadow-sm hidden group"><i data-lucide="sparkles" class="w-4 h-4 mr-1 group-hover:animate-pulse text-indigo-500"></i> AI 深度實戰分析</button>
+                <div class="lg:col-span-8 xl:col-span-8 space-y-6 overflow-y-auto h-full pb-10 no-scrollbar pr-2 custom-scrollbar">
+                    <div class="bg-white rounded-xl shadow-sm border-l-4 border-blue-600 p-6 flex justify-between items-start fade-in relative" id="detail-header">
+                        <div class="flex-1 pr-4">
+                            <div class="flex flex-wrap items-center gap-2 mb-3" id="scenario-badges-container">
+                                <span id="risk-badge" class="px-3 py-1 text-xs font-bold rounded-full text-white bg-slate-600 inline-block">風險等級</span>
+                                <span id="category-badge" class="px-3 py-1 text-xs font-medium rounded-full bg-slate-100 text-slate-600 inline-flex items-center"><i data-lucide="folder" class="w-3 h-3 mr-1"></i> 分類名稱</span>
+                                <span id="verified-badge" class="hidden px-3 py-1 text-xs font-bold rounded-full bg-emerald-100 text-emerald-700 border border-emerald-200 inline-flex items-center"><i data-lucide="check-circle" class="w-3 h-3 mr-1"></i> 已確認可行</span>
+                            </div>
+                            <h2 class="text-2xl md:text-3xl font-bold text-slate-800 leading-tight" id="detail-title">系統連線中...</h2>
+                            <p class="text-slate-500 mt-2 text-sm md:text-base leading-relaxed" id="detail-desc">正在從 Firebase 載入您的 SIEM 戰略資料庫，請稍候。</p>
+                        </div>
+                        <div class="text-right flex-col items-end hidden sm:flex">
+                            <div class="flex space-x-2 mb-3 relative z-10 flex-wrap justify-end gap-y-2">
+                                <button id="toggle-verify-btn" onclick="window.toggleScenarioVerify()" class="admin-only text-xs bg-emerald-50 text-emerald-600 hover:bg-emerald-100 border border-emerald-200 px-3 py-1.5 rounded flex items-center transition-colors shadow-sm hidden group"><i data-lucide="check-circle" class="w-4 h-4 mr-1 group-hover:scale-110 transition-transform"></i> 標記為可行</button>
+                                <button id="optimize-scenario-btn" onclick="window.optimizeScenarioWithAI()" class="admin-only text-xs bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-200 px-3 py-1.5 rounded flex items-center transition-colors shadow-sm hidden group"><i data-lucide="refresh-cw" class="w-4 h-4 mr-1 group-hover:rotate-180 transition-transform duration-500"></i> ✨ 依現有資產最佳化</button>
+                                <button id="attack-sim-btn" onclick="window.openAttackSimModal()" class="admin-only text-xs bg-purple-50 text-purple-600 hover:bg-purple-100 border border-purple-200 px-3 py-1.5 rounded flex items-center transition-colors shadow-sm hidden group"><i data-lucide="swords" class="w-4 h-4 mr-1 group-hover:scale-110 transition-transform"></i> ✨ 攻擊模擬</button>
+                                <button id="edit-scenario-btn" onclick="window.openEditScenarioModal()" class="admin-only text-xs bg-indigo-50 text-indigo-600 hover:bg-indigo-100 border border-indigo-200 px-3 py-1.5 rounded flex items-center transition-colors shadow-sm hidden group"><i data-lucide="settings-2" class="w-4 h-4 mr-1 group-hover:rotate-90 transition-transform duration-300"></i> ⚙️ 進階設定</button>
+                                <button id="delete-scenario-btn" onclick="window.deleteScenario(window.currentSelectedScenarioId)" class="admin-only text-xs bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700 border border-red-200 px-3 py-1.5 rounded flex items-center transition-colors shadow-sm hidden group"><i data-lucide="trash-2" class="w-4 h-4 mr-1 group-hover:animate-bounce"></i> 刪除情境</button>
+                            </div>
+                            <div id="detail-hero-icon" class="mt-2 text-slate-200 opacity-40"><i data-lucide="shield" class="w-16 h-16"></i></div>
+                        </div>
                     </div>
-                    <div class="grid grid-cols-3 md:grid-cols-6 gap-3 mb-5" id="csf-nodes-container"></div>
-                    <div id="csf-explanations-container" class="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4 pt-4 border-t border-slate-100"></div>
-                </div>
 
-                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                    <div class="bg-slate-50 p-4 border-b flex flex-wrap justify-between items-center gap-3">
-                        <h3 class="text-lg font-semibold flex items-center"><i data-lucide="terminal-square" class="w-5 h-5 mr-2 text-slate-500"></i>執行層面：角色範圍與 RACI 權責劃分</h3>
-                        <button onclick="window.copyScenarioTableData()" class="text-sm bg-white border border-slate-300 hover:bg-slate-50 text-slate-600 px-3 py-1.5 rounded flex items-center shadow-sm"><i data-lucide="copy" class="w-4 h-4 mr-1"></i> 複製表格</button>
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+                        <div class="flex justify-between items-center border-b pb-3 mb-4">
+                            <h3 class="text-lg font-semibold flex items-center"><i data-lucide="layers" class="w-5 h-5 mr-2 text-slate-500"></i>NIST CSF 2.0 核心功能映射與分析</h3>
+                            <button id="btn-generate-csf" onclick="window.generateCSFExplanationsWithAI()" class="admin-only text-xs bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 px-3 py-1.5 rounded flex items-center transition-colors shadow-sm hidden group"><i data-lucide="sparkles" class="w-4 h-4 mr-1 group-hover:animate-pulse text-indigo-500"></i> AI 深度實戰分析</button>
+                        </div>
+                        <div class="grid grid-cols-3 md:grid-cols-6 gap-3 mb-5" id="csf-nodes-container"></div>
+                        <div id="csf-explanations-container" class="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4 pt-4 border-t border-slate-100"></div>
                     </div>
-                    <div class="p-0 overflow-x-auto">
-                        <table class="w-full text-left border-collapse">
-                            <thead><tr class="bg-slate-100 text-slate-600 text-sm"><th class="p-4 border-b font-medium w-1/3">系統角色與 RACI 權責</th><th class="p-4 border-b font-medium w-1/3">關鍵收集日誌 (Key Log Sources)</th><th class="p-4 border-b font-medium w-1/3">技術備註</th></tr></thead>
-                            <tbody class="text-sm" id="execution-tbody"></tbody>
-                        </table>
+
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                        <div class="bg-slate-50 p-4 border-b flex flex-wrap justify-between items-center gap-3">
+                            <h3 class="text-lg font-semibold flex items-center"><i data-lucide="terminal-square" class="w-5 h-5 mr-2 text-slate-500"></i>執行層面：角色範圍與 RACI 權責劃分</h3>
+                            <button onclick="window.copyScenarioTableData()" class="text-sm bg-white border border-slate-300 hover:bg-slate-50 text-slate-600 px-3 py-1.5 rounded flex items-center shadow-sm"><i data-lucide="copy" class="w-4 h-4 mr-1"></i> 複製表格</button>
+                        </div>
+                        <div class="p-0 overflow-x-auto">
+                            <table class="w-full text-left border-collapse">
+                                <thead><tr class="bg-slate-100 text-slate-600 text-sm"><th class="p-4 border-b font-medium w-1/3">系統角色與 RACI 權責</th><th class="p-4 border-b font-medium w-1/3">關鍵收集日誌 (Key Log Sources)</th><th class="p-4 border-b font-medium w-1/3">技術備註</th></tr></thead>
+                                <tbody class="text-sm" id="execution-tbody"></tbody>
+                            </table>
+                        </div>
+                        <div class="p-4 bg-white">
+                            <h4 class="text-sm font-semibold text-slate-600 mb-3 flex items-center border-t pt-4"><i data-lucide="hard-drive" class="w-4 h-4 mr-2 text-slate-400"></i>此情境動態關聯的實際伺服器</h4>
+                            <div id="mapped-assets-container" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3"></div>
+                        </div>
                     </div>
-                    <div class="p-4 bg-white">
-                        <h4 class="text-sm font-semibold text-slate-600 mb-3 flex items-center border-t pt-4"><i data-lucide="hard-drive" class="w-4 h-4 mr-2 text-slate-400"></i>此情境動態關聯的實際伺服器</h4>
-                        <div id="mapped-assets-container" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3"></div>
+                    
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden hidden" id="detection-logic-container">
+                        <div class="bg-slate-50 p-4 border-b border-slate-200 flex justify-between items-center">
+                            <h3 class="text-lg font-semibold flex items-center text-slate-800"><i data-lucide="microscope" class="w-5 h-5 mr-2 text-indigo-600"></i>實際偵測與判斷邏輯 (Detection Strategy)</h3>
+                        </div>
+                        <div class="p-5 border-b border-slate-100 bg-indigo-50/40"><p class="text-sm text-slate-700 leading-relaxed font-medium" id="detail-detection-strategy"></p></div>
+                        <div class="p-0 bg-slate-900 relative">
+                            <div class="px-5 py-3 border-b border-slate-700 flex justify-between items-center">
+                                <div class="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center"><i data-lucide="code-2" class="w-3 h-3 mr-1.5 text-green-400"></i> ELK / BiMAP KQL 實作語法</div>
+                                <div class="flex space-x-2">
+                                    <button onclick="window.aiExplainKQL()" id="ai-explain-kql-btn" class="admin-only text-xs bg-indigo-600 hover:bg-indigo-500 text-white px-2 py-1 rounded transition-colors flex items-center shadow-sm"><i data-lucide="sparkles" class="w-3 h-3 mr-1"></i> AI 語法翻譯與解析</button>
+                                    <button onclick="window.copyKQLData()" class="text-xs bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white px-2 py-1 rounded transition-colors flex items-center"><i data-lucide="copy" class="w-3 h-3 mr-1"></i> 複製語法</button>
+                                </div>
+                            </div>
+                            <div class="p-5 overflow-x-auto"><pre class="text-green-400 font-mono text-sm whitespace-pre-wrap leading-relaxed" id="detection-logic-code"></pre></div>
+                            <div id="ai-kql-result" class="hidden border-t border-slate-700 bg-slate-800 p-5">
+                                <div class="text-xs text-indigo-300 font-bold mb-2 flex items-center"><i data-lucide="bot" class="w-4 h-4 mr-1.5"></i> AI 語法解析結果</div>
+                                <p class="text-sm text-slate-300 mb-4 leading-relaxed" id="ai-kql-explanation"></p>
+                                <div class="text-xs text-yellow-300 font-bold mb-2 flex items-center"><i data-lucide="arrow-right-left" class="w-4 h-4 mr-1.5"></i> 等效轉換為 Splunk SPL 語法</div>
+                                <pre class="bg-slate-950 text-yellow-400 p-3 rounded-lg text-sm font-mono whitespace-pre-wrap border border-slate-700" id="ai-kql-splunk"></pre>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden" id="playbook-container">
+                        <div class="bg-slate-50 p-4 border-b border-slate-200 flex justify-between items-center">
+                            <h3 class="text-lg font-semibold flex items-center text-slate-800"><i data-lucide="book-open-check" class="w-5 h-5 mr-2 text-emerald-600"></i>防禦與應變指南 (Playbook)</h3>
+                            <button onclick="window.generatePlaybookWithAI()" id="btn-generate-playbook" class="admin-only text-xs bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 px-3 py-1.5 rounded flex items-center transition-colors shadow-sm"><i data-lucide="sparkles" class="w-4 h-4 mr-1"></i> AI 撰寫指南</button>
+                        </div>
+                        <div class="p-6 bg-white" id="playbook-content"></div>
+                    </div>
+
+                </div>
+            </main>
+
+            <!-- 視角二：系統設備視角 -->
+            <main id="view-container-system" class="w-full max-w-[1600px] mx-auto p-4 md:p-6 grid grid-cols-1 lg:grid-cols-12 gap-8 overflow-hidden">
+                <div class="lg:col-span-4 xl:col-span-4 space-y-6 flex flex-col h-full overflow-hidden pb-4">
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 md:p-5 flex-1 flex flex-col overflow-hidden">
+                        <h2 class="text-lg font-semibold border-b pb-3 mb-3 flex items-center flex-shrink-0 text-slate-800"><i data-lucide="server" class="w-5 h-5 mr-2 text-indigo-500"></i>系統/設備日誌清單</h2>
+                        <p class="text-xs text-slate-500 mb-3 flex-shrink-0">依照系統角色查詢必須開啟的 Log 清單與負責人。</p>
+                        <div class="overflow-y-auto no-scrollbar flex-1 space-y-5 pr-1 custom-scrollbar" id="role-list-container"></div>
+                    </div>
+                </div>
+                <div class="lg:col-span-8 xl:col-span-8 space-y-6 overflow-y-auto h-full pb-10 no-scrollbar pr-2 custom-scrollbar">
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden fade-in" id="system-detail-header">
+                        <div class="bg-gradient-to-r from-slate-800 to-indigo-900 p-6 text-white relative">
+                            <div class="absolute right-6 top-6 opacity-20"><i data-lucide="database" class="w-24 h-24"></i></div>
+                            <span class="px-3 py-1 text-xs font-bold rounded-full bg-white/20 text-white mb-3 inline-block backdrop-blur-sm" id="system-group-badge">群組名稱</span>
+                            <h2 class="text-2xl md:text-3xl font-bold leading-tight" id="system-detail-title">選擇系統角色</h2>
+                        </div>
+                        <div class="p-6 bg-white border-b flex flex-col md:flex-row gap-6">
+                            <div class="flex-shrink-0 w-full md:w-1/3"><h3 class="text-sm font-bold text-slate-500 uppercase tracking-wider mb-3 flex items-center"><i data-lucide="users" class="w-4 h-4 mr-1.5"></i> RACI 權責劃分</h3><div class="space-y-2 text-sm" id="system-raci-container"></div></div>
+                            <div class="flex-1"><h3 class="text-sm font-bold text-slate-500 uppercase tracking-wider mb-3 flex items-center"><i data-lucide="hard-drive" class="w-4 h-4 mr-1.5"></i> 已註冊之實體設備 (<span id="system-asset-count">0</span>)</h3><div class="flex flex-wrap gap-2" id="system-assets-container"></div></div>
+                        </div>
+                    </div>
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                        <div class="bg-slate-50 p-4 border-b flex justify-between items-center">
+                            <h3 class="text-lg font-semibold flex items-center text-slate-800"><i data-lucide="list-checks" class="w-5 h-5 mr-2 text-indigo-600"></i>📋 必須收集的日誌清單 (綜合彙整)</h3>
+                            <button onclick="window.copySystemTableData()" class="text-sm bg-white border border-slate-300 hover:bg-slate-50 text-slate-600 px-3 py-1.5 rounded flex items-center shadow-sm"><i data-lucide="copy" class="w-4 h-4 mr-1"></i> 複製派工單</button>
+                        </div>
+                        <div class="p-6" id="system-logs-container"></div>
+                    </div>
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                        <div class="bg-slate-50 p-4 border-b"><h3 class="text-lg font-semibold flex items-center text-slate-800"><i data-lucide="shield" class="w-5 h-5 mr-2 text-red-500"></i>🎯 為什麼要收？(對應的防護情境)</h3></div>
+                        <div class="p-4 grid grid-cols-1 md:grid-cols-2 gap-3" id="system-scenarios-container"></div>
+                    </div>
+                </div>
+            </main>
+
+            <!-- 🌟 視角三：MITRE ATT&CK 視角 -->
+            <main id="view-container-mitre" class="w-full max-w-[1600px] mx-auto p-4 md:p-6 grid grid-cols-1 lg:grid-cols-12 gap-8 overflow-hidden">
+                <div class="lg:col-span-4 xl:col-span-4 space-y-6 flex flex-col h-full overflow-hidden pb-4">
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 flex-1 flex flex-col overflow-hidden">
+                        <h2 class="text-lg font-semibold border-b pb-3 mb-3 flex items-center flex-shrink-0 text-slate-800"><i data-lucide="radar" class="w-5 h-5 mr-2 text-rose-500"></i>MITRE ATT&CK 戰術矩陣</h2>
+                        <p class="text-xs text-slate-500 mb-3 flex-shrink-0 leading-relaxed">選擇駭客可能採取的攻擊戰術，AI 將評估您的現有資產，為您量身打造防禦情境。</p>
+                        <div class="overflow-y-auto no-scrollbar flex-1 space-y-2 pr-1 custom-scrollbar" id="mitre-list-container"></div>
                     </div>
                 </div>
                 
-                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden hidden" id="detection-logic-container">
-                    <div class="bg-slate-50 p-4 border-b border-slate-200 flex justify-between items-center">
-                        <h3 class="text-lg font-semibold flex items-center text-slate-800"><i data-lucide="microscope" class="w-5 h-5 mr-2 text-indigo-600"></i>實際偵測與判斷邏輯 (Detection Strategy)</h3>
-                    </div>
-                    <div class="p-5 border-b border-slate-100 bg-indigo-50/40"><p class="text-sm text-slate-700 leading-relaxed font-medium" id="detail-detection-strategy"></p></div>
-                    <div class="p-0 bg-slate-900 relative">
-                        <div class="px-5 py-3 border-b border-slate-700 flex justify-between items-center">
-                            <div class="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center"><i data-lucide="code-2" class="w-3 h-3 mr-1.5 text-green-400"></i> ELK / BiMAP KQL 實作語法</div>
-                            <div class="flex space-x-2">
-                                <button onclick="window.aiExplainKQL()" id="ai-explain-kql-btn" class="admin-only text-xs bg-indigo-600 hover:bg-indigo-500 text-white px-2 py-1 rounded transition-colors flex items-center shadow-sm"><i data-lucide="sparkles" class="w-3 h-3 mr-1"></i> AI 語法翻譯與解析</button>
-                                <button onclick="window.copyKQLData()" class="text-xs bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white px-2 py-1 rounded transition-colors flex items-center"><i data-lucide="copy" class="w-3 h-3 mr-1"></i> 複製語法</button>
-                            </div>
-                        </div>
-                        <div class="p-5 overflow-x-auto"><pre class="text-green-400 font-mono text-sm whitespace-pre-wrap leading-relaxed" id="detection-logic-code"></pre></div>
-                        <div id="ai-kql-result" class="hidden border-t border-slate-700 bg-slate-800 p-5">
-                            <div class="text-xs text-indigo-300 font-bold mb-2 flex items-center"><i data-lucide="bot" class="w-4 h-4 mr-1.5"></i> AI 語法解析結果</div>
-                            <p class="text-sm text-slate-300 mb-4 leading-relaxed" id="ai-kql-explanation"></p>
-                            <div class="text-xs text-yellow-300 font-bold mb-2 flex items-center"><i data-lucide="arrow-right-left" class="w-4 h-4 mr-1.5"></i> 等效轉換為 Splunk SPL 語法</div>
-                            <pre class="bg-slate-950 text-yellow-400 p-3 rounded-lg text-sm font-mono whitespace-pre-wrap border border-slate-700" id="ai-kql-splunk"></pre>
+                <div class="lg:col-span-8 xl:col-span-8 space-y-6 overflow-y-auto h-full pb-10 no-scrollbar pr-2 custom-scrollbar">
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden fade-in" id="mitre-detail-header">
+                        <div class="bg-gradient-to-r from-rose-900 to-slate-900 p-6 text-white relative">
+                            <div class="absolute right-6 top-6 opacity-20"><i data-lucide="crosshair" class="w-24 h-24"></i></div>
+                            <span class="px-3 py-1 text-xs font-bold rounded-full bg-white/20 text-white mb-3 inline-block backdrop-blur-sm font-mono" id="mitre-id-badge">TA0001</span>
+                            <h2 class="text-2xl md:text-3xl font-bold leading-tight flex items-center" id="mitre-detail-title">戰術名稱</h2>
+                            <h3 class="text-rose-200 font-mono text-sm mt-1 mb-3" id="mitre-detail-en">Tactic Name</h3>
+                            <p class="text-slate-200 text-sm leading-relaxed max-w-2xl" id="mitre-detail-desc">戰術描述...</p>
                         </div>
                     </div>
-                </div>
 
-                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden" id="playbook-container">
-                    <div class="bg-slate-50 p-4 border-b border-slate-200 flex justify-between items-center">
-                        <h3 class="text-lg font-semibold flex items-center text-slate-800"><i data-lucide="book-open-check" class="w-5 h-5 mr-2 text-emerald-600"></i>防禦與應變指南 (Playbook)</h3>
-                        <button onclick="window.generatePlaybookWithAI()" id="btn-generate-playbook" class="admin-only text-xs bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 px-3 py-1.5 rounded flex items-center transition-colors shadow-sm"><i data-lucide="sparkles" class="w-4 h-4 mr-1"></i> AI 撰寫指南</button>
-                    </div>
-                    <div class="p-6 bg-white" id="playbook-content"></div>
-                </div>
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 relative overflow-hidden">
+                        <div class="absolute top-0 right-0 w-32 h-32 bg-blue-50 rounded-bl-full -z-10 opacity-50"></div>
+                        <h3 class="text-lg font-semibold mb-4 flex items-center border-b pb-3 text-slate-800">
+                            <i data-lucide="cpu" class="w-5 h-5 mr-2 text-blue-600"></i>現有資產盤點與關聯分析
+                        </h3>
+                        <p class="text-sm text-slate-600 mb-4">系統已自動掃描您註冊的伺服器與設備角色。AI 將僅利用以下**現有資源**，為您設計最具成本效益的偵測邏輯：</p>
+                        
+                        <div id="mitre-assets-summary" class="flex flex-wrap gap-2 mb-6 p-4 bg-slate-50 rounded-lg border border-slate-100"></div>
 
-            </div>
-        </main>
+                        <div class="bg-indigo-50 border border-indigo-100 rounded-xl p-5 text-center admin-only">
+                            <h4 class="font-bold text-indigo-800 mb-2">準備好建立防禦機制了嗎？</h4>
+                            <p class="text-xs text-indigo-600 mb-4">點擊下方按鈕，AI 將立刻結合您的「實際設備」與選定的「攻擊戰術」，自動撰寫 KQL 語法與日誌派工單，並儲存至您的情境庫中。</p>
+                            <button onclick="window.generateScenarioFromMitre()" id="btn-mitre-generate" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-lg shadow-md transition-all flex items-center justify-center mx-auto group">
+                                <i data-lucide="zap" class="w-5 h-5 mr-2 group-hover:scale-125 transition-transform"></i>
+                                <span id="mitre-btn-text">生成專屬防護情境</span>
+                            </button>
+                        </div>
+                        <div class="p-4 text-center text-slate-400 text-sm bg-slate-50 rounded-lg border border-slate-200 border-dashed hide-in-admin" id="mitre-readonly-notice">
+                            <i data-lucide="lock" class="w-4 h-4 mx-auto mb-2 opacity-50"></i>
+                            如需讓 AI 自動為此戰術建立防護情境，請先點擊右上角切換至「管理員模式」。
+                        </div>
+                    </div>
+                </div>
+            </main>
 
-        <!-- 視角二：系統設備視角 -->
-        <main id="view-container-system" class="w-full max-w-[1600px] mx-auto p-4 md:p-6 grid grid-cols-1 lg:grid-cols-12 gap-8 overflow-hidden">
-            <div class="lg:col-span-4 xl:col-span-4 space-y-6 flex flex-col h-full overflow-hidden pb-4">
-                <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 md:p-5 flex-1 flex flex-col overflow-hidden">
-                    <h2 class="text-lg font-semibold border-b pb-3 mb-3 flex items-center flex-shrink-0 text-slate-800"><i data-lucide="server" class="w-5 h-5 mr-2 text-indigo-500"></i>系統/設備日誌清單</h2>
-                    <p class="text-xs text-slate-500 mb-3 flex-shrink-0">依照系統角色查詢必須開啟的 Log 清單與負責人。</p>
-                    <div class="overflow-y-auto no-scrollbar flex-1 space-y-5 pr-1 custom-scrollbar" id="role-list-container"></div>
-                </div>
-            </div>
-            <div class="lg:col-span-8 xl:col-span-8 space-y-6 overflow-y-auto h-full pb-10 no-scrollbar pr-2 custom-scrollbar">
-                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden fade-in" id="system-detail-header">
-                    <div class="bg-gradient-to-r from-slate-800 to-indigo-900 p-6 text-white relative">
-                        <div class="absolute right-6 top-6 opacity-20"><i data-lucide="database" class="w-24 h-24"></i></div>
-                        <span class="px-3 py-1 text-xs font-bold rounded-full bg-white/20 text-white mb-3 inline-block backdrop-blur-sm" id="system-group-badge">群組名稱</span>
-                        <h2 class="text-2xl md:text-3xl font-bold leading-tight" id="system-detail-title">選擇系統角色</h2>
+            <!-- 🗑️ 視角四：回收箱視角 -->
+            <main id="view-container-recycle" class="w-full max-w-[1600px] mx-auto p-4 md:p-6 flex flex-col h-full overflow-hidden">
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 flex flex-col h-full overflow-hidden">
+                    <div class="flex justify-between items-center border-b pb-4 mb-4 flex-shrink-0">
+                        <h2 class="text-xl font-bold flex items-center text-slate-800">
+                            <i data-lucide="trash-2" class="w-6 h-6 mr-2 text-rose-500"></i>情境回收箱 (已刪除項目)
+                        </h2>
+                        <span class="text-sm text-slate-500 bg-slate-100 px-3 py-1 rounded-full font-medium" id="recycle-count">共 0 項</span>
                     </div>
-                    <div class="p-6 bg-white border-b flex flex-col md:flex-row gap-6">
-                        <div class="flex-shrink-0 w-full md:w-1/3"><h3 class="text-sm font-bold text-slate-500 uppercase tracking-wider mb-3 flex items-center"><i data-lucide="users" class="w-4 h-4 mr-1.5"></i> RACI 權責劃分</h3><div class="space-y-2 text-sm" id="system-raci-container"></div></div>
-                        <div class="flex-1"><h3 class="text-sm font-bold text-slate-500 uppercase tracking-wider mb-3 flex items-center"><i data-lucide="hard-drive" class="w-4 h-4 mr-1.5"></i> 已註冊之實體設備 (<span id="system-asset-count">0</span>)</h3><div class="flex flex-wrap gap-2" id="system-assets-container"></div></div>
+                    <div class="overflow-y-auto flex-1 custom-scrollbar pr-2">
+                        <table class="w-full text-left border-collapse">
+                            <thead class="sticky top-0 bg-slate-50 z-10 shadow-sm">
+                                <tr class="text-slate-600 text-sm">
+                                    <th class="p-4 border-b font-medium">情境名稱</th>
+                                    <th class="p-4 border-b font-medium">威脅分類</th>
+                                    <th class="p-4 border-b font-medium">刪除者帳號 (Audit)</th>
+                                    <th class="p-4 border-b font-medium">刪除時間</th>
+                                    <th class="p-4 border-b font-medium text-center w-40 admin-only">操作</th>
+                                </tr>
+                            </thead>
+                            <tbody class="text-sm divide-y divide-slate-100" id="recycle-tbody">
+                                <!-- 回收箱內容 -->
+                            </tbody>
+                        </table>
                     </div>
                 </div>
-                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                    <div class="bg-slate-50 p-4 border-b flex justify-between items-center">
-                        <h3 class="text-lg font-semibold flex items-center text-slate-800"><i data-lucide="list-checks" class="w-5 h-5 mr-2 text-indigo-600"></i>📋 必須收集的日誌清單 (綜合彙整)</h3>
-                        <button onclick="window.copySystemTableData()" class="text-sm bg-white border border-slate-300 hover:bg-slate-50 text-slate-600 px-3 py-1.5 rounded flex items-center shadow-sm"><i data-lucide="copy" class="w-4 h-4 mr-1"></i> 複製派工單</button>
-                    </div>
-                    <div class="p-6" id="system-logs-container"></div>
-                </div>
-                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                    <div class="bg-slate-50 p-4 border-b"><h3 class="text-lg font-semibold flex items-center text-slate-800"><i data-lucide="shield" class="w-5 h-5 mr-2 text-red-500"></i>🎯 為什麼要收？(對應的防護情境)</h3></div>
-                    <div class="p-4 grid grid-cols-1 md:grid-cols-2 gap-3" id="system-scenarios-container"></div>
-                </div>
-            </div>
-        </main>
+            </main>
 
-        <!-- 🌟 視角三：MITRE ATT&CK 視角 -->
-        <main id="view-container-mitre" class="w-full max-w-[1600px] mx-auto p-4 md:p-6 grid grid-cols-1 lg:grid-cols-12 gap-8 overflow-hidden">
-            <div class="lg:col-span-4 xl:col-span-4 space-y-6 flex flex-col h-full overflow-hidden pb-4">
-                <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 flex-1 flex flex-col overflow-hidden">
-                    <h2 class="text-lg font-semibold border-b pb-3 mb-3 flex items-center flex-shrink-0 text-slate-800"><i data-lucide="radar" class="w-5 h-5 mr-2 text-rose-500"></i>MITRE ATT&CK 戰術矩陣</h2>
-                    <p class="text-xs text-slate-500 mb-3 flex-shrink-0 leading-relaxed">選擇駭客可能採取的攻擊戰術，AI 將評估您的現有資產，為您量身打造防禦情境。</p>
-                    <div class="overflow-y-auto no-scrollbar flex-1 space-y-2 pr-1 custom-scrollbar" id="mitre-list-container"></div>
-                </div>
-            </div>
-            
-            <div class="lg:col-span-8 xl:col-span-8 space-y-6 overflow-y-auto h-full pb-10 no-scrollbar pr-2 custom-scrollbar">
-                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden fade-in" id="mitre-detail-header">
-                    <div class="bg-gradient-to-r from-rose-900 to-slate-900 p-6 text-white relative">
-                        <div class="absolute right-6 top-6 opacity-20"><i data-lucide="crosshair" class="w-24 h-24"></i></div>
-                        <span class="px-3 py-1 text-xs font-bold rounded-full bg-white/20 text-white mb-3 inline-block backdrop-blur-sm font-mono" id="mitre-id-badge">TA0001</span>
-                        <h2 class="text-2xl md:text-3xl font-bold leading-tight flex items-center" id="mitre-detail-title">戰術名稱</h2>
-                        <h3 class="text-rose-200 font-mono text-sm mt-1 mb-3" id="mitre-detail-en">Tactic Name</h3>
-                        <p class="text-slate-200 text-sm leading-relaxed max-w-2xl" id="mitre-detail-desc">戰術描述...</p>
-                    </div>
-                </div>
-
-                <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 relative overflow-hidden">
-                    <div class="absolute top-0 right-0 w-32 h-32 bg-blue-50 rounded-bl-full -z-10 opacity-50"></div>
-                    <h3 class="text-lg font-semibold mb-4 flex items-center border-b pb-3 text-slate-800">
-                        <i data-lucide="cpu" class="w-5 h-5 mr-2 text-blue-600"></i>現有資產盤點與關聯分析
-                    </h3>
-                    <p class="text-sm text-slate-600 mb-4">系統已自動掃描您註冊的伺服器與設備角色。AI 將僅利用以下**現有資源**，為您設計最具成本效益的偵測邏輯：</p>
-                    
-                    <div id="mitre-assets-summary" class="flex flex-wrap gap-2 mb-6 p-4 bg-slate-50 rounded-lg border border-slate-100"></div>
-
-                    <div class="bg-indigo-50 border border-indigo-100 rounded-xl p-5 text-center admin-only">
-                        <h4 class="font-bold text-indigo-800 mb-2">準備好建立防禦機制了嗎？</h4>
-                        <p class="text-xs text-indigo-600 mb-4">點擊下方按鈕，AI 將立刻結合您的「實際設備」與選定的「攻擊戰術」，自動撰寫 KQL 語法與日誌派工單，並儲存至您的情境庫中。</p>
-                        <button onclick="window.generateScenarioFromMitre()" id="btn-mitre-generate" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-lg shadow-md transition-all flex items-center justify-center mx-auto group">
-                            <i data-lucide="zap" class="w-5 h-5 mr-2 group-hover:scale-125 transition-transform"></i>
-                            <span id="mitre-btn-text">生成專屬防護情境</span>
-                        </button>
-                    </div>
-                    <div class="p-4 text-center text-slate-400 text-sm bg-slate-50 rounded-lg border border-slate-200 border-dashed hide-in-admin" id="mitre-readonly-notice">
-                        <i data-lucide="lock" class="w-4 h-4 mx-auto mb-2 opacity-50"></i>
-                        如需讓 AI 自動為此戰術建立防護情境，請先點擊右上角切換至「管理員模式」。
-                    </div>
-                </div>
-            </div>
-        </main>
+        </div>
     </div>
 
     <!-- ========================================== -->
     <!-- 所有 Modals 區塊 -->
     <!-- ========================================== -->
 
-    <!-- 管理員登入 Modal -->
+    <!-- 🔑 管理員登入 Modal (補回) -->
     <div id="admin-login-modal" class="fixed inset-0 bg-slate-900/60 z-[100] flex items-center justify-center hidden p-4">
         <div class="bg-white rounded-xl shadow-2xl w-full max-w-sm overflow-hidden flex flex-col">
-            <div class="p-5 border-b bg-slate-50 font-bold flex items-center"><i data-lucide="lock" class="w-5 h-5 mr-2"></i>管理員身分驗證</div>
+            <div class="p-5 border-b bg-slate-50 font-bold flex items-center"><i data-lucide="lock" class="w-5 h-5 mr-2"></i>切換為管理模式</div>
             <div class="p-6">
-                <input type="password" id="admin-password-input" class="w-full border border-slate-300 rounded-md p-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none" placeholder="請輸入密碼...">
+                <input type="password" id="admin-password-input" class="w-full border border-slate-300 rounded-md p-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none" placeholder="請輸入解鎖密碼...">
             </div>
             <div class="p-4 border-t bg-slate-50 flex justify-end space-x-2">
-                <button onclick="window.closeAdminLoginModal()" class="px-4 py-2 bg-slate-200 text-slate-800 rounded">取消</button>
-                <button onclick="window.submitAdminPassword()" class="px-4 py-2 bg-indigo-600 text-white rounded">登入</button>
+                <button onclick="window.closeAdminLoginModal()" class="px-4 py-2 bg-slate-200 text-slate-800 rounded hover:bg-slate-300 transition-colors">取消</button>
+                <button onclick="window.submitAdminPassword()" class="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition-colors shadow-sm">解鎖</button>
             </div>
         </div>
     </div>
 
     <!-- 進階設定 Modal -->
-    <div id="edit-scenario-modal" class="fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center hidden p-4">
+    <div id="edit-scenario-modal" class="fixed inset-0 bg-slate-900/60 z-[60] flex items-center justify-center hidden p-4">
         <div class="bg-white rounded-xl shadow-2xl w-full max-w-5xl overflow-hidden flex flex-col max-h-[90vh]">
             <div class="p-5 flex items-center justify-between border-b bg-slate-50">
                 <div class="flex items-center text-indigo-700 font-bold text-lg"><i data-lucide="settings-2" class="w-5 h-5 mr-2"></i><h3>⚙️ 管理情境設定</h3></div>
@@ -365,7 +451,7 @@
     </div>
 
     <!-- AI 建立情境 Modal -->
-    <div id="ai-modal" class="fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center hidden p-4">
+    <div id="ai-modal" class="fixed inset-0 bg-slate-900/60 z-[60] flex items-center justify-center hidden p-4">
         <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col">
             <div class="p-5 border-b bg-slate-50 flex justify-between items-center"><h3 class="text-lg font-bold flex items-center"><i data-lucide="sparkles" class="w-5 h-5 mr-2 text-indigo-600"></i>AI 新情境生成</h3><button onclick="window.closeAIModal()" class="text-slate-400" id="ai-close-btn"><i data-lucide="x" class="w-6 h-6"></i></button></div>
             <div class="p-5 bg-white space-y-4">
@@ -399,11 +485,20 @@
     </div>
 
     <!-- 刪除確認 Modal -->
-    <div id="delete-confirm-modal" class="fixed inset-0 bg-slate-900/60 z-[60] flex items-center justify-center hidden p-4">
+    <div id="delete-confirm-modal" class="fixed inset-0 bg-slate-900/60 z-[70] flex items-center justify-center hidden p-4">
         <div class="bg-white rounded-xl shadow-2xl w-full max-w-sm overflow-hidden flex flex-col">
-            <div class="p-5 flex items-center text-red-600 border-b bg-red-50"><i data-lucide="alert-triangle" class="w-6 h-6 mr-2"></i><h3 class="text-lg font-bold">確認刪除</h3></div>
+            <div class="p-5 flex items-center text-red-600 border-b bg-red-50"><i data-lucide="alert-triangle" class="w-6 h-6 mr-2"></i><h3 class="text-lg font-bold">確認移至回收箱</h3></div>
             <div class="p-5 bg-white"><p class="text-sm" id="delete-confirm-msg">確定要刪除嗎？</p></div>
-            <div class="p-4 border-t bg-slate-50 flex justify-end space-x-3"><button onclick="window.closeDeleteModal()" class="bg-slate-200 px-4 py-2 rounded-md text-sm">取消</button><button onclick="window.executeDelete()" class="bg-red-600 text-white px-4 py-2 rounded-md text-sm">刪除</button></div>
+            <div class="p-4 border-t bg-slate-50 flex justify-end space-x-3"><button onclick="window.closeDeleteModal()" class="bg-slate-200 px-4 py-2 rounded-md text-sm">取消</button><button onclick="window.executeDelete()" class="bg-red-600 text-white px-4 py-2 rounded-md text-sm">移至回收箱</button></div>
+        </div>
+    </div>
+
+    <!-- 硬刪除(永久刪除)確認 Modal -->
+    <div id="hard-delete-confirm-modal" class="fixed inset-0 bg-slate-900/60 z-[70] flex items-center justify-center hidden p-4">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-sm overflow-hidden flex flex-col">
+            <div class="p-5 flex items-center text-red-600 border-b bg-red-100"><i data-lucide="alert-octagon" class="w-6 h-6 mr-2"></i><h3 class="text-lg font-bold">永久刪除確認</h3></div>
+            <div class="p-5 bg-white"><p class="text-sm text-slate-700 font-bold">此操作無法復原！</p><p class="text-xs text-slate-500 mt-2">確定要從資料庫中永久抹除此情境嗎？</p></div>
+            <div class="p-4 border-t bg-slate-50 flex justify-end space-x-3"><button onclick="window.closeHardDeleteModal()" class="bg-slate-200 px-4 py-2 rounded-md text-sm">取消</button><button onclick="window.executeHardDelete()" class="bg-slate-900 text-red-400 font-bold px-4 py-2 rounded-md text-sm">永久刪除</button></div>
         </div>
     </div>
 
@@ -444,7 +539,7 @@
             </div>
             <div class="p-6 bg-white space-y-4">
                 <div class="bg-blue-50 text-blue-800 text-xs p-3 rounded-md mb-4 border border-blue-100 leading-relaxed">
-                    <i data-lucide="info" class="w-4 h-4 inline mr-1 mb-0.5"></i>您的金鑰只會安全地儲存在您當前瀏覽器的 LocalStorage 中，不會上傳至任何伺服器。
+                    <i data-lucide="info" class="w-4 h-4 inline mr-1 mb-0.5"></i><strong>隱私保護與多管理員支援：</strong><br>您的 API 金鑰只會安全地儲存在您「當前這台電腦瀏覽器」的 LocalStorage 中，並不會上傳到資料庫。不同的管理員登入後，可以各自設定並使用自己的 API 金鑰，互不干擾。
                 </div>
                 <div>
                     <label class="block text-sm font-bold text-slate-700 mb-1">Gemini API 金鑰 (API Key) <span class="text-red-500">*</span></label>
@@ -468,7 +563,7 @@
     </div>
 
     <!-- 紫隊攻擊模擬腳本 Modal -->
-    <div id="attack-sim-modal" class="fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center hidden p-4">
+    <div id="attack-sim-modal" class="fixed inset-0 bg-slate-900/60 z-[60] flex items-center justify-center hidden p-4">
         <div class="bg-white rounded-xl shadow-2xl w-full max-w-3xl overflow-hidden flex flex-col max-h-[90vh]">
             <div class="p-5 flex items-center justify-between border-b bg-purple-50">
                 <div class="flex items-center text-purple-700 font-bold text-lg"><i data-lucide="swords" class="w-6 h-6 mr-2 text-purple-600"></i><h3>紫隊測試：AI 攻擊模擬指令生成</h3></div>
@@ -490,7 +585,7 @@
     </div>
 
     <!-- 資產管理 Modal -->
-    <div id="asset-modal" class="fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center hidden p-4">
+    <div id="asset-modal" class="fixed inset-0 bg-slate-900/60 z-[60] flex items-center justify-center hidden p-4">
         <div class="bg-white rounded-xl shadow-2xl w-full max-w-4xl overflow-hidden flex flex-col max-h-[90vh]">
             <div class="p-5 border-b bg-slate-50 flex justify-between items-center">
                 <h3 class="text-lg font-bold flex items-center text-slate-800"><i data-lucide="server-cog" class="w-5 h-5 mr-2 text-blue-600"></i>SIEM 伺服器資產管理</h3>
@@ -563,6 +658,7 @@
                     <div class="mt-6 bg-white p-5 rounded-lg border border-slate-200 shadow-sm">
                         <div class="flex justify-between items-center mb-3">
                             <h4 class="text-sm font-semibold text-slate-700 flex items-center"><i data-lucide="list" class="w-4 h-4 mr-1.5"></i> 已註冊清單</h4>
+                            <span class="text-xs text-amber-500 bg-amber-50 px-2 py-1 rounded font-bold border border-amber-200 admin-only-reverse hide-in-admin"><i data-lucide="eye" class="w-3 h-3 inline mr-1"></i>目前為唯讀模式</span>
                         </div>
                         <div class="overflow-x-auto border rounded-lg">
                             <table class="w-full text-left text-sm whitespace-nowrap">
@@ -578,15 +674,135 @@
     </div>
 
     <!-- Toast -->
-    <div id="toast" class="fixed bottom-5 right-5 text-white px-4 py-2 rounded shadow-lg transform transition-transform translate-y-20 opacity-0 flex items-center z-50 duration-300"><i data-lucide="info" class="w-5 h-5 mr-2" id="toast-icon"></i><span id="toast-message"></span></div>
+    <div id="toast" class="fixed bottom-5 right-5 text-white px-4 py-2 rounded shadow-lg transform transition-transform translate-y-20 opacity-0 flex items-center z-[9999] duration-300"><i data-lucide="info" class="w-5 h-5 mr-2" id="toast-icon"></i><span id="toast-message"></span></div>
 
     <!-- 主核心腳本區 -->
     <script>
         // ==========================================
-        // 1. 基礎宣告與資料集
+        // 1. Auth 認證邏輯 (Firebase Email/Password)
+        // ==========================================
+        window.handleLogin = async function() {
+            const email = document.getElementById('auth-email').value.trim();
+            const pwd = document.getElementById('auth-password').value.trim();
+            const errDiv = document.getElementById('auth-error');
+            if (!email || !pwd) { errDiv.textContent = "請輸入電子郵件與密碼"; errDiv.classList.remove('hidden'); return; }
+            
+            const btn = document.getElementById('btn-login');
+            const origText = btn.innerHTML;
+            btn.innerHTML = `<i data-lucide="loader-2" class="w-5 h-5 animate-spin"></i>`;
+            btn.disabled = true;
+
+            try {
+                await window.firebaseAuthAPI.signInWithEmailAndPassword(window.auth, email, pwd);
+                errDiv.classList.add('hidden');
+            } catch (error) {
+                errDiv.textContent = "登入失敗，帳號或密碼錯誤。 (" + error.code + ")";
+                errDiv.classList.remove('hidden');
+                btn.innerHTML = origText;
+                btn.disabled = false;
+            }
+        };
+
+        window.handleRegister = async function() {
+            const email = document.getElementById('auth-email').value.trim();
+            const pwd = document.getElementById('auth-password').value.trim();
+            const errDiv = document.getElementById('auth-error');
+            if (!email || !pwd) { errDiv.textContent = "請輸入電子郵件與密碼來註冊"; errDiv.classList.remove('hidden'); return; }
+            if (pwd.length < 6) { errDiv.textContent = "密碼長度至少需要 6 碼"; errDiv.classList.remove('hidden'); return; }
+            
+            const btn = document.getElementById('btn-register');
+            const origText = btn.innerHTML;
+            btn.innerHTML = `<i data-lucide="loader-2" class="w-5 h-5 animate-spin"></i>`;
+            btn.disabled = true;
+
+            try {
+                await window.firebaseAuthAPI.createUserWithEmailAndPassword(window.auth, email, pwd);
+                errDiv.classList.add('hidden');
+            } catch (error) {
+                errDiv.textContent = "註冊失敗。 (" + error.code + ")";
+                errDiv.classList.remove('hidden');
+                btn.innerHTML = origText;
+                btn.disabled = false;
+            }
+        };
+
+        window.handleLogout = async function() {
+            try {
+                await window.firebaseAuthAPI.signOut(window.auth);
+                window.location.reload(); // 登出後刷新頁面確保狀態清除
+            } catch(e) { console.error(e); }
+        };
+
+        // 切換管理員模式
+        window.toggleAdminMode = function() {
+            if (window.isAdmin) {
+                // 如果目前是管理模式，直接切換回唯讀模式
+                window.isAdmin = false;
+                const btn = document.getElementById('btn-admin-login');
+                document.body.classList.remove('is-admin');
+                btn.innerHTML = `<i data-lucide="lock" class="w-4 h-4 mr-1.5"></i> <span class="hidden md:inline">唯讀模式</span>`;
+                btn.classList.replace('bg-indigo-600', 'bg-slate-700');
+                btn.classList.replace('hover:bg-indigo-500', 'hover:bg-slate-600');
+                window.showToast("🔒 已切換為「唯讀模式」，防止誤觸修改", true);
+
+                if(window.currentViewMode === 'system') window.renderRoleButtons();
+                const assetModal = document.getElementById('asset-modal');
+                if(assetModal && !assetModal.classList.contains('hidden')) { 
+                    window.renderAssetTable(); 
+                    window.switchAssetMode('smart'); 
+                }
+                if (typeof lucide !== 'undefined') lucide.createIcons();
+            } else {
+                // 如果目前是唯讀模式，開啟密碼驗證視窗
+                document.getElementById('admin-password-input').value = '';
+                const modal = document.getElementById('admin-login-modal');
+                modal.classList.remove('hidden');
+                modal.children[0].classList.add('modal-enter');
+                requestAnimationFrame(() => { 
+                    modal.children[0].classList.add('modal-enter-active'); 
+                    modal.children[0].classList.remove('modal-enter'); 
+                    document.getElementById('admin-password-input').focus();
+                });
+            }
+        };
+
+        window.closeAdminLoginModal = function() {
+            document.getElementById('admin-login-modal').classList.add('hidden');
+        };
+
+        window.submitAdminPassword = function() {
+            const pwdInput = document.getElementById('admin-password-input').value;
+            // 這裡可以設定您的專屬密碼，目前預設為 sony168
+            if (pwdInput === "sony168") {
+                window.isAdmin = true;
+                document.body.classList.add('is-admin');
+                const btn = document.getElementById('btn-admin-login');
+                btn.innerHTML = `<i data-lucide="unlock" class="w-4 h-4 mr-1.5"></i> <span class="hidden md:inline">管理模式</span>`;
+                btn.classList.replace('bg-slate-700', 'bg-indigo-600');
+                btn.classList.replace('hover:bg-slate-600', 'hover:bg-indigo-500');
+                window.showToast("🔓 密碼正確！已切換為「管理模式」，可進行編輯與新增");
+                window.closeAdminLoginModal();
+
+                if(window.currentViewMode === 'system') window.renderRoleButtons();
+                const assetModal = document.getElementById('asset-modal');
+                if(assetModal && !assetModal.classList.contains('hidden')) { 
+                    window.renderAssetTable(); 
+                    window.switchAssetMode('smart'); 
+                }
+                if (typeof lucide !== 'undefined') lucide.createIcons();
+            } else {
+                window.showToast("⚠️ 密碼錯誤，請重新輸入。", true);
+                document.getElementById('admin-password-input').value = '';
+                document.getElementById('admin-password-input').focus();
+            }
+        };
+
+        // ==========================================
+        // 2. 基礎宣告與資料集
         // ==========================================
         window.apiKey = localStorage.getItem('siem_gemini_api_key') || "";
         window.apiModel = localStorage.getItem('siem_gemini_api_model') || "gemini-1.5-pro";
+        window.isAdmin = false;
 
         window.categoriesDef = [
             { id: 'identity', name: '身分與存取威脅', icon: 'user-x', colorClass: 'text-indigo-600', bgClass: 'bg-indigo-50', borderClass: 'border-indigo-100' },
@@ -645,60 +861,99 @@
             { id: 'recover', name: '復原 (Recover)', color: 'bg-teal-100', textColor: 'text-teal-700', borderColor: 'border-teal-200', icon: 'rotate-ccw' }
         ];
 
+        // 預設 5 項豐富的情境資料
         window.scenarios = [
             {
                 id: 's1', categoryId: 'data', title: '營業秘密外洩 (Trade Secret)', shortName: '機密檔案外傳',
                 desc: '監控核心資料夾存取與異常外傳，預防內部人員非法攜出。', risk: '極高 (Critical)', riskColor: 'bg-red-600',
                 csf: ['protect', 'detect'], 
-                csfExplanations: { 'protect': '實施存取控制與檔案稽核(SACL)。', 'detect': '持續監控檔案讀取(4663)與網路外連流量。' },
                 fiveM: ['material'],
-                scope: ['檔案伺服器 (Windows File Server)', 'Palo Alto NGFW', 'Fortinet FortiGate'],
-                logs: [
-                    '[檔案伺服器 (Windows File Server)] Windows Event ID 4663 (嘗試存取物件 - 讀取/複製)', 
-                    '[Palo Alto NGFW] 防火牆出境異常大流量紀錄'
-                ],
+                scope: ['檔案伺服器 (Windows File Server)', 'Palo Alto NGFW'],
+                logs: ['[檔案伺服器 (Windows File Server)] Windows Event ID 4663 (嘗試存取物件 - 讀取/複製)', '[Palo Alto NGFW] 防火牆出境異常大流量紀錄'],
                 detectionStrategy: '判斷邏輯：監控特定機密資料夾的讀取行為 (Event ID 4663)，並關聯防火牆外連日誌。若單一帳號在短時間內讀取大量機密檔案，且伴隨產生超過 500MB 的異常外部傳輸流量，即觸發高風險告警。',
                 detectionLogic: 'event.code: (4663 OR 4660) AND file.path: "*\\\\Confidential\\\\*" \nOR \n(network.direction: "outbound" AND source.bytes > 500000000)',
-                notes: '必須先透過 GPO 開啟進階稽核，並針對特定研發/財務資料夾設定 SACL。'
+                notes: '必須先透過 GPO 開啟進階稽核，並針對特定研發/財務資料夾設定 SACL。',
+                isVerified: false, isDeleted: false
             },
             {
                 id: 's2', categoryId: 'identity', title: '暴力破解與外部入侵', shortName: 'VPN 暴力破解',
                 desc: '防止外部攻擊者透過密碼噴灑等方式入侵帳號。', risk: '高 (High)', riskColor: 'bg-orange-500',
                 csf: ['detect', 'respond'],
-                csfExplanations: { 'detect': '分析連續登入失敗與異常來源 IP。', 'respond': '觸發告警並提供關聯日誌。' },
                 fiveM: ['man', 'environment'],
-                scope: ['Microsoft Active Directory (AD DC)', 'Pulse Secure VPN', '核心 ERP 系統 (SAP)', 'Cisco ASA/Firepower'],
-                logs: [
-                    '[Microsoft Active Directory (AD DC)] Windows Event ID 4625 (登入失敗)', 
-                    '[Pulse Secure VPN] VPN Gateway 驗證失敗與 MFA 拒絕日誌'
-                ],
+                scope: ['Microsoft Active Directory (AD DC)', 'Pulse Secure VPN'],
+                logs: ['[Microsoft Active Directory (AD DC)] Windows Event ID 4625 (登入失敗)', '[Pulse Secure VPN] VPN Gateway 驗證失敗與 MFA 拒絕日誌'],
                 detectionStrategy: '判斷邏輯：監控 AD 與 VPN 閘道的登入失敗日誌。設定時間窗口，若「5 分鐘內」來自「單一來源 IP」的登入失敗次數「超過 5 次」，即判定為疑似暴力破解攻擊並發出告警。',
-                detectionLogic: '// 判斷 5 分鐘內單一來源 IP 失敗超過 5 次\nevent.action: "login" AND outcome: "failure" \n| stats count() by source.ip >= 5 within 5m',
-                notes: '需設定關聯規則：同一來源 IP 對多帳號嘗試，或單一帳號短時間連續失敗後成功。'
+                detectionLogic: 'event.action: "login" AND outcome: "failure" \n| stats count() by source.ip >= 5 within 5m',
+                notes: '需設定關聯規則：同一來源 IP 對多帳號嘗試，或單一帳號短時間連續失敗後成功。',
+                isVerified: false, isDeleted: false
+            },
+            {
+                id: 's3', categoryId: 'compliance', title: '內部特權濫用 (Privilege Abuse)', shortName: '特權帳號異常',
+                desc: '監控管理員與關鍵群組異動，確保每一筆權限提升都有對應的申請與授權。', risk: '中 (Medium)', riskColor: 'bg-yellow-500',
+                csf: ['govern', 'protect', 'detect'],
+                fiveM: ['man', 'method'],
+                scope: ['Microsoft Active Directory (AD DC)'],
+                logs: ['[Microsoft Active Directory (AD DC)] Windows Event ID 4728, 4732, 4756 (敏感群組成員變更)', '[Microsoft Active Directory (AD DC)] Windows Event ID 4720 (建立新使用者帳戶)'],
+                detectionStrategy: '判斷邏輯：鎖定高特權群組。當系統偵測到有成員被加入這些高權限群組或有建立新帳戶的行為時，立即觸發獨立告警。',
+                detectionLogic: 'event.code: (4728 OR 4732 OR 4756) AND group.name: ("Domain Admins" OR "Enterprise Admins")',
+                notes: '重點監控 Domain Admins 等高權限群組。',
+                isVerified: false, isDeleted: false
+            },
+            {
+                id: 's4', categoryId: 'endpoint', title: '勒索軟體早期活動', shortName: '勒索軟體活動',
+                desc: '偵測大規模檔案加密與破壞行為，在大規模加密發生前強行阻斷，減少資料損失。', risk: '極高 (Critical)', riskColor: 'bg-red-600',
+                csf: ['detect', 'respond'],
+                fiveM: ['machine', 'material'],
+                scope: ['檔案伺服器 (Windows File Server)', 'CrowdStrike Falcon EDR'],
+                logs: ['[檔案伺服器 (Windows File Server)] 短時間內大量 4663 寫入/重新命名', '[CrowdStrike Falcon EDR] EDR 惡意行為告警'],
+                detectionStrategy: '判斷邏輯：若「1 分鐘內」單一使用者變更「超過 100 個檔案」，或副檔名改為已知勒索特徵，即觸發最高級別隔離告警。',
+                detectionLogic: '(event.code: 4663 AND file.extension: ("*.crypt" OR "*.locked"))\nOR event.provider: "CrowdStrike" AND event.severity: "High"',
+                notes: '可連動 SOAR 進行帳號隔離。',
+                isVerified: false, isDeleted: false
+            },
+            {
+                id: 's5', categoryId: 'health', title: '備份系統防護與破壞', shortName: '備份破壞行為',
+                desc: '確保遭遇毀滅性攻擊後仍可復原，監控最後一道防線(備份)是否遭停用或竄改。', risk: '高 (High)', riskColor: 'bg-orange-500',
+                csf: ['identify', 'recover'],
+                fiveM: ['machine', 'method'],
+                scope: ['Veeam Backup Server'],
+                logs: ['[Veeam Backup Server] 備份軟體任務中斷或設定異動', '[Veeam Backup Server] vssadmin 刪除陰影複製'],
+                detectionStrategy: '判斷邏輯：嚴密監控備份伺服器的日誌清除行為 (1102) 以及執行刪除陰影複製的異常指令。',
+                detectionLogic: 'event.code: 1102 \nOR (process.name: "vssadmin.exe" AND process.command_line: "*delete shadows*")',
+                notes: '若產生告警需直接通報最高主管。',
+                isVerified: false, isDeleted: false
             }
         ];
 
-        window.isAdmin = false;
+        window.recycledScenarios = []; // 存放被軟刪除的情境
+
         window.currentViewMode = 'scenario';
         window.currentSelectedScenarioId = null;
         window.currentSelectedRoleName = null;
         window.currentSelectedMitreId = null; 
         window.scenarioToDelete = null;
+        window.scenarioToHardDelete = null;
         window.assetToDelete = null; 
         window.editingAssetId = null;
         window.isFirebaseInitialized = false;
         window.radarChart = null;
 
         // ==========================================
-        // 2. 輔助函式
+        // 3. 輔助函式
         // ==========================================
         window.showToast = function(msg, isError = false) {
             const toast = document.getElementById('toast');
             const toastMsg = document.getElementById('toast-message');
             if (!toast || !toastMsg) return;
             toastMsg.textContent = msg;
-            toast.className = `fixed bottom-5 right-5 text-white px-4 py-2 rounded shadow-lg transform transition-transform opacity-100 flex items-center z-50 duration-300 ${isError ? 'bg-red-600' : 'bg-green-600'}`;
+            toast.className = `fixed bottom-5 right-5 text-white px-4 py-2 rounded shadow-lg transform transition-transform opacity-100 flex items-center z-[9999] duration-300 ${isError ? 'bg-red-600' : 'bg-emerald-600'}`;
             setTimeout(() => { toast.classList.add('translate-y-20', 'opacity-0'); }, 3000);
+        };
+
+        window.formatDate = function(timestamp) {
+            if(!timestamp) return '-';
+            const d = new Date(timestamp);
+            return `${d.getFullYear()}/${(d.getMonth()+1).toString().padStart(2,'0')}/${d.getDate().toString().padStart(2,'0')} ${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')}`;
         };
 
         window.fetchWithRetry = async function(url, options, maxRetries = 5) {
@@ -718,7 +973,7 @@
         };
 
         // ==========================================
-        // 3. 資料庫連線
+        // 4. 資料庫連線 (包含軟刪除過濾)
         // ==========================================
         window.loadDataFromFirebase = async function() {
             try {
@@ -730,19 +985,29 @@
                     for (let a of window.assets) { const docRef = await window.fs.addDoc(window.fs.collection(window.db, "assets"), a); a.docId = docRef.id; }
                 } else {
                     const scenariosSnapshot = await window.fs.getDocs(window.fs.collection(window.db, "scenarios"));
-                    if (!scenariosSnapshot.empty) { window.scenarios = []; scenariosSnapshot.forEach(doc => window.scenarios.push({ docId: doc.id, ...doc.data() })); }
+                    if (!scenariosSnapshot.empty) { 
+                        window.scenarios = []; 
+                        window.recycledScenarios = [];
+                        scenariosSnapshot.forEach(doc => { 
+                            const data = doc.data();
+                            if (data.isDeleted) {
+                                window.recycledScenarios.push({ docId: doc.id, ...data });
+                            } else {
+                                window.scenarios.push({ docId: doc.id, ...data }); 
+                            }
+                        }); 
+                    }
                     const assetsSnapshot = await window.fs.getDocs(window.fs.collection(window.db, "assets"));
                     if (!assetsSnapshot.empty) { window.assets = []; assetsSnapshot.forEach(doc => window.assets.push({ docId: doc.id, ...doc.data() })); }
                 }
             } catch (e) { 
                 console.warn("Firebase error:", e); 
-                if (e.message && e.message.toLowerCase().includes('permission')) { console.error("Permission denied"); }
                 window.showToast("⚠️ 已切換為本地記憶體模式", true);
             } finally { window.syncCustomRoles(); }
         };
 
         // ==========================================
-        // 4. 核心 UI 初始化與視圖切換
+        // 5. 核心 UI 初始化與視圖切換
         // ==========================================
         window.init = function() {
             window.syncCustomRoles(); 
@@ -750,6 +1015,7 @@
             window.renderRoleButtons(); 
             window.renderMitreButtons(); 
             window.initRoleDropdown();
+            window.renderRecycleBin();
             if (window.scenarios && window.scenarios.length > 0) window.selectScenario(window.scenarios[0].id);
             if (window.rolesDef && window.rolesDef.length > 0 && window.rolesDef[0].roles.length > 0) window.selectRole(window.rolesDef[0].roles[0]);
             if (window.mitreTactics && window.mitreTactics.length > 0) window.selectMitreTactic(window.mitreTactics[0].id); 
@@ -762,7 +1028,22 @@
             document.getElementById('tab-scenario').classList.toggle('active', viewName === 'scenario');
             document.getElementById('tab-system').classList.toggle('active', viewName === 'system');
             document.getElementById('tab-mitre').classList.toggle('active', viewName === 'mitre');
-            ['scenario', 'system', 'mitre'].forEach(v => { const el = document.getElementById(`view-container-${v}`); if (el) { el.classList.toggle('active-view', v === viewName); } });
+            
+            const tabRecycle = document.getElementById('tab-recycle');
+            if (viewName === 'recycle') {
+                tabRecycle.classList.add('bg-rose-50', 'text-rose-700', 'font-bold');
+                tabRecycle.classList.remove('text-rose-300', 'hover:text-rose-100');
+            } else {
+                tabRecycle.classList.remove('bg-rose-50', 'text-rose-700', 'font-bold');
+                tabRecycle.classList.add('text-rose-300', 'hover:text-rose-100');
+            }
+
+            ['scenario', 'system', 'mitre', 'recycle'].forEach(v => { 
+                const el = document.getElementById(`view-container-${v}`); 
+                if (el) el.classList.toggle('active-view', v === viewName); 
+            });
+
+            if(viewName === 'recycle') window.renderRecycleBin();
         };
 
         window.syncCustomRoles = function() {
@@ -778,41 +1059,6 @@
         window.toggleCategory = function(groupId) {
             const groupEl = document.getElementById(`group-${groupId}`); const iconEl = document.getElementById(`icon-${groupId}`);
             if (groupEl) { groupEl.classList.toggle('hidden'); if (iconEl) { iconEl.classList.toggle('-rotate-90', groupEl.classList.contains('hidden')); } }
-        };
-
-        window.toggleAdminMode = function() {
-            if (window.isAdmin) {
-                window.isAdmin = false;
-                document.body.classList.remove('is-admin');
-                document.getElementById('btn-admin-login').innerHTML = `<i data-lucide="lock" class="w-4 h-4 mr-1.5"></i> <span class="hidden md:inline">唯讀模式</span>`;
-                document.getElementById('btn-admin-login').classList.replace('bg-indigo-600', 'bg-slate-700');
-                document.getElementById('btn-admin-login').classList.replace('hover:bg-indigo-500', 'hover:bg-slate-600');
-                window.showToast("🔒 已切換為「唯讀模式」", true);
-                if(window.currentViewMode === 'system') window.renderRoleButtons();
-                if(document.getElementById('asset-modal').classList.contains('hidden') === false) { window.renderAssetTable(); window.switchAssetMode('smart'); }
-            } else {
-                document.getElementById('admin-password-input').value = '';
-                const modal = document.getElementById('admin-login-modal'); modal.classList.remove('hidden'); modal.children[0].classList.add('modal-enter');
-                requestAnimationFrame(() => { modal.children[0].classList.add('modal-enter-active'); modal.children[0].classList.remove('modal-enter'); document.getElementById('admin-password-input').focus(); });
-            }
-        };
-
-        window.closeAdminLoginModal = function() { document.getElementById('admin-login-modal').classList.add('hidden'); };
-
-        window.submitAdminPassword = async function() {
-            const pwdInput = document.getElementById('admin-password-input').value;
-            // Simplified check for demo purposes
-            if (pwdInput === "sony168" || pwdInput !== "") {
-                window.isAdmin = true; document.body.classList.add('is-admin');
-                document.getElementById('btn-admin-login').innerHTML = `<i data-lucide="unlock" class="w-4 h-4 mr-1.5"></i> <span class="hidden md:inline">管理員模式</span>`;
-                document.getElementById('btn-admin-login').classList.replace('bg-slate-700', 'bg-indigo-600'); document.getElementById('btn-admin-login').classList.replace('hover:bg-slate-600', 'hover:bg-indigo-500');
-                window.showToast("🔓 已解鎖所有編輯與新增權限！");
-                window.closeAdminLoginModal(); if (typeof lucide !== 'undefined') lucide.createIcons();
-                if(window.currentViewMode === 'system') window.renderRoleButtons();
-                if(document.getElementById('asset-modal').classList.contains('hidden') === false) { window.renderAssetTable(); window.switchAssetMode('smart'); }
-            } else {
-                window.showToast("⚠️ 密碼不能為空。", true); 
-            }
         };
 
         window.openApiSettingsModal = function() {
@@ -858,7 +1104,21 @@
         window.renderScenarioButtons = function() {
             const container = document.getElementById('scenario-list'); container.innerHTML = '';
             const totalSpan = document.getElementById('total-scenarios-count'); if (totalSpan) totalSpan.textContent = `共 ${window.scenarios ? window.scenarios.length : 0} 項`;
-            if(!window.categoriesDef || !window.scenarios) return;
+            
+            // 🔧 關鍵修復：若資料庫為空，提供友善的防呆預設畫面
+            if (!window.scenarios || window.scenarios.length === 0) {
+                document.getElementById('detail-title').textContent = '尚無情境';
+                document.getElementById('detail-desc').textContent = '請點擊左側「AI 輔助生成新情境」建立第一筆資料。';
+                document.getElementById('execution-tbody').innerHTML = '';
+                document.getElementById('scenario-badges-container').innerHTML = '';
+                document.getElementById('toggle-verify-btn').classList.add('hidden');
+                document.getElementById('optimize-scenario-btn').classList.add('hidden'); 
+                document.getElementById('delete-scenario-btn').classList.add('hidden'); 
+                document.getElementById('edit-scenario-btn').classList.add('hidden'); 
+                document.getElementById('attack-sim-btn').classList.add('hidden'); 
+                return;
+            }
+            if(!window.categoriesDef) return;
 
             window.categoriesDef.forEach(cat => {
                 const categoryScenarios = window.scenarios.filter(s => s.categoryId === cat.id); if (categoryScenarios.length === 0) return;
@@ -868,10 +1128,14 @@
 
                 const groupContainer = document.getElementById(`group-cat-${cat.id}`);
                 categoryScenarios.forEach(s => {
-                    const btn = document.createElement('button'); btn.className = `scenario-btn w-full text-left px-3 py-2.5 rounded-md border border-slate-200 hover:border-${cat.colorClass.split('-')[1]}-400 focus:outline-none flex justify-between items-start bg-white shadow-sm transition-all`; btn.id = `btn-${s.id}`; btn.onclick = () => window.selectScenario(s.id);
+                    const isVerified = s.isVerified;
+                    const bgClass = isVerified ? 'bg-emerald-50 border-emerald-300' : 'bg-white border-slate-200';
+                    const verifiedIcon = isVerified ? `<i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-500 ml-1.5 flex-shrink-0" title="已確認可行"></i>` : '';
+                    
+                    const btn = document.createElement('button'); btn.className = `scenario-btn w-full text-left px-3 py-2.5 rounded-md border hover:border-${cat.colorClass.split('-')[1]}-400 focus:outline-none flex justify-between items-start shadow-sm transition-all ${bgClass}`; btn.id = `btn-${s.id}`; btn.onclick = () => window.selectScenario(s.id);
                     let rColor = s.riskColor || 'bg-slate-600'; if (!rColor.includes('bg-')) { if (s.risk && (s.risk.includes('極高') || s.risk.includes('高') || s.risk.includes('Critical') || s.risk.includes('High'))) rColor = 'bg-red-600'; else if (s.risk && (s.risk.includes('中') || s.risk.includes('Medium'))) rColor = 'bg-orange-500'; else if (s.risk && (s.risk.includes('低') || s.risk.includes('Low'))) rColor = 'bg-green-500'; else rColor = 'bg-slate-600'; }
                     const displayTitle = s.shortName ? s.shortName : s.title; const subTitleHtml = s.shortName ? `<span class="text-[10px] text-slate-400 truncate w-full block mt-0.5" title="${s.title}">${s.title}</span>` : '';
-                    btn.innerHTML = `<div class="flex items-start overflow-hidden w-full"><i data-lucide="${cat.icon}" class="w-4 h-4 mr-2 mt-0.5 text-slate-400 btn-icon flex-shrink-0"></i><div class="flex flex-col min-w-0 flex-1"><span class="font-bold text-sm truncate text-slate-700" title="${displayTitle}">${displayTitle}</span>${subTitleHtml}</div></div><span class="w-2.5 h-2.5 rounded-full ${rColor} flex-shrink-0 ml-2 mt-1 shadow-sm"></span>`;
+                    btn.innerHTML = `<div class="flex items-start overflow-hidden w-full"><i data-lucide="${cat.icon}" class="w-4 h-4 mr-2 mt-0.5 text-slate-400 btn-icon flex-shrink-0"></i><div class="flex flex-col min-w-0 flex-1"><div class="flex items-center"><span class="font-bold text-sm truncate text-slate-700" title="${displayTitle}">${displayTitle}</span>${verifiedIcon}</div>${subTitleHtml}</div></div><span class="w-2.5 h-2.5 rounded-full ${rColor} flex-shrink-0 ml-2 mt-1 shadow-sm"></span>`;
                     groupContainer.appendChild(btn);
                 });
             });
@@ -893,9 +1157,23 @@
             const catBadge = document.getElementById('category-badge'); 
             if(categoryInfo) { catBadge.className = `px-3 py-1 text-xs font-bold rounded-full border ${categoryInfo.bgClass} ${categoryInfo.colorClass} ${categoryInfo.borderClass} inline-flex items-center`; catBadge.innerHTML = `<i data-lucide="${categoryInfo.icon}" class="w-3.5 h-3.5 mr-1.5"></i> ${categoryInfo.name}`; document.getElementById('detail-hero-icon').innerHTML = `<i data-lucide="${categoryInfo.icon}" class="w-20 h-20 transform -rotate-12 translate-x-2 -translate-y-2"></i>`; }
 
-            const badgesContainer = document.getElementById('scenario-badges-container'); while (badgesContainer.children.length > 2) { badgesContainer.removeChild(badgesContainer.lastChild); }
+            const verifiedBadge = document.getElementById('verified-badge');
+            const toggleVerifyBtn = document.getElementById('toggle-verify-btn');
+            if (scenario.isVerified) {
+                verifiedBadge.classList.remove('hidden');
+                toggleVerifyBtn.innerHTML = `<i data-lucide="x-circle" class="w-4 h-4 mr-1 text-slate-500"></i> 取消確認`;
+                toggleVerifyBtn.className = "admin-only text-xs bg-slate-100 text-slate-600 hover:bg-slate-200 border border-slate-300 px-3 py-1.5 rounded flex items-center transition-colors shadow-sm hidden group";
+            } else {
+                verifiedBadge.classList.add('hidden');
+                toggleVerifyBtn.innerHTML = `<i data-lucide="check-circle" class="w-4 h-4 mr-1 group-hover:scale-110 transition-transform"></i> 標記為可行`;
+                toggleVerifyBtn.className = "admin-only text-xs bg-emerald-50 text-emerald-600 hover:bg-emerald-100 border border-emerald-200 px-3 py-1.5 rounded flex items-center transition-colors shadow-sm hidden group";
+            }
+
+            const badgesContainer = document.getElementById('scenario-badges-container');
+            while (badgesContainer.children.length > 3) { badgesContainer.removeChild(badgesContainer.lastChild); }
             if (scenario.fiveM && Array.isArray(scenario.fiveM)) { scenario.fiveM.forEach(mId => { const mDef = window.fiveMDef.find(m => m.id === mId); if (mDef) { const mBadge = document.createElement('span'); mBadge.className = `px-3 py-1 text-xs font-medium rounded-full border ${mDef.bgClass} ${mDef.colorClass} ${mDef.borderClass} inline-flex items-center cursor-help`; mBadge.title = mDef.desc; mBadge.innerHTML = `<i data-lucide="${mDef.icon}" class="w-3 h-3 mr-1"></i> ${mDef.name}`; badgesContainer.appendChild(mBadge); } }); }
 
+            document.getElementById('toggle-verify-btn').classList.remove('hidden');
             document.getElementById('optimize-scenario-btn').classList.remove('hidden'); document.getElementById('delete-scenario-btn').classList.remove('hidden'); document.getElementById('edit-scenario-btn').classList.remove('hidden'); document.getElementById('attack-sim-btn').classList.remove('hidden'); 
             const csfGenBtn = document.getElementById('btn-generate-csf'); if (csfGenBtn) csfGenBtn.classList.remove('hidden');
             const kqlResult = document.getElementById('ai-kql-result'); if (kqlResult) kqlResult.classList.add('hidden');
@@ -1244,7 +1522,7 @@
         window.deleteAsset = function(id) {
             const target = window.assets.find(a => a.id === id); if (!target) return;
             window.assetToDelete = id; window.scenarioToDelete = null; 
-            document.getElementById('delete-confirm-msg').textContent = `確定要刪除資產「${target.name}」嗎？(刪除後無法復原)`;
+            document.getElementById('delete-confirm-msg').textContent = `確定要刪除資產「${target.name}」嗎？(實體資產將會直接永久刪除)`;
             const modal = document.getElementById('delete-confirm-modal'); modal.classList.remove('hidden'); modal.children[0].classList.add('modal-enter');
             requestAnimationFrame(() => { modal.children[0].classList.add('modal-enter-active'); modal.children[0].classList.remove('modal-enter'); });
         };
@@ -1300,10 +1578,10 @@
                 const cat = window.categoriesDef.find(c => c.id === s.categoryId) || {name: '未分類'};
                 const fiveM = (s.fiveM || []).map(mId => { const m = window.fiveMDef.find(d => d.id === mId); return m ? m.name : ''; }).filter(n => n).join(', ');
                 const csf = (s.csf || []).map(cId => { const c = window.csfFunctions.find(d => d.id === cId); return c ? c.name : ''; }).join(', ');
-                return { '威脅領域 (Category)': cat.name, '情境名稱 (Title)': s.title, '情境描述 (Description)': s.desc, '風險等級 (Risk Level)': s.risk, '對應 NIST CSF': csf, '管理維度 (5M1E)': fiveM, '涵蓋系統角色 (Scope)': (s.scope || []).join(', '), '必須收集日誌 (Required Logs)': (s.logs || []).join('\n'), '實際偵測策略 (Detection Strategy)': s.detectionStrategy || '', 'KQL 實作語法 (KQL Logic)': s.detectionLogic || '', '技術備註 (Notes)': s.notes || '' };
+                return { '威脅領域 (Category)': cat.name, '情境名稱 (Title)': s.title, '已確認可行': s.isVerified ? '是' : '否', '情境描述 (Description)': s.desc, '風險等級 (Risk Level)': s.risk, '對應 NIST CSF': csf, '管理維度 (5M1E)': fiveM, '涵蓋系統角色 (Scope)': (s.scope || []).join(', '), '必須收集日誌 (Required Logs)': (s.logs || []).join('\n'), '實際偵測策略 (Detection Strategy)': s.detectionStrategy || '', 'KQL 實作語法 (KQL Logic)': s.detectionLogic || '', '技術備註 (Notes)': s.notes || '' };
             });
             const ws = XLSX.utils.json_to_sheet(exportData);
-            ws['!cols'] = [{wch: 15}, {wch: 30}, {wch: 45}, {wch: 15}, {wch: 25}, {wch: 25}, {wch: 30}, {wch: 50}, {wch: 50}, {wch: 40}, {wch: 30}];
+            ws['!cols'] = [{wch: 15}, {wch: 30}, {wch: 10}, {wch: 45}, {wch: 15}, {wch: 25}, {wch: 25}, {wch: 30}, {wch: 50}, {wch: 50}, {wch: 40}, {wch: 30}];
             const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "SIEM 監控情境清單"); XLSX.writeFile(wb, "SIEM_Strategy_Plan.xlsx");
             window.showToast('✅ 成功匯出 Excel 報表！');
         };
@@ -1378,7 +1656,6 @@
                 let text = result.candidates[0].content.parts[0].text;
                 
                 if (jsonMode) {
-                    // 確保移除 AI 偶爾會加上的 Markdown 標記，避免 JSON.parse 報錯
                     text = text.replace(/```json/gi, '').replace(/```/g, '').trim();
                     return JSON.parse(text);
                 }
@@ -1413,10 +1690,10 @@
             - scope (系統角色) 陣列請【務必優先】從使用者現有資產角色中挑選: [${activeRoles.join(', ')}]，如果現有資產不足以支撐防禦，再自行補充新角色。
             - logs 陣列請列出針對 scope 中每個角色必須收集的具體日誌，格式必須為 "[角色名稱] 日誌詳細說明"。
             - risk 只能填寫: "極高 (Critical)", "高 (High)", "中 (Medium)", "低 (Low)"。
-            - detectionLogic 必須是可直接在 ELK (Elastic Stack / Kibana) 上執行的 KQL (Kibana Query Language) 語法。
-            - detectionStrategy 則是對該 KQL 偵測邏輯的詳細中文原理解釋與判斷說明。
+            - detectionLogic 必須是可直接在 ELK 上執行的 KQL (Kibana Query Language) 語法。
+            - detectionStrategy 是對該 KQL 偵測邏輯的詳細中文原理解釋與判斷說明。
 
-            請輸出純 JSON 格式，必須包含以下所有欄位，絕不可遺漏或留空：
+            請輸出純 JSON 格式：
             { 
               "id": "s_new", 
               "categoryId": "string", 
@@ -1439,6 +1716,8 @@
             
             if (res) {
                 res.id = 's' + Date.now();
+                res.isVerified = false;
+                res.isDeleted = false;
                 if (window.db && window.fs) {
                     try {
                         const docRef = await window.fs.addDoc(window.fs.collection(window.db, "scenarios"), res);
@@ -1512,7 +1791,7 @@
                 }
 
                 window.showToast("✨ AI 深度實戰分析已完成！");
-                window.selectScenario(scenario.id); // 重新渲染畫面以顯示結果
+                window.selectScenario(scenario.id);
             }
 
             btn.innerHTML = originalHtml;
@@ -1544,10 +1823,10 @@
             - risk 只能填寫: "極高 (Critical)", "高 (High)", "中 (Medium)", "低 (Low)"。
             - scope 陣列請優先對應使用者的現有資產角色。
             - logs 陣列格式必須為 "[角色名稱] 需收集的日誌細節"。
-            - detectionLogic 必須是符合 ELK (Elastic Stack) 規範的 KQL (Kibana Query Language) 語法。
+            - detectionLogic 必須是符合 ELK (Elastic Stack) 規範的 KQL 語法。
             - detectionStrategy 則是對該 KQL 偵測邏輯的中文原理解釋與判斷說明。
 
-            輸出格式必須為完整 JSON Object，不可遺漏欄位：
+            輸出格式必須為完整 JSON Object：
             { 
               "id": "m_new", 
               "categoryId": "string", 
@@ -1569,6 +1848,8 @@
             const res = await window.callGemini(prompt, systemPrompt);
             if (res) {
                 res.id = 'm' + Date.now();
+                res.isVerified = false;
+                res.isDeleted = false;
                 window.scenarios.push(res);
                 if (window.db && window.fs) {
                     try {
@@ -1625,34 +1906,126 @@
         };
 
         // ==========================================
-        // 9. 管理與刪除邏輯
+        // 9. 管理與軟/硬刪除邏輯
         // ==========================================
         window.deleteScenario = function(id) {
             window.scenarioToDelete = id;
             window.assetToDelete = null;
-            document.getElementById('delete-confirm-msg').textContent = "確定要刪除此情境嗎？這將會從雲端永久移除。";
+            document.getElementById('delete-confirm-msg').innerHTML = "確定要把此情境移至<strong>回收箱</strong>嗎？<br><span class='text-xs text-slate-500'>若有需要，您可以隨時從回收箱中將其復原。</span>";
             document.getElementById('delete-confirm-modal').classList.remove('hidden');
         };
 
         window.executeDelete = async function() {
             if (window.scenarioToDelete) {
                 const sc = window.scenarios.find(s => s.id === window.scenarioToDelete);
-                if (window.db && window.fs && sc.docId) await window.fs.deleteDoc(window.fs.doc(window.db, "scenarios", sc.docId));
+                // Soft delete
+                sc.isDeleted = true;
+                sc.deletedBy = window.currentUser ? window.currentUser.email : 'Unknown';
+                sc.deletedAt = Date.now();
+
+                if (window.db && window.fs && sc.docId) {
+                    await window.fs.updateDoc(window.fs.doc(window.db, "scenarios", sc.docId), {
+                        isDeleted: true,
+                        deletedBy: sc.deletedBy,
+                        deletedAt: sc.deletedAt
+                    });
+                }
+                
+                // Move from scenarios array to recycledScenarios array
                 window.scenarios = window.scenarios.filter(s => s.id !== window.scenarioToDelete);
+                window.recycledScenarios.push(sc);
+                
                 window.renderScenarioButtons();
                 if (window.scenarios.length > 0) window.selectScenario(window.scenarios[0].id);
+                window.renderRecycleBin();
+                window.showToast("🗑️ 情境已移至回收箱");
+                
             } else if (window.assetToDelete) {
                 const as = window.assets.find(a => a.id === window.assetToDelete);
                 if (window.db && window.fs && as.docId) await window.fs.deleteDoc(window.fs.doc(window.db, "assets", as.docId));
                 window.assets = window.assets.filter(a => a.id !== window.assetToDelete);
                 window.renderAssetTable();
                 window.renderRoleButtons();
+                window.showToast("🗑️ 資產已永久刪除");
             }
             window.closeDeleteModal();
-            window.showToast("🗑️ 資料已移除");
         };
 
-        // 其他基礎視窗控制
+        // 回收箱專用邏輯
+        window.renderRecycleBin = function() {
+            const tbody = document.getElementById('recycle-tbody');
+            if(!tbody) return;
+            tbody.innerHTML = '';
+            document.getElementById('recycle-count').textContent = `共 ${window.recycledScenarios.length} 項`;
+
+            if (window.recycledScenarios.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" class="p-8 text-center text-slate-500 italic"><i data-lucide="inbox" class="w-10 h-10 mx-auto mb-3 opacity-40"></i>回收箱是空的</td></tr>`;
+                if (typeof lucide !== 'undefined') lucide.createIcons();
+                return;
+            }
+
+            window.recycledScenarios.sort((a, b) => (b.deletedAt || 0) - (a.deletedAt || 0)).forEach(sc => {
+                const cat = window.categoriesDef.find(c => c.id === sc.categoryId) || {name: '未知分類', icon: 'folder'};
+                tbody.innerHTML += `
+                    <tr class="hover:bg-slate-50 transition-colors">
+                        <td class="p-4 border-b font-bold text-slate-800">${sc.title}</td>
+                        <td class="p-4 border-b"><span class="inline-flex items-center px-2 py-1 rounded bg-slate-100 text-slate-600 text-xs"><i data-lucide="${cat.icon}" class="w-3 h-3 mr-1"></i>${cat.name}</span></td>
+                        <td class="p-4 border-b text-slate-600 text-xs font-mono">${sc.deletedBy || '未知使用者'}</td>
+                        <td class="p-4 border-b text-slate-500 text-xs">${window.formatDate(sc.deletedAt)}</td>
+                        <td class="p-4 border-b text-center admin-only">
+                            <button onclick="window.restoreScenario('${sc.id}')" class="text-indigo-600 hover:bg-indigo-50 p-1.5 rounded mr-2" title="復原此情境"><i data-lucide="rotate-ccw" class="w-4 h-4"></i></button>
+                            <button onclick="window.confirmHardDelete('${sc.id}')" class="text-rose-500 hover:bg-rose-50 p-1.5 rounded" title="永久刪除"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                        </td>
+                    </tr>
+                `;
+            });
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+        };
+
+        window.restoreScenario = async function(id) {
+            const idx = window.recycledScenarios.findIndex(s => s.id === id);
+            if(idx === -1) return;
+            const sc = window.recycledScenarios[idx];
+            
+            sc.isDeleted = false;
+            
+            if (window.db && window.fs && sc.docId) {
+                await window.fs.updateDoc(window.fs.doc(window.db, "scenarios", sc.docId), { isDeleted: false });
+            }
+
+            window.recycledScenarios.splice(idx, 1);
+            window.scenarios.push(sc);
+            
+            window.renderRecycleBin();
+            window.renderScenarioButtons();
+            window.showToast("✅ 情境已成功復原");
+        };
+
+        window.confirmHardDelete = function(id) {
+            window.scenarioToHardDelete = id;
+            document.getElementById('hard-delete-confirm-modal').classList.remove('hidden');
+        };
+        window.closeHardDeleteModal = function() {
+            window.scenarioToHardDelete = null;
+            document.getElementById('hard-delete-confirm-modal').classList.add('hidden');
+        };
+
+        window.executeHardDelete = async function() {
+            if(!window.scenarioToHardDelete) return;
+            const idx = window.recycledScenarios.findIndex(s => s.id === window.scenarioToHardDelete);
+            if(idx !== -1) {
+                const sc = window.recycledScenarios[idx];
+                if (window.db && window.fs && sc.docId) {
+                    await window.fs.deleteDoc(window.fs.doc(window.db, "scenarios", sc.docId));
+                }
+                window.recycledScenarios.splice(idx, 1);
+                window.renderRecycleBin();
+                window.showToast("🔥 情境已永久抹除");
+            }
+            window.closeHardDeleteModal();
+        };
+
+        // 基礎視窗控制
         window.openAIModal = () => document.getElementById('ai-modal').classList.remove('hidden');
         window.closeAIModal = () => document.getElementById('ai-modal').classList.add('hidden');
         window.openExecutiveReportModal = () => { document.getElementById('executive-report-modal').classList.remove('hidden'); window.generateExecutiveReport(); };
@@ -1660,6 +2033,25 @@
         window.closeDeleteModal = () => document.getElementById('delete-confirm-modal').classList.add('hidden');
         window.closeAttackSimModal = () => document.getElementById('attack-sim-modal').classList.add('hidden');
         
+        window.toggleScenarioVerify = async function() {
+            const scenario = window.scenarios.find(s => s.id === window.currentSelectedScenarioId);
+            if (!scenario) return;
+
+            scenario.isVerified = !scenario.isVerified;
+
+            if (window.db && window.fs && scenario.docId) {
+                try {
+                    await window.fs.updateDoc(window.fs.doc(window.db, "scenarios", scenario.docId), {
+                        isVerified: scenario.isVerified
+                    });
+                } catch(e) { console.error(e); }
+            }
+
+            window.showToast(scenario.isVerified ? "✅ 情境已標記為「確認可行」" : "ℹ️ 已取消可行標記");
+            window.renderScenarioButtons(); 
+            window.selectScenario(scenario.id); 
+        };
+
         // ==========================================
         // 10. 進階設定 (編輯情境) 與 AI 擴充邏輯
         // ==========================================
@@ -1876,16 +2268,16 @@
             if (window.isFirebaseInitialized) return;
             window.isFirebaseInitialized = true;
             if(window.db && window.fs) {
-                window.showToast("正在連接並同步您的雲端資料庫...", false);
                 await window.loadDataFromFirebase();
-                window.showToast("✅ 成功載入 Firebase 雲端資料庫！");
-                const loadingOverlay = document.getElementById('loading-overlay');
-                if (loadingOverlay) loadingOverlay.classList.add('hidden');
             }
             window.init();
+            
+            // 強制檢查如果剛登入尚未觸發切換，再次重新繪製
+            if (window.scenarios && window.scenarios.length > 0) window.selectScenario(window.scenarios[0].id);
         };
 
-        window.addEventListener('firebase-loaded', () => {
+        // 監聽 Auth 變化完成後觸發系統加載
+        window.addEventListener('firebase-authenticated', () => {
             if (document.readyState === 'loading') {
                 document.addEventListener('DOMContentLoaded', bootSystem);
             } else {
@@ -1893,18 +2285,6 @@
             }
         });
 
-        setTimeout(() => {
-            if (!window.isFirebaseInitialized) {
-                console.warn("Firebase SDK loading timeout, running in local memory mode.");
-                const loadingOverlay = document.getElementById('loading-overlay');
-                if (loadingOverlay) loadingOverlay.classList.add('hidden');
-                if (document.readyState === 'loading') {
-                    document.addEventListener('DOMContentLoaded', () => { window.init(); });
-                } else {
-                    window.init();
-                }
-            }
-        }, 3000);
     </script>
 </body>
 </html>
