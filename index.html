@@ -467,7 +467,7 @@
                             </select>
                         </div>
                     </div>
-                    <div class="flex flex-col"><div class="flex justify-between items-center mb-2 border-b pb-2"><h4 class="font-bold text-sm flex items-center"><i data-lucide="file-code" class="w-4 h-4 mr-1.5 text-blue-500"></i> 6. 收集日誌</h4><button onclick="window.aiAutoFillLogs(event)" class="text-xs bg-indigo-50 text-indigo-700 hover:bg-indigo-100 px-2 py-1 rounded transition-colors"><i data-lucide="sparkles" class="w-3 h-3 mr-1 inline"></i>AI 補齊</button></div><textarea id="edit-scenario-logs" rows="3" class="w-full text-sm font-mono border-slate-300 rounded-md p-3 border"></textarea></div>
+                    <div class="flex flex-col"><div class="flex justify-between items-center mb-2 border-b pb-2"><h4 class="font-bold text-sm flex items-center"><i data-lucide="file-code" class="w-4 h-4 mr-1.5 text-blue-500"></i> 6. 收集日誌</h4><button onclick="window.aiAutoFillDetails(event)" class="text-xs bg-indigo-50 text-indigo-700 hover:bg-indigo-100 px-2 py-1 rounded transition-colors shadow-sm"><i data-lucide="sparkles" class="w-3 h-3 mr-1 inline"></i>AI 深度補齊 (日誌與 ELK)</button></div><textarea id="edit-scenario-logs" rows="3" class="w-full text-sm font-mono border-slate-300 rounded-md p-3 border"></textarea></div>
                     <div class="flex flex-col"><div class="flex justify-between items-center mb-2 border-b pb-2"><h4 class="font-bold text-sm flex items-center"><i data-lucide="microscope" class="w-4 h-4 mr-1.5 text-indigo-500"></i> 7. 判斷邏輯說明</h4></div><textarea id="edit-scenario-strategy" rows="2" class="w-full text-sm border-slate-300 rounded-md p-3 border"></textarea></div>
                     <div class="flex flex-col"><div class="flex justify-between items-center mb-2 border-b pb-2"><h4 class="font-bold text-sm flex items-center"><i data-lucide="code-2" class="w-4 h-4 mr-1.5 text-green-500"></i> 8. KQL 邏輯</h4></div><textarea id="edit-scenario-kql" rows="2" class="w-full text-sm font-mono border-slate-300 rounded-md p-3 bg-slate-900 text-green-400"></textarea></div>
                     <div class="flex flex-col"><div class="flex justify-between items-center mb-2 border-b pb-2"><h4 class="font-bold text-sm flex items-center"><i data-lucide="clipboard-list" class="w-4 h-4 mr-1.5 text-blue-500"></i> 9. 備註</h4></div><textarea id="edit-scenario-notes" rows="2" class="w-full text-sm border-slate-300 rounded-md p-3 border"></textarea></div>
@@ -2087,6 +2087,12 @@
                 window.assets = window.assets.filter(a => a.id !== window.assetToDelete);
                 window.renderAssetTable();
                 window.renderRoleButtons();
+                
+                // 🔧 補齊連動：刪除資產後，強制刷新當前的情境畫面，讓缺失的資產立刻顯示警告
+                if (window.currentViewMode === 'scenario' && window.currentSelectedScenarioId) {
+                    window.selectScenario(window.currentSelectedScenarioId);
+                }
+                
                 window.showToast("🗑️ 資產已永久刪除");
             }
             window.closeDeleteModal();
@@ -2297,26 +2303,40 @@
             window.showToast("✅ 情境設定與燈號已成功儲存！");
         };
 
-        window.aiAutoFillLogs = async (e) => {
+        // 🔧 升級：將單純補齊日誌，升級為補齊「日誌、原理解釋與 ELK 語法」
+        window.aiAutoFillDetails = async (e) => {
             e.preventDefault();
             const scopeCbs = document.querySelectorAll('.edit-scope-cb:checked');
             const scope = Array.from(scopeCbs).map(cb => cb.value);
             if(scope.length === 0) return window.showToast("⚠️ 請先勾選至少一個系統角色！", true);
             
             const btn = e.currentTarget; const origHtml = btn.innerHTML;
-            btn.innerHTML = `<i data-lucide="loader-2" class="w-3 h-3 animate-spin inline mr-1"></i> 生成中...`;
+            btn.innerHTML = `<i data-lucide="loader-2" class="w-3 h-3 animate-spin inline mr-1"></i> 深度補齊中...`;
             btn.disabled = true;
 
             const title = document.getElementById('edit-scenario-title').value.trim();
-            const strategy = document.getElementById('edit-scenario-strategy').value.trim();
+            const strategyText = document.getElementById('edit-scenario-strategy').value.trim();
+            const kqlText = document.getElementById('edit-scenario-kql').value.trim();
 
-            const prompt = `為以下 SIEM 監控情境建議必須收集的日誌。\n情境名稱：${title}\n判斷邏輯：${strategy}\n系統角色：${scope.join(', ')}`;
-            const systemPrompt = `你是一個 SIEM 專家。請以 JSON 陣列格式回傳日誌清單，例如：["[設備A] Windows Event ID 4625 (登入失敗)", "[設備B] 防火牆阻擋日誌"]`;
+            const prompt = `為以下 SIEM 監控情境建議必須收集的日誌，並同時補齊 ELK 偵測語法。
+            情境名稱：${title}
+            系統角色：${scope.join(', ')}
+            目前的判斷邏輯參考：${strategyText}
+            目前的 KQL 參考：${kqlText}`;
+            
+            const systemPrompt = `你是一個頂尖的 SIEM 專家。請以嚴格的 JSON 格式回傳以下三個屬性：
+            {
+               "logs": ["陣列格式，如: [設備A] Windows Event ID 4625 (登入失敗)", "[設備B] 防火牆阻擋日誌"],
+               "detectionStrategy": "中文詳細解釋如何利用上述日誌進行關聯分析與判斷",
+               "detectionLogic": "可直接在 ELK 上執行的 KQL (Kibana Query Language) 語法。絕對不要加上 Markdown 的 backticks 標記"
+            }`;
 
             const res = await window.callGemini(prompt, systemPrompt, true);
-            if (res && Array.isArray(res)) {
-                document.getElementById('edit-scenario-logs').value = res.join('\n');
-                window.showToast("✨ AI 已為您建議日誌清單");
+            if (res) {
+                if (res.logs && Array.isArray(res.logs)) document.getElementById('edit-scenario-logs').value = res.logs.join('\n');
+                if (res.detectionStrategy) document.getElementById('edit-scenario-strategy').value = res.detectionStrategy;
+                if (res.detectionLogic) document.getElementById('edit-scenario-kql').value = res.detectionLogic;
+                window.showToast("✨ AI 已為您自動補齊日誌與 ELK 語法！");
             }
             btn.innerHTML = origHtml; btn.disabled = false;
             if (typeof lucide !== 'undefined') lucide.createIcons();
@@ -2360,14 +2380,15 @@
             const valid5M = window.fiveMDef.map(m => m.id).join(', ');
             const fiveMContext = window.fiveMDef.map(m => `${m.id}=${m.name}(${m.desc})`).join(', ');
 
+            // 🔧 強化 System Prompt：強烈約束 ELK (KQL) 必填
             const systemPrompt = `你是一位頂尖的 SIEM 架構專家。請根據使用者【目前的實體資產角色清單】：[${activeRoles.join(', ')}]，全面重新掃描並最佳化此威脅情境的內容。
             必須嚴格遵守：
             - scope 陣列請【務必優先】只包含在上述現有資產中能對應到的角色。拔除不合理或不存在的設備，並加入現有可用來防禦此情境的設備。若現有設備完全無法防禦，才建議必要的外部角色。
             - csf 元素只能從: [${validCSF}] 挑選。
             - fiveM 元素只能從: [${valid5M}] 挑選。各屬性定義參考：${fiveMContext}
             - logs 陣列請根據更新後的 scope，列出對應的日誌收集需求，格式為 "[角色名稱] 日誌詳細說明"。
-            - detectionLogic 必須是優化後、可直接在 ELK 上執行的 KQL 語法，並且只能使用有在 logs 收集範圍內的資料。
-            - detectionStrategy 是對優化後邏輯的中文解釋。
+            - detectionLogic 【非常重要】必須是優化後、可直接在 ELK 上執行的 KQL (Kibana Query Language) 語法。請勿留空，且不要包覆在 markdown backticks 內。
+            - detectionStrategy 是對優化後 KQL 邏輯的中文解釋。
             - 同步檢視並更新 mitigation, response (防禦與應變指南) 以符合最新的資產與防禦邏輯。
 
             回傳純 JSON 格式：
@@ -2394,7 +2415,7 @@
             目前的 mitigation: ${JSON.stringify(scenario.mitigation || [])}
             目前的 response: ${JSON.stringify(scenario.response || [])}
             
-            請依據現有資產全面重新生成並優化上述內容。`;
+            請依據現有資產全面重新生成並優化上述所有內容。如果 KQL 語法太短或不足，請擴充它。`;
 
             const res = await window.callGemini(prompt, systemPrompt, true);
             if (res) {
@@ -2403,7 +2424,12 @@
                 scenario.fiveM = res.fiveM || scenario.fiveM;
                 scenario.logs = res.logs || scenario.logs;
                 scenario.detectionStrategy = res.detectionStrategy || scenario.detectionStrategy;
-                scenario.detectionLogic = res.detectionLogic || scenario.detectionLogic;
+                
+                // 防呆：確保即使 AI 回傳空值，也不會蓋掉原本有的 KQL
+                if (res.detectionLogic && res.detectionLogic.trim() !== '') {
+                    scenario.detectionLogic = res.detectionLogic;
+                }
+                
                 scenario.mitigation = res.mitigation || scenario.mitigation;
                 scenario.response = res.response || scenario.response;
                 
