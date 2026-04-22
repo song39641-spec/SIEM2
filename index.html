@@ -2303,7 +2303,7 @@
             window.showToast("✅ 情境設定與燈號已成功儲存！");
         };
 
-        // 🔧 升級：將單純補齊日誌，升級為補齊「日誌、原理解釋與 ELK 語法」
+        // 🔧 升級：將單純補齊日誌，升級為補齊「日誌、原理解釋、ELK 語法與備註」
         window.aiAutoFillDetails = async (e) => {
             e.preventDefault();
             const scopeCbs = document.querySelectorAll('.edit-scope-cb:checked');
@@ -2315,20 +2315,28 @@
             btn.disabled = true;
 
             const title = document.getElementById('edit-scenario-title').value.trim();
+            const logsText = document.getElementById('edit-scenario-logs').value.trim();
             const strategyText = document.getElementById('edit-scenario-strategy').value.trim();
             const kqlText = document.getElementById('edit-scenario-kql').value.trim();
+            const notesText = document.getElementById('edit-scenario-notes').value.trim();
 
-            const prompt = `為以下 SIEM 監控情境建議必須收集的日誌，並同時補齊 ELK 偵測語法。
+            const prompt = `為以下 SIEM 監控情境深度補齊所有技術細節：
             情境名稱：${title}
-            系統角色：${scope.join(', ')}
-            目前的判斷邏輯參考：${strategyText}
-            目前的 KQL 參考：${kqlText}`;
+            系統角色 (Scope)：${scope.join(', ')}
+            ---目前的內容參考---
+            收集日誌：${logsText || '(空)'}
+            判斷邏輯說明：${strategyText || '(空)'}
+            KQL 邏輯：${kqlText || '(空)'}
+            備註：${notesText || '(空)'}
             
-            const systemPrompt = `你是一個頂尖的 SIEM 專家。請以嚴格的 JSON 格式回傳以下三個屬性：
+            請根據系統角色與情境名稱，將上述四個欄位(日誌、判斷邏輯、KQL、備註)全部補齊、擴充到最完整的狀態。`;
+            
+            const systemPrompt = `你是一個頂尖的 SIEM 專家。請以嚴格的 JSON 格式回傳以下四個屬性：
             {
-               "logs": ["陣列格式，如: [設備A] Windows Event ID 4625 (登入失敗)", "[設備B] 防火牆阻擋日誌"],
+               "logs": ["陣列格式，列出必須收集的日誌，如: [設備A] Windows Event ID 4625 (登入失敗)", "[設備B] 防火牆阻擋日誌"],
                "detectionStrategy": "中文詳細解釋如何利用上述日誌進行關聯分析與判斷",
-               "detectionLogic": "可直接在 ELK 上執行的 KQL (Kibana Query Language) 語法。絕對不要加上 Markdown 的 backticks 標記"
+               "detectionLogic": "可直接在 ELK 上執行的 KQL (Kibana Query Language) 語法。絕對不要加上 Markdown 的 backticks 標記",
+               "notes": "針對此情境的技術備註，例如需要開啟什麼進階稽核、GPO、前置作業、閾值建議等"
             }`;
 
             const res = await window.callGemini(prompt, systemPrompt, true);
@@ -2336,7 +2344,8 @@
                 if (res.logs && Array.isArray(res.logs)) document.getElementById('edit-scenario-logs').value = res.logs.join('\n');
                 if (res.detectionStrategy) document.getElementById('edit-scenario-strategy').value = res.detectionStrategy;
                 if (res.detectionLogic) document.getElementById('edit-scenario-kql').value = res.detectionLogic;
-                window.showToast("✨ AI 已為您自動補齊日誌與 ELK 語法！");
+                if (res.notes) document.getElementById('edit-scenario-notes').value = res.notes;
+                window.showToast("✨ AI 已為您自動補齊所有技術細節！");
             }
             btn.innerHTML = origHtml; btn.disabled = false;
             if (typeof lucide !== 'undefined') lucide.createIcons();
