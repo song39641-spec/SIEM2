@@ -286,6 +286,27 @@
                         <div class="p-6 bg-white" id="playbook-content"></div>
                     </div>
 
+                    <!-- 💬 新增：協作討論備註區 -->
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden mt-2" id="discussion-container">
+                        <div class="bg-slate-50 p-4 border-b border-slate-200 flex justify-between items-center">
+                            <h3 class="text-lg font-semibold flex items-center text-slate-800"><i data-lucide="message-square-text" class="w-5 h-5 mr-2 text-blue-600"></i>協作討論與備註</h3>
+                            <span class="text-xs text-slate-500 bg-white px-2 py-1 rounded border shadow-sm" id="comment-count-badge">0 則留言</span>
+                        </div>
+                        <div class="p-6 bg-white flex flex-col gap-4">
+                            <div id="comments-list" class="space-y-3 max-h-60 overflow-y-auto custom-scrollbar pr-2">
+                                <!-- 留言內容將動態渲染於此 -->
+                            </div>
+                            <div class="border-t border-slate-100 pt-4 mt-2">
+                                <div class="relative">
+                                    <textarea id="new-comment-text" rows="2" class="w-full text-sm border-slate-300 rounded-lg p-3 pb-10 border focus:ring-2 focus:ring-blue-500 focus:outline-none resize-none" placeholder="輸入討論內容、修改建議或會議紀錄..."></textarea>
+                                    <button onclick="window.addComment()" class="absolute bottom-2 right-2 bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-md text-xs font-bold shadow-sm transition-colors flex items-center">
+                                        <i data-lucide="send" class="w-3 h-3 mr-1"></i> 送出留言
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                 </div>
             </main>
 
@@ -1261,7 +1282,88 @@
                 (scenario.response || []).forEach(item => { pHTML += `<li class="flex items-start text-sm text-slate-700 leading-relaxed"><i data-lucide="alert-triangle" class="w-4 h-4 mr-2 text-rose-500 mt-0.5 flex-shrink-0"></i><span>${item}</span></li>`; });
                 pHTML += '</ul></div></div>'; playbookContent.innerHTML = pHTML;
             } else { playbookContent.innerHTML = `<div class="text-center py-8 text-slate-400 text-sm border-2 border-dashed border-slate-200 rounded-xl bg-slate-50/50"><i data-lucide="book-dashed" class="w-10 h-10 mx-auto mb-3 opacity-40 text-slate-500"></i>尚無定義防禦與應變指南。<br><span class="admin-only inline-block mt-3 text-emerald-600 bg-emerald-50 px-3 py-1 rounded-md border border-emerald-100"><i data-lucide="info" class="w-3 h-3 inline mr-1"></i>請點擊右上角「AI 撰寫指南」按鈕自動生成。</span></div>`; }
+            
+            // 呼叫渲染留言區
+            window.renderComments();
+
             if (typeof lucide !== 'undefined') lucide.createIcons();
+        };
+
+        // 💬 新增：渲染留言區邏輯
+        window.renderComments = function() {
+            const scenario = window.scenarios.find(s => s.id === window.currentSelectedScenarioId);
+            const listContainer = document.getElementById('comments-list');
+            const badge = document.getElementById('comment-count-badge');
+            if (!scenario || !listContainer) return;
+
+            const comments = scenario.comments || [];
+            badge.textContent = `${comments.length} 則留言`;
+
+            if (comments.length === 0) {
+                listContainer.innerHTML = `<div class="text-center py-6 text-slate-400 text-sm italic bg-slate-50 rounded-lg border border-dashed border-slate-200"><i data-lucide="message-square-dashed" class="w-6 h-6 mx-auto mb-2 opacity-50"></i>尚無討論紀錄，有任何問題或調整建議請在下方留言。</div>`;
+                if (typeof lucide !== 'undefined') lucide.createIcons();
+                return;
+            }
+
+            let html = '';
+            comments.forEach(c => {
+                // 判斷是否為自己留的言，改變背景色增加識別度
+                const isMe = window.currentUser && window.currentUser.email === c.author;
+                const bgClass = isMe ? 'bg-blue-50 border-blue-100' : 'bg-slate-50 border-slate-100';
+                const nameColor = isMe ? 'text-blue-700' : 'text-slate-700';
+
+                html += `
+                    <div class="${bgClass} p-3 rounded-lg border flex flex-col gap-1.5 shadow-sm">
+                        <div class="flex justify-between items-center">
+                            <span class="text-xs font-bold ${nameColor} flex items-center"><i data-lucide="user" class="w-3 h-3 mr-1"></i>${c.author}</span>
+                            <span class="text-[10px] text-slate-400 font-mono">${window.formatDate(c.timestamp)}</span>
+                        </div>
+                        <p class="text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">${c.text}</p>
+                    </div>
+                `;
+            });
+            listContainer.innerHTML = html;
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+            
+            // 自動捲動到最底部看最新留言
+            listContainer.scrollTop = listContainer.scrollHeight;
+        };
+
+        // 💬 新增：送出留言邏輯
+        window.addComment = async function() {
+            const scenario = window.scenarios.find(s => s.id === window.currentSelectedScenarioId);
+            const input = document.getElementById('new-comment-text');
+            const text = input.value.trim();
+            
+            if (!text) return window.showToast('⚠️ 留言內容不能為空！', true);
+            if (!scenario) return;
+
+            const author = window.currentUser ? window.currentUser.email : 'Unknown';
+            const newComment = {
+                id: 'c' + Date.now(),
+                text: text,
+                author: author,
+                timestamp: Date.now()
+            };
+
+            scenario.comments = scenario.comments || [];
+            scenario.comments.push(newComment);
+
+            // 儲存至 Firebase
+            if (window.db && window.fs && scenario.docId) {
+                try {
+                    await window.fs.updateDoc(window.fs.doc(window.db, "scenarios", scenario.docId), {
+                        comments: scenario.comments
+                    });
+                } catch(e) { 
+                    console.error("留言儲存失敗", e); 
+                    window.showToast('⚠️ 留言同步雲端失敗', true);
+                }
+            }
+
+            input.value = '';
+            window.renderComments();
+            window.showToast('💬 留言已送出！');
         };
 
         window.renderRoleButtons = function() {
