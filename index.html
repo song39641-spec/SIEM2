@@ -271,6 +271,7 @@
                             <div class="px-5 py-3 border-b border-slate-700 flex justify-between items-center">
                                 <div class="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center"><i data-lucide="code-2" class="w-3 h-3 mr-1.5 text-green-400"></i> ELK / BiMAP KQL 實作語法</div>
                                 <div class="flex space-x-2">
+                                    <button onclick="window.aiTuneFalsePositives()" id="ai-tune-kql-btn" class="admin-only text-xs bg-amber-500 hover:bg-amber-600 text-white px-2 py-1 rounded transition-colors flex items-center shadow-sm"><i data-lucide="sparkles" class="w-3 h-3 mr-1 text-amber-200"></i> ✨ 降低誤判建議</button>
                                     <button onclick="window.aiExplainKQL()" id="ai-explain-kql-btn" class="admin-only text-xs bg-indigo-600 hover:bg-indigo-500 text-white px-2 py-1 rounded transition-colors flex items-center shadow-sm"><i data-lucide="sparkles" class="w-3 h-3 mr-1"></i> AI 語法翻譯與解析</button>
                                     <button onclick="window.copyKQLData()" class="text-xs bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white px-2 py-1 rounded transition-colors flex items-center"><i data-lucide="copy" class="w-3 h-3 mr-1"></i> 複製語法</button>
                                 </div>
@@ -281,6 +282,14 @@
                                 <p class="text-sm text-slate-300 mb-4 leading-relaxed" id="ai-kql-explanation"></p>
                                 <div class="text-xs text-yellow-300 font-bold mb-2 flex items-center"><i data-lucide="arrow-right-left" class="w-4 h-4 mr-1.5"></i> 等效轉換為 Splunk SPL 語法</div>
                                 <pre class="bg-slate-950 text-yellow-400 p-3 rounded-lg text-sm font-mono whitespace-pre-wrap border border-slate-700" id="ai-kql-splunk"></pre>
+                            </div>
+                            <!-- ✨ 新增：誤判調校結果區塊 -->
+                            <div id="ai-tune-result" class="hidden border-t border-slate-700 bg-slate-800 p-5">
+                                <div class="text-xs text-amber-400 font-bold mb-2 flex items-center"><i data-lucide="filter" class="w-4 h-4 mr-1.5"></i> AI 誤判調校 (False Positive Tuning) 建議</div>
+                                <p class="text-sm text-slate-300 mb-4 leading-relaxed" id="ai-tune-explanation"></p>
+                                <div class="text-xs text-green-400 font-bold mb-2 flex items-center"><i data-lucide="code" class="w-4 h-4 mr-1.5"></i> 調校後的優化 KQL 語法</div>
+                                <pre class="bg-slate-950 text-green-400 p-3 rounded-lg text-sm font-mono whitespace-pre-wrap border border-slate-700" id="ai-tune-kql-output"></pre>
+                                <button onclick="window.applyTunedKQL()" class="mt-3 text-xs bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded transition-colors shadow-sm inline-flex items-center"><i data-lucide="check" class="w-3 h-3 mr-1"></i> 套用此優化語法至情境中</button>
                             </div>
                         </div>
                     </div>
@@ -439,7 +448,12 @@
                             </h2>
                             <p class="text-sm text-slate-500 mt-1">此頁面呈現經團隊討論並「標記為可行」的威脅情境，依戰略領域分組，提供高階主管快速檢閱。</p>
                         </div>
-                        <span class="text-sm text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full font-bold border border-emerald-200" id="verified-count">共 0 項</span>
+                        <div class="flex items-center space-x-3">
+                            <button onclick="window.openPitchModal()" class="admin-only text-sm bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white px-4 py-2 rounded-lg flex items-center shadow-md transition-all group font-bold">
+                                <i data-lucide="presentation" class="w-4 h-4 mr-1.5 group-hover:scale-110 transition-transform"></i> ✨ 生成高階簡報
+                            </button>
+                            <span class="text-sm text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full font-bold border border-emerald-200" id="verified-count">共 0 項</span>
+                        </div>
                     </div>
                     <div class="overflow-y-auto flex-1 custom-scrollbar pr-2 pb-4">
                         <!-- 🔧 將原本的 grid 替換為垂直排列 (space-y-8)，網格會在 JS 裡面針對個別分類動態生成 -->
@@ -691,6 +705,33 @@
                 <div><h4 class="font-bold text-sm text-slate-800 mb-2 flex items-center"><i data-lucide="file-text" class="w-4 h-4 mr-1.5 text-indigo-500"></i> 腳本原理解析與手動檢查項目</h4><p class="text-sm text-slate-600 leading-relaxed bg-slate-50 p-4 rounded-lg border border-slate-100" id="script-explanation"></p></div>
             </div>
             <div class="p-4 border-t bg-slate-50 flex justify-end"><button onclick="window.closeScriptModal()" class="bg-slate-200 hover:bg-slate-300 text-slate-800 px-6 py-2 rounded-md text-sm font-medium transition-colors shadow-sm">完成並關閉</button></div>
+        </div>
+    </div>
+
+    <!-- ✨ 戰略簡報產生器 Modal -->
+    <div id="pitch-modal" class="fixed inset-0 bg-slate-900/80 z-[80] flex items-center justify-center hidden p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-4xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div class="p-5 border-b bg-gradient-to-r from-teal-600 to-emerald-600 flex items-center justify-between">
+                <div class="flex items-center text-white">
+                    <i data-lucide="presentation" class="w-6 h-6 mr-2"></i>
+                    <h3 class="text-lg font-bold tracking-wide">✨ AI 高階戰略簡報大綱 (Pitch Deck)</h3>
+                </div>
+                <button onclick="window.closePitchModal()" class="text-white/70 hover:text-white transition-colors"><i data-lucide="x" class="w-6 h-6"></i></button>
+            </div>
+            <div id="pitch-loading" class="flex-grow flex flex-col items-center justify-center min-h-[400px] bg-slate-50 hidden">
+                <i data-lucide="loader-2" class="w-12 h-12 text-teal-600 animate-spin mb-4"></i>
+                <h4 class="text-lg font-bold text-slate-700 mb-2">正在為高階主管統整防護進度...</h4>
+                <p class="text-sm text-slate-500">AI 正在將已驗證情境轉化為商業語言</p>
+            </div>
+            <div id="pitch-content" class="p-8 bg-white overflow-y-auto custom-scrollbar flex-grow hidden">
+                <div class="prose max-w-none text-slate-700" id="pitch-markdown"></div>
+            </div>
+            <div class="p-4 border-t bg-slate-50 flex justify-between items-center">
+                <button onclick="window.copyPitch()" class="bg-teal-50 text-teal-700 border border-teal-200 hover:bg-teal-100 px-4 py-2 rounded-md text-sm font-bold transition-colors shadow-sm flex items-center">
+                    <i data-lucide="copy" class="w-4 h-4 mr-1.5"></i> 複製簡報內容
+                </button>
+                <button onclick="window.closePitchModal()" class="bg-slate-200 hover:bg-slate-300 text-slate-800 px-6 py-2 rounded-md text-sm font-bold transition-colors shadow-sm">關閉</button>
+            </div>
         </div>
     </div>
 
@@ -1355,6 +1396,7 @@
             document.getElementById('optimize-scenario-btn').classList.remove('hidden'); document.getElementById('delete-scenario-btn').classList.remove('hidden'); document.getElementById('edit-scenario-btn').classList.remove('hidden'); document.getElementById('attack-sim-btn').classList.remove('hidden'); 
             const csfGenBtn = document.getElementById('btn-generate-csf'); if (csfGenBtn) csfGenBtn.classList.remove('hidden');
             const kqlResult = document.getElementById('ai-kql-result'); if (kqlResult) kqlResult.classList.add('hidden');
+            const tuneResult = document.getElementById('ai-tune-result'); if (tuneResult) tuneResult.classList.add('hidden');
 
             const csfNodesContainer = document.getElementById('csf-nodes-container'); const csfExplanationsContainer = document.getElementById('csf-explanations-container');
             csfNodesContainer.innerHTML = ''; csfExplanationsContainer.innerHTML = ''; let hasExplanations = false;
@@ -1447,16 +1489,23 @@
 
             let html = '';
             comments.forEach(c => {
-                // 判斷是否為自己留的言，改變背景色增加識別度
-                const isMe = window.currentUser && window.currentUser.email === c.author;
+                // 判斷是否為自己留的言 (改為即時從 auth 核心抓取)
+                const currentEmail = (window.auth && window.auth.currentUser) ? window.auth.currentUser.email : null;
+                const isMe = currentEmail && currentEmail === c.author;
                 const bgClass = isMe ? 'bg-blue-50 border-blue-100' : 'bg-slate-50 border-slate-100';
                 const nameColor = isMe ? 'text-blue-700' : 'text-slate-700';
+
+                // 🔧 權限升級：將刪除按鈕強制加上 admin-only 類別，唯有解鎖管理模式才能看見與操作
+                const deleteBtnHtml = `<button onclick="window.deleteComment('${c.id}')" class="admin-only text-rose-400 hover:text-rose-600 transition-colors ml-2 bg-white rounded-md px-1.5 py-0.5 border border-rose-100 shadow-sm" title="刪除留言"><i data-lucide="trash-2" class="w-3 h-3"></i></button>`;
 
                 html += `
                     <div class="${bgClass} p-3 rounded-lg border flex flex-col gap-1.5 shadow-sm">
                         <div class="flex justify-between items-center">
-                            <span class="text-xs font-bold ${nameColor} flex items-center"><i data-lucide="user" class="w-3 h-3 mr-1"></i>${c.author}</span>
-                            <span class="text-[10px] text-slate-400 font-mono">${window.formatDate(c.timestamp)}</span>
+                            <span class="text-xs font-bold ${nameColor} flex items-center"><i data-lucide="user" class="w-3 h-3 mr-1"></i>${c.author || '未知使用者'}</span>
+                            <div class="flex items-center">
+                                <span class="text-[10px] text-slate-400 font-mono">${window.formatDate(c.timestamp)}</span>
+                                ${deleteBtnHtml}
+                            </div>
                         </div>
                         <p class="text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">${c.text}</p>
                     </div>
@@ -1478,7 +1527,8 @@
             if (!text) return window.showToast('⚠️ 留言內容不能為空！', true);
             if (!scenario) return;
 
-            const author = window.currentUser ? window.currentUser.email : 'Unknown';
+            // 即時抓取登入帳號
+            const author = (window.auth && window.auth.currentUser) ? window.auth.currentUser.email : 'Unknown';
             const newComment = {
                 id: 'c' + Date.now(),
                 text: text,
@@ -1504,6 +1554,33 @@
             input.value = '';
             window.renderComments();
             window.showToast('💬 留言已送出！');
+        };
+
+        // 🗑️ 新增：刪除留言邏輯
+        window.deleteComment = async function(commentId) {
+            // 🔧 雙重防呆：確保一定要在管理模式才能執行刪除
+            if (!window.isAdmin) return window.showToast('⚠️ 必須解鎖管理模式才能刪除留言！', true);
+
+            const scenario = window.scenarios.find(s => s.id === window.currentSelectedScenarioId);
+            if (!scenario || !scenario.comments) return;
+
+            // 先移除陣列中的該則留言
+            scenario.comments = scenario.comments.filter(c => c.id !== commentId);
+
+            // 同步更新至 Firebase
+            if (window.db && window.fs && scenario.docId) {
+                try {
+                    await window.fs.updateDoc(window.fs.doc(window.db, "scenarios", scenario.docId), {
+                        comments: scenario.comments
+                    });
+                    window.showToast('🗑️ 留言已刪除');
+                } catch(e) { 
+                    console.error("留言刪除失敗", e); 
+                    window.showToast('⚠️ 留言刪除失敗', true);
+                }
+            }
+
+            window.renderComments(); // 重新渲染留言區
         };
 
         window.renderRoleButtons = function() {
@@ -2552,6 +2629,34 @@
         window.closeExecutiveReportModal = () => document.getElementById('executive-report-modal').classList.add('hidden');
         window.closeDeleteModal = () => document.getElementById('delete-confirm-modal').classList.add('hidden');
         window.closeAttackSimModal = () => document.getElementById('attack-sim-modal').classList.add('hidden');
+
+        // ✨ 新增：高階戰略簡報大綱 (Pitch Generator)
+        window.openPitchModal = async () => {
+            const verifiedScenarios = (window.scenarios || []).filter(s => s.isVerified && !s.isDeleted);
+            if (verifiedScenarios.length === 0) return window.showToast("⚠️ 尚無已驗證情境，無法生成簡報！", true);
+
+            document.getElementById('pitch-modal').classList.remove('hidden');
+            document.getElementById('pitch-loading').classList.remove('hidden');
+            document.getElementById('pitch-content').classList.add('hidden');
+
+            const context = verifiedScenarios.map(s => `- [${s.risk}] ${s.title} (涵蓋設備: ${s.scope.join(', ')})`).join('\n');
+            const prompt = `我們團隊已經在 SIEM 平台上驗證了以下監控情境：\n${context}\n\n請為我產生一份給高階主管(C-level)或董事會的「資安監控導入進度報告」簡報大綱(約4-5頁)。\n必須包含：\n1. 執行摘要 (Executive Summary)\n2. 已覆蓋的核心風險與威脅 (用商業語言描述)\n3. 資產覆蓋率與跨部門協作狀態\n4. 下一步計畫 (Next Steps)。\n\n請使用 Markdown 格式，適當使用 emoji 讓重點更突出。不需要給 JSON，直接輸出 Markdown 文本即可。`;
+            const systemPrompt = `你是一位經驗豐富的虛擬資安長 (vCISO)。擅長將生硬的技術指標轉化為高階主管能懂的商業與風險價值。`;
+            
+            const res = await window.callGemini(prompt, systemPrompt, false);
+            if (res) {
+                document.getElementById('pitch-markdown').innerHTML = res.replace(/\n/g, '<br>');
+                document.getElementById('pitch-loading').classList.add('hidden');
+                document.getElementById('pitch-content').classList.remove('hidden');
+            } else {
+                window.closePitchModal();
+            }
+        };
+        window.closePitchModal = () => document.getElementById('pitch-modal').classList.add('hidden');
+        window.copyPitch = () => {
+            const content = document.getElementById('pitch-markdown').innerText;
+            navigator.clipboard.writeText(content).then(() => window.showToast('✅ 簡報大綱已複製！')).catch(() => window.showToast('⚠️ 複製失敗', true));
+        };
         
         window.toggleScenarioVerify = async function() {
             const scenario = window.scenarios.find(s => s.id === window.currentSelectedScenarioId);
@@ -2733,6 +2838,7 @@
             btn.disabled = true;
 
             const kqlResultBox = document.getElementById('ai-kql-result');
+            document.getElementById('ai-tune-result').classList.add('hidden');
             kqlResultBox.classList.remove('hidden');
             document.getElementById('ai-kql-explanation').textContent = "AI 正在分析語法並轉換...";
             document.getElementById('ai-kql-splunk').textContent = "轉換中...";
@@ -2747,6 +2853,49 @@
 
             btn.innerHTML = originalHtml; btn.disabled = false;
             if (typeof lucide !== 'undefined') lucide.createIcons();
+        };
+
+        // ✨ 新增：AI 誤判排除與調校建議 (False Positive Tuning)
+        window.aiTuneFalsePositives = async function() {
+            const scenario = window.scenarios.find(s => s.id === window.currentSelectedScenarioId);
+            if (!scenario || !scenario.detectionLogic) return window.showToast("⚠️ 尚無 KQL 語法可供調校！", true);
+            
+            const btn = document.getElementById('ai-tune-kql-btn'); const originalHtml = btn.innerHTML;
+            btn.innerHTML = `<i data-lucide="loader-2" class="w-3 h-3 mr-1 animate-spin"></i> 調校中...`;
+            btn.disabled = true;
+
+            const tuneResultBox = document.getElementById('ai-tune-result');
+            document.getElementById('ai-kql-result').classList.add('hidden');
+            tuneResultBox.classList.remove('hidden');
+            document.getElementById('ai-tune-explanation').textContent = "AI 正在分析企業環境中常見的誤判與例外狀況...";
+            document.getElementById('ai-tune-kql-output').textContent = "優化語法生成中...";
+
+            const systemPrompt = `你是一位資深的 SOC Tier 3 分析師與 SIEM 專家。請分析使用者提供的偵測邏輯，指出在真實企業環境中可能產生哪些「誤判 (False Positives)」(如合法管理行為、排程掃描等)，並提供加入過濾條件(Whitelist/Exceptions)後的進階 KQL。
+            回傳嚴格的 JSON: {"explanation": "誤判情境分析與調校建議(可分點說明)", "tunedKql": "調校後的完整 KQL 語法，不可使用 markdown 標籤"}`;
+            
+            const prompt = `情境：${scenario.title}\n判斷策略：${scenario.detectionStrategy}\n當前 KQL：\n${scenario.detectionLogic}`;
+            const res = await window.callGemini(prompt, systemPrompt, true);
+            
+            if (res) {
+                document.getElementById('ai-tune-explanation').textContent = res.explanation;
+                document.getElementById('ai-tune-kql-output').textContent = res.tunedKql;
+                window.tempTunedKql = res.tunedKql; // 暫存起來供套用按鈕使用
+            } else { tuneResultBox.classList.add('hidden'); }
+
+            btn.innerHTML = originalHtml; btn.disabled = false;
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+        };
+
+        window.applyTunedKQL = async function() {
+            if (!window.tempTunedKql) return;
+            const scenario = window.scenarios.find(s => s.id === window.currentSelectedScenarioId);
+            if (!scenario) return;
+            scenario.detectionLogic = window.tempTunedKql;
+            if (window.db && window.fs && scenario.docId) { 
+                await window.fs.updateDoc(window.fs.doc(window.db, "scenarios", scenario.docId), { detectionLogic: scenario.detectionLogic }); 
+            }
+            window.showToast("✅ 已成功套用優化後的 KQL 語法！");
+            window.selectScenario(scenario.id); // 重新渲染畫面
         };
 
         window.optimizeScenarioWithAI = async function() {
