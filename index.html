@@ -816,11 +816,11 @@
         ];
 
         window.fiveMDef = [
-            { id: 'man', name: '人 (Man)', desc: '詐欺保護、身分鑑別、行為分析等', icon: 'user', colorClass: 'text-pink-700', bgClass: 'bg-pink-100', borderClass: 'border-pink-200' },
-            { id: 'machine', name: '機 (Machine)', desc: '設備鑑別、裝置管理等', icon: 'server', colorClass: 'text-cyan-700', bgClass: 'bg-cyan-100', borderClass: 'border-cyan-200' },
-            { id: 'material', name: '料 (Material)', desc: '關鍵資料等', icon: 'file-text', colorClass: 'text-amber-700', bgClass: 'bg-amber-100', borderClass: 'border-amber-200' },
-            { id: 'method', name: '法 (Method)', desc: '異常程序、日誌分析等', icon: 'git-merge', colorClass: 'text-violet-700', bgClass: 'bg-violet-100', borderClass: 'border-violet-200' },
-            { id: 'environment', name: '環 (Environment)', desc: '區域告警等', icon: 'cloud', colorClass: 'text-lime-700', bgClass: 'bg-lime-100', borderClass: 'border-lime-200' }
+            { id: 'man', name: '人 (Man)', desc: '詐欺保護、身分鑑別、行為分析、外部入侵等屬性', icon: 'user', colorClass: 'text-pink-700', bgClass: 'bg-pink-100', borderClass: 'border-pink-200' },
+            { id: 'machine', name: '機 (Machine)', desc: '設備鑑別、機台資安、裝置管理等屬性', icon: 'server', colorClass: 'text-cyan-700', bgClass: 'bg-cyan-100', borderClass: 'border-cyan-200' },
+            { id: 'material', name: '料 (Material)', desc: '關鍵原料、關鍵資料等屬性', icon: 'file-text', colorClass: 'text-amber-700', bgClass: 'bg-amber-100', borderClass: 'border-amber-200' },
+            { id: 'method', name: '法 (Method)', desc: '異常程序、日誌分析等屬性', icon: 'git-merge', colorClass: 'text-violet-700', bgClass: 'bg-violet-100', borderClass: 'border-violet-200' },
+            { id: 'environment', name: '環 (Environment)', desc: '人臉&門禁辨識、區域告警等屬性', icon: 'cloud', colorClass: 'text-lime-700', bgClass: 'bg-lime-100', borderClass: 'border-lime-200' }
         ];
 
         window.rolesDef = [
@@ -954,6 +954,19 @@
             if(!timestamp) return '-';
             const d = new Date(timestamp);
             return `${d.getFullYear()}/${(d.getMonth()+1).toString().padStart(2,'0')}/${d.getDate().toString().padStart(2,'0')} ${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')}`;
+        };
+
+        // 🔧 新增：統一的風險顏色判斷與修復邏輯
+        window.getRiskColor = function(scenario) {
+            let rColor = scenario.riskColor || '';
+            if (!rColor || !rColor.includes('bg-')) {
+                const risk = scenario.risk || '';
+                if (risk.includes('極高') || risk.includes('高') || risk.includes('Critical') || risk.includes('High') || risk.includes('A') || risk.includes('紅')) return 'bg-red-600';
+                if (risk.includes('中') || risk.includes('Medium') || risk.includes('B') || risk.includes('黃')) return 'bg-orange-500';
+                if (risk.includes('低') || risk.includes('Low') || risk.includes('C') || risk.includes('綠')) return 'bg-green-500';
+                return 'bg-slate-600';
+            }
+            return rColor;
         };
 
         window.fetchWithRetry = async function(url, options, maxRetries = 5) {
@@ -1133,7 +1146,9 @@
                     const verifiedIcon = isVerified ? `<i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-500 ml-1.5 flex-shrink-0" title="已確認可行"></i>` : '';
                     
                     const btn = document.createElement('button'); btn.className = `scenario-btn w-full text-left px-3 py-2.5 rounded-md border hover:border-${cat.colorClass.split('-')[1]}-400 focus:outline-none flex justify-between items-start shadow-sm transition-all ${bgClass}`; btn.id = `btn-${s.id}`; btn.onclick = () => window.selectScenario(s.id);
-                    let rColor = s.riskColor || 'bg-slate-600'; if (!rColor.includes('bg-')) { if (s.risk && (s.risk.includes('極高') || s.risk.includes('高') || s.risk.includes('Critical') || s.risk.includes('High'))) rColor = 'bg-red-600'; else if (s.risk && (s.risk.includes('中') || s.risk.includes('Medium'))) rColor = 'bg-orange-500'; else if (s.risk && (s.risk.includes('低') || s.risk.includes('Low'))) rColor = 'bg-green-500'; else rColor = 'bg-slate-600'; }
+                    
+                    let rColor = window.getRiskColor(s); // 🔧 套用統一判斷
+                    
                     const displayTitle = s.shortName ? s.shortName : s.title; const subTitleHtml = s.shortName ? `<span class="text-[10px] text-slate-400 truncate w-full block mt-0.5" title="${s.title}">${s.title}</span>` : '';
                     btn.innerHTML = `<div class="flex items-start overflow-hidden w-full"><i data-lucide="${cat.icon}" class="w-4 h-4 mr-2 mt-0.5 text-slate-400 btn-icon flex-shrink-0"></i><div class="flex flex-col min-w-0 flex-1"><div class="flex items-center"><span class="font-bold text-sm truncate text-slate-700" title="${displayTitle}">${displayTitle}</span>${verifiedIcon}</div>${subTitleHtml}</div></div><span class="w-2.5 h-2.5 rounded-full ${rColor} flex-shrink-0 ml-2 mt-1 shadow-sm"></span>`;
                     groupContainer.appendChild(btn);
@@ -1152,7 +1167,9 @@
             if (categoryInfo) { const groupEl = document.getElementById(`group-cat-${categoryInfo.id}`); const iconEl = document.getElementById(`icon-cat-${categoryInfo.id}`); if (groupEl && groupEl.classList.contains('hidden')) { groupEl.classList.remove('hidden'); if (iconEl) iconEl.classList.remove('-rotate-90'); } }
 
             document.getElementById('detail-title').textContent = scenario.title || '無標題'; document.getElementById('detail-desc').textContent = scenario.desc || '無描述';
-            let rColor = scenario.riskColor || 'bg-slate-600'; if (!rColor.includes('bg-')) { if (scenario.risk && (scenario.risk.includes('極高') || scenario.risk.includes('高') || scenario.risk.includes('Critical') || scenario.risk.includes('High'))) rColor = 'bg-red-600'; else if (scenario.risk && (scenario.risk.includes('中') || scenario.risk.includes('Medium'))) rColor = 'bg-orange-500'; else if (scenario.risk && (scenario.risk.includes('低') || scenario.risk.includes('Low'))) rColor = 'bg-green-500'; else rColor = 'bg-slate-600'; }
+            
+            let rColor = window.getRiskColor(scenario); // 🔧 套用統一判斷
+            
             document.getElementById('risk-badge').className = `px-3 py-1 text-xs font-bold rounded-full text-white ${rColor}`; document.getElementById('risk-badge').textContent = `風險: ${scenario.risk || '未知'}`;
             const catBadge = document.getElementById('category-badge'); 
             if(categoryInfo) { catBadge.className = `px-3 py-1 text-xs font-bold rounded-full border ${categoryInfo.bgClass} ${categoryInfo.colorClass} ${categoryInfo.borderClass} inline-flex items-center`; catBadge.innerHTML = `<i data-lucide="${categoryInfo.icon}" class="w-3.5 h-3.5 mr-1.5"></i> ${categoryInfo.name}`; document.getElementById('detail-hero-icon').innerHTML = `<i data-lucide="${categoryInfo.icon}" class="w-20 h-20 transform -rotate-12 translate-x-2 -translate-y-2"></i>`; }
@@ -1317,13 +1334,7 @@
             else {
                 let scHtml = '';
                 relatedScenarios.forEach(s => { 
-                    let rColor = s.riskColor || 'bg-slate-600';
-                    if (!rColor.includes('bg-')) {
-                        if (s.risk && (s.risk.includes('極高') || s.risk.includes('高') || s.risk.includes('Critical') || s.risk.includes('High'))) rColor = 'bg-red-600';
-                        else if (s.risk && (s.risk.includes('中') || s.risk.includes('Medium'))) rColor = 'bg-orange-500';
-                        else if (s.risk && (s.risk.includes('低') || s.risk.includes('Low'))) rColor = 'bg-green-500';
-                        else rColor = 'bg-slate-600';
-                    }
+                    let rColor = window.getRiskColor(s); // 🔧 套用統一判斷
                     scHtml += `<div class="border rounded-lg p-3 bg-white shadow-sm flex flex-col cursor-pointer hover:border-blue-400 transition-colors" onclick="window.switchView('scenario'); window.selectScenario('${s.id}')"><div class="flex justify-between items-start mb-1"><span class="font-bold text-sm text-slate-800">${s.title}</span><span class="w-2.5 h-2.5 rounded-full ${rColor} flex-shrink-0 ml-2 mt-1"></span></div><div class="text-xs text-slate-500 truncate" title="點擊查看情境詳情">點擊查看此情境詳情 &rarr;</div></div>`; 
                 });
                 scenariosContainer.innerHTML = scHtml;
@@ -1681,15 +1692,26 @@
             const validCategories = window.categoriesDef.map(c => c.id).join(', ');
             const validCSF = window.csfFunctions.map(c => c.id).join(', ');
             const valid5M = window.fiveMDef.map(m => m.id).join(', ');
+            const fiveMContext = window.fiveMDef.map(m => `${m.id}=${m.name}(${m.desc})`).join(', ');
+
+            // 將選項映射給 AI，幫助其理解嚴重性
+            const riskMap = {
+                'auto': '✨ 讓 AI 依情境自動判斷',
+                'red': '🔴 紅燈 A 級 (確定的入侵/勒索/核心威脅)',
+                'yellow': '🟡 黃燈 B 級 (可疑行為，需人工判斷)',
+                'green': '🟢 綠燈 C 級 (低風險異常，趨勢分析)'
+            };
+            const riskLevelStr = riskMap[risk] || risk;
 
             const systemPrompt = `你是一位 SIEM 資安架構專家。請根據要求生成一個完整且符合現實環境的威脅監控情境。
             必須嚴格遵守以下選項範圍：
             - categoryId 只能從中挑選: [${validCategories}]
             - csf 陣列元素只能從中挑選: [${validCSF}]
-            - fiveM 陣列元素只能從中挑選: [${valid5M}]
+            - fiveM 陣列元素只能從中挑選: [${valid5M}]。各屬性定義參考：${fiveMContext}
             - scope (系統角色) 陣列請【務必優先】從使用者現有資產角色中挑選: [${activeRoles.join(', ')}]，如果現有資產不足以支撐防禦，再自行補充新角色。
             - logs 陣列請列出針對 scope 中每個角色必須收集的具體日誌，格式必須為 "[角色名稱] 日誌詳細說明"。
-            - risk 只能填寫: "極高 (Critical)", "高 (High)", "中 (Medium)", "低 (Low)"。
+            - risk 請根據嚴重程度填寫: "🔴 紅燈 A 級", "🟡 黃燈 B 級", "🟢 綠燈 C 級" 或 "極高", "高", "中", "低"。
+            - riskColor 請對應風險填寫 Tailwind 背景色類別，例如: "bg-red-600", "bg-orange-500", "bg-green-500"。
             - detectionLogic 必須是可直接在 ELK 上執行的 KQL (Kibana Query Language) 語法。
             - detectionStrategy 是對該 KQL 偵測邏輯的詳細中文原理解釋與判斷說明。
 
@@ -1701,6 +1723,7 @@
               "shortName": "string", 
               "desc": "string", 
               "risk": "string", 
+              "riskColor": "string",
               "csf": ["string"], 
               "fiveM": ["string"], 
               "scope": ["string"], 
@@ -1712,7 +1735,7 @@
               "response": ["string"] 
             }`;
             
-            const res = await window.callGemini(`方向分類: ${direction}, 指定風險等級: ${risk}, 使用者補充情境需求: ${promptInput || '無'}`, systemPrompt);
+            const res = await window.callGemini(`方向分類: ${direction}, 指定風險等級: ${riskLevelStr}, 使用者補充情境需求: ${promptInput || '無'}`, systemPrompt);
             
             if (res) {
                 res.id = 's' + Date.now();
@@ -1810,6 +1833,7 @@
             const validCategories = window.categoriesDef.map(c => c.id).join(', ');
             const validCSF = window.csfFunctions.map(c => c.id).join(', ');
             const valid5M = window.fiveMDef.map(m => m.id).join(', ');
+            const fiveMContext = window.fiveMDef.map(m => `${m.id}=${m.name}(${m.desc})`).join(', ');
 
             const prompt = `針對 MITRE ATT&CK 戰術 [${tactic.name} (${tactic.en})]：${tactic.desc}
             請設計一個能有效偵測此戰術的最佳 SIEM 防禦情境。
@@ -1819,8 +1843,9 @@
             必須嚴格遵守選項範圍：
             - categoryId: [${validCategories}]
             - csf: [${validCSF}]
-            - fiveM: [${valid5M}]
+            - fiveM: [${valid5M}]。各屬性定義參考：${fiveMContext}
             - risk 只能填寫: "極高 (Critical)", "高 (High)", "中 (Medium)", "低 (Low)"。
+            - riskColor 請對應風險填寫 Tailwind 背景色類別，例如: "bg-red-600", "bg-orange-500", "bg-green-500"。
             - scope 陣列請優先對應使用者的現有資產角色。
             - logs 陣列格式必須為 "[角色名稱] 需收集的日誌細節"。
             - detectionLogic 必須是符合 ELK (Elastic Stack) 規範的 KQL 語法。
@@ -1834,6 +1859,7 @@
               "shortName": "string", 
               "desc": "string", 
               "risk": "string", 
+              "riskColor": "string",
               "csf": ["string"], 
               "fiveM": ["string"], 
               "scope": ["string"], 
@@ -2196,12 +2222,13 @@
             const activeRoles = [...new Set(window.assets.map(a => a.role))];
             const validCSF = window.csfFunctions.map(c => c.id).join(', ');
             const valid5M = window.fiveMDef.map(m => m.id).join(', ');
+            const fiveMContext = window.fiveMDef.map(m => `${m.id}=${m.name}(${m.desc})`).join(', ');
 
             const systemPrompt = `你是一位頂尖的 SIEM 架構專家。請根據使用者【目前的實體資產角色清單】：[${activeRoles.join(', ')}]，全面重新掃描並最佳化此威脅情境的內容。
             必須嚴格遵守：
             - scope 陣列請【務必優先】只包含在上述現有資產中能對應到的角色。拔除不合理或不存在的設備，並加入現有可用來防禦此情境的設備。若現有設備完全無法防禦，才建議必要的外部角色。
             - csf 元素只能從: [${validCSF}] 挑選。
-            - fiveM 元素只能從: [${valid5M}] 挑選。
+            - fiveM 元素只能從: [${valid5M}] 挑選。各屬性定義參考：${fiveMContext}
             - logs 陣列請根據更新後的 scope，列出對應的日誌收集需求，格式為 "[角色名稱] 日誌詳細說明"。
             - detectionLogic 必須是優化後、可直接在 ELK 上執行的 KQL 語法，並且只能使用有在 logs 收集範圍內的資料。
             - detectionStrategy 是對優化後邏輯的中文解釋。
