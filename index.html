@@ -156,6 +156,8 @@
                         <button onclick="window.switchView('scenario')" id="tab-scenario" class="view-tab active flex items-center px-3 py-1.5 rounded-md text-sm cursor-pointer whitespace-nowrap"><i data-lucide="crosshair" class="w-4 h-4 mr-1.5"></i> 情境</button>
                         <button onclick="window.switchView('system')" id="tab-system" class="view-tab flex items-center px-3 py-1.5 rounded-md text-sm cursor-pointer whitespace-nowrap"><i data-lucide="server" class="w-4 h-4 mr-1.5"></i> 設備</button>
                         <button onclick="window.switchView('mitre')" id="tab-mitre" class="view-tab flex items-center px-3 py-1.5 rounded-md text-sm cursor-pointer whitespace-nowrap"><i data-lucide="radar" class="w-4 h-4 mr-1.5"></i> MITRE</button>
+                        <!-- ✨ 新增：已驗證總覽的分頁 -->
+                        <button onclick="window.switchView('verified')" id="tab-verified" class="view-tab flex items-center px-3 py-1.5 rounded-md text-sm cursor-pointer whitespace-nowrap text-emerald-400 hover:text-emerald-200 font-medium"><i data-lucide="check-circle-2" class="w-4 h-4 mr-1.5"></i> 驗證總覽</button>
                         <button onclick="window.switchView('recycle')" id="tab-recycle" class="view-tab flex items-center px-3 py-1.5 rounded-md text-sm cursor-pointer whitespace-nowrap text-rose-300 hover:text-rose-100"><i data-lucide="trash-2" class="w-4 h-4 mr-1.5"></i> 回收箱</button>
                     </div>
                     
@@ -196,9 +198,14 @@
                         <div class="overflow-y-auto no-scrollbar flex-1 space-y-5 pr-1" id="scenario-list">
                             <div class="p-5 text-center text-slate-400 text-sm">載入資料中...</div>
                         </div>
-                        <button onclick="window.openAIModal()" class="admin-only w-full mt-4 flex-shrink-0 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white px-4 py-3 rounded-lg shadow-sm flex justify-center items-center font-medium transition-all group">
-                            <i data-lucide="sparkles" class="w-5 h-5 mr-2 group-hover:animate-pulse text-yellow-300"></i>AI 輔助生成新情境
-                        </button>
+                        <div class="flex gap-2 mt-4 flex-shrink-0">
+                            <button onclick="window.openAIModal()" class="admin-only flex-1 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white px-3 py-3 rounded-lg shadow-sm flex justify-center items-center font-medium transition-all group text-sm">
+                                <i data-lucide="sparkles" class="w-4 h-4 mr-1.5 group-hover:animate-pulse text-yellow-300"></i>輔助生成
+                            </button>
+                            <button onclick="window.openCtiModal()" class="admin-only flex-1 bg-gradient-to-r from-rose-500 to-orange-500 hover:from-rose-600 hover:to-orange-600 text-white px-3 py-3 rounded-lg shadow-sm flex justify-center items-center font-medium transition-all group text-sm" title="貼上外部資安新聞或 CVE">
+                                <i data-lucide="rss" class="w-4 h-4 mr-1.5 group-hover:animate-pulse text-yellow-200"></i>✨ 情資解析
+                            </button>
+                        </div>
                     </div>
                     <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5 hidden xl:block flex-shrink-0">
                         <h2 class="text-sm font-semibold text-slate-500 mb-3 uppercase tracking-wider">NIST CSF 涵蓋率預覽</h2>
@@ -332,9 +339,12 @@
                         </div>
                     </div>
                     <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                        <div class="bg-slate-50 p-4 border-b flex justify-between items-center">
+                        <div class="bg-slate-50 p-4 border-b flex flex-wrap justify-between items-center gap-3">
                             <h3 class="text-lg font-semibold flex items-center text-slate-800"><i data-lucide="list-checks" class="w-5 h-5 mr-2 text-indigo-600"></i>📋 必須收集的日誌清單 (綜合彙整)</h3>
-                            <button onclick="window.copySystemTableData()" class="text-sm bg-white border border-slate-300 hover:bg-slate-50 text-slate-600 px-3 py-1.5 rounded flex items-center shadow-sm"><i data-lucide="copy" class="w-4 h-4 mr-1"></i> 複製派工單</button>
+                            <div class="flex gap-2">
+                                <button onclick="window.generateLogScript()" class="admin-only text-sm bg-indigo-50 border border-indigo-200 hover:bg-indigo-100 text-indigo-700 px-3 py-1.5 rounded flex items-center shadow-sm transition-colors"><i data-lucide="sparkles" class="w-4 h-4 mr-1"></i> ✨ 派發腳本</button>
+                                <button onclick="window.copySystemTableData()" class="text-sm bg-white border border-slate-300 hover:bg-slate-50 text-slate-600 px-3 py-1.5 rounded flex items-center shadow-sm"><i data-lucide="copy" class="w-4 h-4 mr-1"></i> 複製派工單</button>
+                            </div>
                         </div>
                         <div class="p-6" id="system-logs-container"></div>
                     </div>
@@ -391,30 +401,51 @@
                 </div>
             </main>
 
-            <!-- 🗑️ 視角四：回收箱視角 -->
+            <!-- ✨ 自動化腳本 Modal -->
+            <div id="script-modal" class="fixed inset-0 bg-slate-900/60 z-[60] flex items-center justify-center hidden p-4">
+                <!-- ... Modal 內容不變 ... -->
+            </div>
+
+            <!-- 🗑️ 視角四：回收箱視角 (升級為圖卡式) -->
             <main id="view-container-recycle" class="w-full max-w-[1600px] mx-auto p-4 md:p-6 flex flex-col h-full overflow-hidden">
                 <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 flex flex-col h-full overflow-hidden">
                     <div class="flex justify-between items-center border-b pb-4 mb-4 flex-shrink-0">
-                        <h2 class="text-xl font-bold flex items-center text-slate-800">
-                            <i data-lucide="trash-2" class="w-6 h-6 mr-2 text-rose-500"></i>情境回收箱 (已刪除項目)
-                        </h2>
-                        <span class="text-sm text-slate-500 bg-slate-100 px-3 py-1 rounded-full font-medium" id="recycle-count">共 0 項</span>
+                        <div>
+                            <h2 class="text-xl font-bold flex items-center text-slate-800">
+                                <i data-lucide="trash-2" class="w-6 h-6 mr-2 text-rose-500"></i>情境回收箱 (已刪除項目)
+                            </h2>
+                            <p class="text-sm text-slate-500 mt-1">此處存放被軟刪除的威脅情境。您可以隨時復原它們，或將其永久抹除以釋放空間。</p>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <span class="text-xs text-amber-500 bg-amber-50 px-2 py-1 rounded font-bold border border-amber-200 hide-in-admin"><i data-lucide="lock" class="w-3 h-3 inline mr-1"></i>解鎖右上角「管理模式」以進行復原操作</span>
+                            <span class="text-sm text-slate-500 bg-slate-100 px-3 py-1 rounded-full font-medium" id="recycle-count">共 0 項</span>
+                        </div>
                     </div>
-                    <div class="overflow-y-auto flex-1 custom-scrollbar pr-2">
-                        <table class="w-full text-left border-collapse">
-                            <thead class="sticky top-0 bg-slate-50 z-10 shadow-sm">
-                                <tr class="text-slate-600 text-sm">
-                                    <th class="p-4 border-b font-medium">情境名稱</th>
-                                    <th class="p-4 border-b font-medium">威脅分類</th>
-                                    <th class="p-4 border-b font-medium">刪除者帳號 (Audit)</th>
-                                    <th class="p-4 border-b font-medium">刪除時間</th>
-                                    <th class="p-4 border-b font-medium text-center w-40 admin-only">操作</th>
-                                </tr>
-                            </thead>
-                            <tbody class="text-sm divide-y divide-slate-100" id="recycle-tbody">
-                                <!-- 回收箱內容 -->
-                            </tbody>
-                        </table>
+                    <div class="overflow-y-auto flex-1 custom-scrollbar pr-2 pb-4">
+                        <div id="recycle-cards-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                            <!-- 回收箱圖卡內容將動態渲染於此 -->
+                        </div>
+                    </div>
+                </div>
+            </main>
+
+            <!-- ✅ 視角五：已驗證情境視角 (高層總覽卡片) -->
+            <main id="view-container-verified" class="w-full max-w-[1600px] mx-auto p-4 md:p-6 flex flex-col h-full overflow-hidden">
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 flex flex-col h-full overflow-hidden">
+                    <div class="flex justify-between items-center border-b pb-4 mb-4 flex-shrink-0">
+                        <div>
+                            <h2 class="text-xl font-bold flex items-center text-slate-800">
+                                <i data-lucide="check-circle-2" class="w-6 h-6 mr-2 text-emerald-500"></i>已驗證情境總覽 (Management View)
+                            </h2>
+                            <p class="text-sm text-slate-500 mt-1">此頁面呈現經團隊討論並「標記為可行」的威脅情境，依戰略領域分組，提供高階主管快速檢閱。</p>
+                        </div>
+                        <span class="text-sm text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full font-bold border border-emerald-200" id="verified-count">共 0 項</span>
+                    </div>
+                    <div class="overflow-y-auto flex-1 custom-scrollbar pr-2 pb-4">
+                        <!-- 🔧 將原本的 grid 替換為垂直排列 (space-y-8)，網格會在 JS 裡面針對個別分類動態生成 -->
+                        <div id="verified-cards-container" class="space-y-8">
+                            <!-- 圖卡與分類標題將動態渲染於此 -->
+                        </div>
                     </div>
                 </div>
             </main>
@@ -426,12 +457,12 @@
     <!-- 所有 Modals 區塊 -->
     <!-- ========================================== -->
 
-    <!-- 🔑 管理員登入 Modal (補回) -->
+    <!-- 🔑 管理員登入 Modal (修復補回) -->
     <div id="admin-login-modal" class="fixed inset-0 bg-slate-900/60 z-[100] flex items-center justify-center hidden p-4">
         <div class="bg-white rounded-xl shadow-2xl w-full max-w-sm overflow-hidden flex flex-col">
             <div class="p-5 border-b bg-slate-50 font-bold flex items-center"><i data-lucide="lock" class="w-5 h-5 mr-2"></i>切換為管理模式</div>
             <div class="p-6">
-                <input type="password" id="admin-password-input" class="w-full border border-slate-300 rounded-md p-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none" placeholder="請輸入解鎖密碼...">
+                <input type="password" id="admin-password-input" class="w-full border border-slate-300 rounded-md p-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none" placeholder="請輸入解鎖密碼..." onkeypress="if(event.key === 'Enter') window.submitAdminPassword()">
             </div>
             <div class="p-4 border-t bg-slate-50 flex justify-end space-x-2">
                 <button onclick="window.closeAdminLoginModal()" class="px-4 py-2 bg-slate-200 text-slate-800 rounded hover:bg-slate-300 transition-colors">取消</button>
@@ -611,6 +642,55 @@
                 <div><h4 class="font-bold text-sm text-slate-800 mb-2 flex items-center"><i data-lucide="info" class="w-4 h-4 mr-1.5 text-purple-500"></i> AI 模擬原理解析</h4><p class="text-sm text-slate-600 leading-relaxed bg-slate-50 p-4 rounded-lg border border-slate-100" id="attack-sim-explanation"></p></div>
             </div>
             <div class="p-4 border-t bg-slate-50 flex justify-end"><button onclick="window.closeAttackSimModal()" class="bg-slate-200 hover:bg-slate-300 text-slate-800 px-6 py-2 rounded-md text-sm font-medium transition-colors shadow-sm">完成並關閉</button></div>
+        </div>
+    </div>
+
+    <!-- ✨ 威脅情資 CTI 轉化 Modal -->
+    <div id="cti-modal" class="fixed inset-0 bg-slate-900/60 z-[60] flex items-center justify-center hidden p-4">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col">
+            <div class="p-5 border-b bg-orange-50 flex justify-between items-center">
+                <h3 class="text-lg font-bold flex items-center text-orange-800"><i data-lucide="rss" class="w-5 h-5 mr-2 text-orange-600"></i>✨ 威脅情資 (CTI) 自動轉化</h3>
+                <button onclick="window.closeCtiModal()" class="text-slate-400" id="cti-close-btn"><i data-lucide="x" class="w-6 h-6"></i></button>
+            </div>
+            <div class="p-6 bg-white space-y-4">
+                <div class="bg-orange-100 text-orange-800 text-xs p-3 rounded-md border border-orange-200 leading-relaxed font-medium flex items-start">
+                    <i data-lucide="info" class="w-4 h-4 inline mr-2 flex-shrink-0 mt-0.5"></i> 貼上資安新聞、CVE 報告或任何非結構化情報。AI 會自動提取 TTPs 並配合您「現有的資產環境」翻譯成可落地的防護情境！
+                </div>
+                <div>
+                    <label class="block text-sm font-bold text-slate-700 mb-2">請貼上情報原文或網頁摘錄：</label>
+                    <textarea id="cti-prompt" rows="8" class="w-full text-sm border-slate-300 rounded-md shadow-sm focus:ring-2 focus:ring-orange-500 p-3 border resize-none" placeholder="例如：CVE-2024-XXXXX 是一個出現在某防火牆設備的 RCE 漏洞，攻擊者可以透過構造特定的 HTTP 請求..."></textarea>
+                </div>
+                <div id="cti-loading" class="hidden flex-col items-center py-4"><i data-lucide="loader-2" class="w-8 h-8 text-orange-600 animate-spin mb-2"></i><span class="text-sm font-bold text-slate-700">AI 正在深度解析情報並媒合資產...</span></div>
+            </div>
+            <div class="p-4 border-t bg-slate-50 flex justify-end space-x-3">
+                <button onclick="window.closeCtiModal()" class="bg-slate-200 px-4 py-2 rounded-md text-sm text-slate-700 hover:bg-slate-300 transition-colors" id="cti-cancel-btn">取消</button>
+                <button onclick="window.generateFromCti()" class="bg-orange-600 hover:bg-orange-700 text-white px-5 py-2 rounded-md text-sm font-bold shadow-sm transition-colors flex items-center" id="cti-submit-btn"><i data-lucide="zap" class="w-4 h-4 mr-1"></i> 開始解析</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ✨ 自動化腳本 Modal -->
+    <div id="script-modal" class="fixed inset-0 bg-slate-900/60 z-[60] flex items-center justify-center hidden p-4">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-4xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div class="p-5 flex items-center justify-between border-b bg-indigo-50">
+                <div class="flex items-center text-indigo-700 font-bold text-lg"><i data-lucide="terminal-square" class="w-6 h-6 mr-2 text-indigo-600"></i><h3>✨ AI 自動化日誌收集腳本</h3></div>
+                <button onclick="window.closeScriptModal()" class="text-slate-400 hover:text-slate-600 focus:outline-none"><i data-lucide="x" class="w-6 h-6"></i></button>
+            </div>
+            <div class="p-8 bg-white flex flex-col items-center justify-center min-h-[300px]" id="script-loading">
+                <i data-lucide="loader-2" class="w-10 h-10 text-indigo-600 animate-spin mb-4"></i><span class="text-base font-bold text-slate-700 mb-2">AI 正在為 <span id="script-target-role" class="text-indigo-600 font-mono"></span> 撰寫部署腳本...</span>
+            </div>
+            <div class="p-6 bg-white hidden flex-col space-y-5 overflow-y-auto custom-scrollbar flex-grow" id="script-content">
+                <div class="bg-blue-50 border border-blue-200 text-blue-800 text-sm p-4 rounded-lg flex items-start shadow-sm"><i data-lucide="info" class="w-5 h-5 mr-3 flex-shrink-0 text-blue-600 mt-0.5"></i><span class="leading-relaxed font-medium">此腳本專為您目前選擇的系統角色與應收集之日誌所量身打造。請根據貴公司的環境變數進行微調後執行。</span></div>
+                <div>
+                    <div class="flex justify-between items-center mb-2">
+                        <h4 class="font-bold text-sm text-slate-800 flex items-center"><i data-lucide="code" class="w-4 h-4 mr-1.5 text-indigo-500"></i> 部署腳本 (Bash / PowerShell)</h4>
+                        <button onclick="window.copyLogScript()" class="text-slate-600 hover:text-indigo-600 bg-slate-100 hover:bg-indigo-50 border border-slate-200 px-3 py-1 rounded text-xs transition-colors flex items-center shadow-sm"><i data-lucide="copy" class="w-3 h-3 mr-1.5"></i> 複製腳本</button>
+                    </div>
+                    <pre class="bg-slate-900 text-green-400 p-5 rounded-lg text-sm font-mono whitespace-pre-wrap leading-relaxed border border-slate-700 shadow-inner" id="script-command"></pre>
+                </div>
+                <div><h4 class="font-bold text-sm text-slate-800 mb-2 flex items-center"><i data-lucide="file-text" class="w-4 h-4 mr-1.5 text-indigo-500"></i> 腳本原理解析與手動檢查項目</h4><p class="text-sm text-slate-600 leading-relaxed bg-slate-50 p-4 rounded-lg border border-slate-100" id="script-explanation"></p></div>
+            </div>
+            <div class="p-4 border-t bg-slate-50 flex justify-end"><button onclick="window.closeScriptModal()" class="bg-slate-200 hover:bg-slate-300 text-slate-800 px-6 py-2 rounded-md text-sm font-medium transition-colors shadow-sm">完成並關閉</button></div>
         </div>
     </div>
 
@@ -802,7 +882,7 @@
 
         window.submitAdminPassword = function() {
             const pwdInput = document.getElementById('admin-password-input').value;
-            // 這裡可以設定您的專屬密碼，目前預設為 sony168
+            // 驗證管理員密碼
             if (pwdInput === "sony168") {
                 window.isAdmin = true;
                 document.body.classList.add('is-admin');
@@ -1059,6 +1139,7 @@
             window.renderMitreButtons(); 
             window.initRoleDropdown();
             window.renderRecycleBin();
+            window.renderVerifiedCards();
             if (window.scenarios && window.scenarios.length > 0) window.selectScenario(window.scenarios[0].id);
             if (window.rolesDef && window.rolesDef.length > 0 && window.rolesDef[0].roles.length > 0) window.selectRole(window.rolesDef[0].roles[0]);
             if (window.mitreTactics && window.mitreTactics.length > 0) window.selectMitreTactic(window.mitreTactics[0].id); 
@@ -1081,12 +1162,22 @@
                 tabRecycle.classList.add('text-rose-300', 'hover:text-rose-100');
             }
 
-            ['scenario', 'system', 'mitre', 'recycle'].forEach(v => { 
+            const tabVerified = document.getElementById('tab-verified');
+            if (viewName === 'verified') {
+                tabVerified.classList.add('bg-emerald-50', 'text-emerald-700', 'font-bold');
+                tabVerified.classList.remove('text-emerald-400', 'hover:text-emerald-200');
+            } else {
+                tabVerified.classList.remove('bg-emerald-50', 'text-emerald-700', 'font-bold');
+                tabVerified.classList.add('text-emerald-400', 'hover:text-emerald-200');
+            }
+
+            ['scenario', 'system', 'mitre', 'recycle', 'verified'].forEach(v => { 
                 const el = document.getElementById(`view-container-${v}`); 
                 if (el) el.classList.toggle('active-view', v === viewName); 
             });
 
             if(viewName === 'recycle') window.renderRecycleBin();
+            if(viewName === 'verified') window.renderVerifiedCards();
         };
 
         window.syncCustomRoles = function() {
@@ -1148,7 +1239,7 @@
             const container = document.getElementById('scenario-list'); container.innerHTML = '';
             const totalSpan = document.getElementById('total-scenarios-count'); if (totalSpan) totalSpan.textContent = `共 ${window.scenarios ? window.scenarios.length : 0} 項`;
             
-            // 🔧 關鍵修復：若資料庫為空，提供友善的防呆預設畫面
+            // 🔧 若資料庫為空，提供友善的防呆預設畫面
             if (!window.scenarios || window.scenarios.length === 0) {
                 document.getElementById('detail-title').textContent = '尚無情境';
                 document.getElementById('detail-desc').textContent = '請點擊左側「AI 輔助生成新情境」建立第一筆資料。';
@@ -1166,25 +1257,61 @@
             window.categoriesDef.forEach(cat => {
                 const categoryScenarios = window.scenarios.filter(s => s.categoryId === cat.id); if (categoryScenarios.length === 0) return;
                 
-                // 🔧 新增排序邏輯：將「已確認可行 (isVerified)」的情境排序到該分類的最上方
-                categoryScenarios.sort((a, b) => (b.isVerified === true ? 1 : 0) - (a.isVerified === true ? 1 : 0));
+                // 🔧 新增風險權重判斷函式 (極高=4, 高=3, 中=2, 低=1)
+                const getRiskWeight = (scenario) => {
+                    const r = scenario.risk || '';
+                    if (r.includes('極高') || r.includes('Critical') || r.includes('紅') || r.includes('A')) return 4;
+                    if (r.includes('高') || r.includes('High')) return 3;
+                    if (r.includes('中') || r.includes('Medium') || r.includes('黃') || r.includes('B')) return 2;
+                    if (r.includes('低') || r.includes('Low') || r.includes('綠') || r.includes('C')) return 1;
+                    return 0;
+                };
 
-                const groupDiv = document.createElement('div'); groupDiv.className = 'mb-2 border border-slate-100 rounded-lg bg-slate-50/50 overflow-hidden';
-                let groupHtmlStr = `<div class="cursor-pointer flex items-center justify-between p-2.5 group hover:bg-slate-100 transition-colors" onclick="window.toggleCategory('cat-${cat.id}')"><h3 class="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center group-hover:text-indigo-600 transition-colors"><i data-lucide="${cat.icon}" class="w-3.5 h-3.5 mr-1.5"></i>${cat.name}</h3><div class="flex items-center"><span class="bg-white text-slate-500 border border-slate-200 px-1.5 py-0.5 rounded text-[10px] font-bold shadow-sm mr-2">${categoryScenarios.length}</span><i data-lucide="chevron-down" id="icon-cat-${cat.id}" class="w-4 h-4 text-slate-400 transition-transform duration-200 transform"></i></div></div><div class="space-y-1.5 p-2 pt-0 category-group transition-all" id="group-cat-${cat.id}"></div>`;
+                // 排序邏輯：1. 將「已確認可行 (isVerified)」排在最上方 2. 若同狀態，則依「風險等級 (高 -> 低)」排序
+                categoryScenarios.sort((a, b) => {
+                    const verifiedDiff = (b.isVerified === true ? 1 : 0) - (a.isVerified === true ? 1 : 0);
+                    if (verifiedDiff !== 0) return verifiedDiff;
+                    return getRiskWeight(b) - getRiskWeight(a); // 權重大的(高風險)排前面
+                });
+
+                // 🎨 視覺再升級：加深標題背景色，並為下拉清單區域鋪上該分類的淡色背景
+                const baseColor = cat.colorClass.split('-')[1]; // 取出 indigo, rose, blue 等主色調
+                const groupDiv = document.createElement('div'); 
+                
+                // 將整個容器的背景設定為該主題色的極淡色 (如 bg-indigo-50/40)
+                groupDiv.className = `mb-3 border border-${baseColor}-200 rounded-xl shadow-sm overflow-hidden bg-${baseColor}-50/40`;
+                
+                let groupHtmlStr = `
+                <div class="cursor-pointer flex items-center justify-between p-3 bg-${baseColor}-100 hover:bg-${baseColor}-200 transition-colors border-b border-${baseColor}-200" onclick="window.toggleCategory('cat-${cat.id}')">
+                    <h3 class="text-xs font-bold text-${baseColor}-800 uppercase tracking-wider flex items-center">
+                        <i data-lucide="${cat.icon}" class="w-4 h-4 mr-1.5 text-${baseColor}-600"></i>${cat.name}
+                    </h3>
+                    <div class="flex items-center">
+                        <span class="bg-white text-${baseColor}-700 border border-${baseColor}-200 px-2 py-0.5 rounded-full text-[10px] font-black shadow-sm mr-2">${categoryScenarios.length}</span>
+                        <i data-lucide="chevron-down" id="icon-cat-${cat.id}" class="w-4 h-4 text-${baseColor}-600 transition-transform duration-200 transform"></i>
+                    </div>
+                </div>
+                <div class="space-y-2 p-2 pt-2 category-group transition-all" id="group-cat-${cat.id}"></div>`;
+                
                 groupDiv.innerHTML = groupHtmlStr; container.appendChild(groupDiv);
 
                 const groupContainer = document.getElementById(`group-cat-${cat.id}`);
                 categoryScenarios.forEach(s => {
                     const isVerified = s.isVerified;
-                    const bgClass = isVerified ? 'bg-emerald-50 border-emerald-300' : 'bg-white border-slate-200';
+                    // 情境按鈕：未確認時為純白背景，已確認為淺綠。配合彩色外框會更有立體感。
+                    const bgClass = isVerified ? 'bg-emerald-50 border-emerald-300' : `bg-white border-${baseColor}-100`;
                     const verifiedIcon = isVerified ? `<i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-500 ml-1.5 flex-shrink-0" title="已確認可行"></i>` : '';
                     
-                    const btn = document.createElement('button'); btn.className = `scenario-btn w-full text-left px-3 py-2.5 rounded-md border hover:border-${cat.colorClass.split('-')[1]}-400 focus:outline-none flex justify-between items-start shadow-sm transition-all ${bgClass}`; btn.id = `btn-${s.id}`; btn.onclick = () => window.selectScenario(s.id);
+                    const btn = document.createElement('button'); 
+                    btn.className = `scenario-btn w-full text-left px-3 py-2.5 rounded-lg border hover:border-${baseColor}-400 hover:shadow-md focus:outline-none flex justify-between items-start shadow-sm transition-all ${bgClass}`; 
+                    btn.id = `btn-${s.id}`; btn.onclick = () => window.selectScenario(s.id);
                     
-                    let rColor = window.getRiskColor(s); // 🔧 套用統一判斷
+                    let rColor = window.getRiskColor(s); // 套用統一判斷
                     
                     const displayTitle = s.shortName ? s.shortName : s.title; const subTitleHtml = s.shortName ? `<span class="text-[10px] text-slate-400 truncate w-full block mt-0.5" title="${s.title}">${s.title}</span>` : '';
-                    btn.innerHTML = `<div class="flex items-start overflow-hidden w-full"><i data-lucide="${cat.icon}" class="w-4 h-4 mr-2 mt-0.5 text-slate-400 btn-icon flex-shrink-0"></i><div class="flex flex-col min-w-0 flex-1"><div class="flex items-center"><span class="font-bold text-sm truncate text-slate-700" title="${displayTitle}">${displayTitle}</span>${verifiedIcon}</div>${subTitleHtml}</div></div><span class="w-2.5 h-2.5 rounded-full ${rColor} flex-shrink-0 ml-2 mt-1 shadow-sm"></span>`;
+                    
+                    // 將按鈕內的小圖示染上專屬分類色彩
+                    btn.innerHTML = `<div class="flex items-start overflow-hidden w-full"><i data-lucide="${cat.icon}" class="w-4 h-4 mr-2 mt-0.5 text-${baseColor}-500 opacity-80 btn-icon flex-shrink-0"></i><div class="flex flex-col min-w-0 flex-1"><div class="flex items-center"><span class="font-bold text-sm truncate text-slate-700" title="${displayTitle}">${displayTitle}</span>${verifiedIcon}</div>${subTitleHtml}</div></div><span class="w-2.5 h-2.5 rounded-full ${rColor} flex-shrink-0 ml-2 mt-1 shadow-sm"></span>`;
                     groupContainer.appendChild(btn);
                 });
             });
@@ -2046,6 +2173,113 @@
             }
         };
 
+        // ✨ 新增：CTI 威脅情資轉化邏輯
+        window.openCtiModal = () => document.getElementById('cti-modal').classList.remove('hidden');
+        window.closeCtiModal = () => document.getElementById('cti-modal').classList.add('hidden');
+
+        window.generateFromCti = async function() {
+            const promptInput = document.getElementById('cti-prompt').value.trim();
+            if (!promptInput) return window.showToast('⚠️ 請先貼上威脅情報！', true);
+            
+            document.getElementById('cti-loading').classList.remove('hidden');
+            document.getElementById('cti-submit-btn').disabled = true;
+            document.getElementById('cti-cancel-btn').disabled = true;
+            
+            const activeRoles = [...new Set(window.assets.map(a => a.role))];
+            const validCategories = window.categoriesDef.map(c => c.id).join(', ');
+            const validCSF = window.csfFunctions.map(c => c.id).join(', ');
+            const valid5M = window.fiveMDef.map(m => m.id).join(', ');
+            const fiveMContext = window.fiveMDef.map(m => `${m.id}=${m.name}(${m.desc})`).join(', ');
+
+            const systemPrompt = `你是一位頂尖的威脅情資(CTI)分析師與 SIEM 架構專家。
+            使用者將貼上一段未結構化的資安情報、新聞或 CVE 描述。請解析其中的 TTPs 與 IOCs，並結合使用者目前的實體設備清單 [${activeRoles.join(', ')}]，轉化為一組可落地的 SIEM 偵測情境。
+            若情報與現有設備無關，請在 scope 加入建議的設備，並在 notes 中說明。
+            
+            必須遵守：
+            - categoryId: 必須符合 [${validCategories}]
+            - csf: 必須符合 [${validCSF}]
+            - fiveM: 必須符合 [${valid5M}]。定義參考：${fiveMContext}
+            - risk 只能填寫: "極高 (Critical)", "高 (High)", "中 (Medium)", "低 (Low)"。
+            - riskColor: 請對應風險填寫 "bg-red-600", "bg-orange-500", "bg-yellow-500" 等。
+            - detectionLogic 必須是符合 ELK (Elastic Stack) 規範的 KQL 語法，不可留空。
+
+            回傳純 JSON 格式：
+            { 
+              "id": "s_new", "categoryId": "string", "title": "string", "shortName": "string", "desc": "string", "risk": "string", "riskColor": "string", "csf": ["string"], "fiveM": ["string"], "scope": ["string"], "logs": ["string"], "detectionStrategy": "string", "detectionLogic": "string", "notes": "string", "mitigation": ["string"], "response": ["string"] 
+            }`;
+            
+            const res = await window.callGemini(promptInput, systemPrompt);
+            if (res) {
+                res.id = 's' + Date.now();
+                res.isVerified = false;
+                res.isDeleted = false;
+                if (window.db && window.fs) {
+                    try {
+                        const docRef = await window.fs.addDoc(window.fs.collection(window.db, "scenarios"), res);
+                        res.docId = docRef.id;
+                    } catch(e) { console.warn('Firebase save failed', e); }
+                }
+                window.scenarios.push(res);
+                window.renderScenarioButtons();
+                window.selectScenario(res.id);
+                window.closeCtiModal();
+                document.getElementById('cti-prompt').value = '';
+                window.showToast("✨ AI 已成功將情報解析並轉化為專屬防禦情境！");
+            }
+            
+            document.getElementById('cti-loading').classList.add('hidden');
+            document.getElementById('cti-submit-btn').disabled = false;
+            document.getElementById('cti-cancel-btn').disabled = false;
+        };
+
+        // ✨ 新增：自動化腳本生成邏輯
+        window.openScriptModal = () => document.getElementById('script-modal').classList.remove('hidden');
+        window.closeScriptModal = () => document.getElementById('script-modal').classList.add('hidden');
+        window.copyLogScript = function() { 
+            const cmd = document.getElementById('script-command').textContent; 
+            navigator.clipboard.writeText(cmd.trim()).then(() => window.showToast('✅ 部署腳本已複製！')).catch(() => window.showToast('⚠️ 複製失敗', true)); 
+        };
+
+        window.generateLogScript = async function() {
+            if(!window.currentSelectedRoleName) return window.showToast('⚠️ 請先選擇要派發腳本的系統角色！', true);
+            
+            let aggregatedLogs = new Set();
+            window.scenarios.forEach(s => { 
+                const safeScope = s.scope || [];
+                if (safeScope.includes(window.currentSelectedRoleName)) { 
+                    const safeLogs = s.logs || [];
+                    safeLogs.forEach(log => { const match = log.match(/^\[(.*?)\]/); if (!match || match[1].toLowerCase().trim() === window.currentSelectedRoleName.toLowerCase().trim()) aggregatedLogs.add(log); }); 
+                } 
+            });
+
+            if (aggregatedLogs.size === 0) return window.showToast('⚠️ 該系統目前無要求收集的日誌，無需腳本。', true);
+
+            window.openScriptModal();
+            document.getElementById('script-target-role').textContent = window.currentSelectedRoleName;
+            document.getElementById('script-loading').classList.remove('hidden');
+            document.getElementById('script-content').classList.add('hidden');
+
+            const systemPrompt = `你是一位資深的系統與 DevOps 工程師。使用者正在部署 SIEM (ELK 架構)，需要針對特定系統角色部署日誌收集器 (如 Filebeat, Winlogbeat, 或是 Rsyslog)。
+            回傳 JSON 格式：
+            {
+               "script": "完整的 Bash 或 PowerShell 部署腳本與設定檔生成指令。絕不能使用 markdown backticks",
+               "explanation": "中文詳細解釋此腳本的運作原理與管理者需手動修改的變數(如 IP 等)。"
+            }`;
+            
+            const prompt = `目標系統角色：${window.currentSelectedRoleName}
+            必須收集的日誌項目清單：\n${Array.from(aggregatedLogs).join('\n')}
+            請為此系統撰寫日誌派發設定腳本。`;
+
+            const res = await window.callGemini(prompt, systemPrompt, true);
+            if (res) {
+                document.getElementById('script-command').textContent = res.script;
+                document.getElementById('script-explanation').textContent = res.explanation;
+                document.getElementById('script-loading').classList.add('hidden');
+                document.getElementById('script-content').classList.remove('hidden');
+            }
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+        };
+
         // ==========================================
         // 9. 管理與軟/硬刪除邏輯
         // ==========================================
@@ -2088,7 +2322,6 @@
                 window.renderAssetTable();
                 window.renderRoleButtons();
                 
-                // 🔧 補齊連動：刪除資產後，強制刷新當前的情境畫面，讓缺失的資產立刻顯示警告
                 if (window.currentViewMode === 'scenario' && window.currentSelectedScenarioId) {
                     window.selectScenario(window.currentSelectedScenarioId);
                 }
@@ -2098,34 +2331,68 @@
             window.closeDeleteModal();
         };
 
-        // 回收箱專用邏輯
+        // 🗑️ 升級：回收箱專用邏輯 (轉為圖卡渲染)
         window.renderRecycleBin = function() {
-            const tbody = document.getElementById('recycle-tbody');
-            if(!tbody) return;
-            tbody.innerHTML = '';
-            document.getElementById('recycle-count').textContent = `共 ${window.recycledScenarios.length} 項`;
+            const container = document.getElementById('recycle-cards-container');
+            const countBadge = document.getElementById('recycle-count');
+            if(!container) return;
+            
+            container.innerHTML = '';
+            countBadge.textContent = `共 ${window.recycledScenarios.length} 項`;
 
             if (window.recycledScenarios.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="5" class="p-8 text-center text-slate-500 italic"><i data-lucide="inbox" class="w-10 h-10 mx-auto mb-3 opacity-40"></i>回收箱是空的</td></tr>`;
+                container.innerHTML = `
+                    <div class="col-span-full text-center py-16 text-slate-400 italic bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200 flex flex-col items-center justify-center">
+                        <i data-lucide="inbox" class="w-16 h-16 mx-auto mb-4 opacity-30"></i>
+                        <p class="text-lg font-bold text-slate-500 mb-1">回收箱是空的</p>
+                    </div>`;
                 if (typeof lucide !== 'undefined') lucide.createIcons();
                 return;
             }
 
+            let html = '';
             window.recycledScenarios.sort((a, b) => (b.deletedAt || 0) - (a.deletedAt || 0)).forEach(sc => {
-                const cat = window.categoriesDef.find(c => c.id === sc.categoryId) || {name: '未知分類', icon: 'folder'};
-                tbody.innerHTML += `
-                    <tr class="hover:bg-slate-50 transition-colors">
-                        <td class="p-4 border-b font-bold text-slate-800">${sc.title}</td>
-                        <td class="p-4 border-b"><span class="inline-flex items-center px-2 py-1 rounded bg-slate-100 text-slate-600 text-xs"><i data-lucide="${cat.icon}" class="w-3 h-3 mr-1"></i>${cat.name}</span></td>
-                        <td class="p-4 border-b text-slate-600 text-xs font-mono">${sc.deletedBy || '未知使用者'}</td>
-                        <td class="p-4 border-b text-slate-500 text-xs">${window.formatDate(sc.deletedAt)}</td>
-                        <td class="p-4 border-b text-center admin-only">
-                            <button onclick="window.restoreScenario('${sc.id}')" class="text-indigo-600 hover:bg-indigo-50 p-1.5 rounded mr-2" title="復原此情境"><i data-lucide="rotate-ccw" class="w-4 h-4"></i></button>
-                            <button onclick="window.confirmHardDelete('${sc.id}')" class="text-rose-500 hover:bg-rose-50 p-1.5 rounded" title="永久刪除"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
-                        </td>
-                    </tr>
+                const cat = window.categoriesDef.find(c => c.id === sc.categoryId) || {name: '未知分類', icon: 'folder', bgClass: 'bg-slate-100', colorClass: 'text-slate-600', borderClass: 'border-slate-200'};
+                
+                html += `
+                    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-all flex flex-col relative overflow-hidden group opacity-80 hover:opacity-100">
+                        <div class="h-1.5 w-full bg-slate-300"></div>
+                        <div class="p-5 flex flex-col flex-grow">
+                            <div class="flex justify-between items-start mb-3">
+                                <span class="px-2.5 py-1 text-[11px] font-bold rounded-lg ${cat.bgClass} ${cat.colorClass} flex items-center border ${cat.borderClass}">
+                                    <i data-lucide="${cat.icon}" class="w-3.5 h-3.5 mr-1.5"></i>${cat.name}
+                                </span>
+                                <span class="text-[10px] bg-rose-50 text-rose-600 border border-rose-200 px-2 py-0.5 rounded shadow-sm font-bold flex items-center">
+                                    <i data-lucide="trash-2" class="w-3 h-3 mr-1"></i> 已刪除
+                                </span>
+                            </div>
+                            <h3 class="font-bold text-slate-800 text-base mb-4 line-clamp-2">${sc.title}</h3>
+                            
+                            <div class="mt-auto bg-slate-50 rounded-lg p-3 space-y-2 border border-slate-100">
+                                <div class="flex items-center justify-between text-xs text-slate-600">
+                                    <span class="flex items-center text-slate-500"><i data-lucide="user-x" class="w-3.5 h-3.5 mr-1.5 opacity-70"></i>刪除者帳號</span>
+                                    <span class="font-mono text-slate-700 truncate max-w-[120px]" title="${sc.deletedBy || '未知使用者'}">${sc.deletedBy || '未知'}</span>
+                                </div>
+                                <div class="flex items-center justify-between text-xs text-slate-600">
+                                    <span class="flex items-center text-slate-500"><i data-lucide="clock" class="w-3.5 h-3.5 mr-1.5 opacity-70"></i>執行時間</span>
+                                    <span class="font-medium text-slate-700">${window.formatDate(sc.deletedAt)}</span>
+                                </div>
+                            </div>
+                            
+                            <!-- admin-only 標籤控制：只有解鎖管理員模式才會顯示操作按鈕 -->
+                            <div class="flex justify-between items-center mt-4 pt-4 border-t border-slate-100 admin-only">
+                                <button onclick="window.restoreScenario('${sc.id}')" class="flex-1 flex justify-center items-center text-indigo-600 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 py-2 rounded-lg text-sm font-bold transition-colors mr-2 shadow-sm">
+                                    <i data-lucide="rotate-ccw" class="w-4 h-4 mr-1.5"></i>復原
+                                </button>
+                                <button onclick="window.confirmHardDelete('${sc.id}')" class="flex justify-center items-center text-rose-500 bg-white hover:bg-rose-50 border border-rose-200 p-2 rounded-lg transition-colors shadow-sm" title="永久刪除">
+                                    <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                 `;
             });
+            container.innerHTML = html;
             if (typeof lucide !== 'undefined') lucide.createIcons();
         };
 
@@ -2170,6 +2437,112 @@
                 window.showToast("🔥 情境已永久抹除");
             }
             window.closeHardDeleteModal();
+        };
+
+        // 🌟 升級：高層視角 (按分類群組 + 風險排序渲染)
+        window.renderVerifiedCards = function() {
+            const container = document.getElementById('verified-cards-container');
+            const countBadge = document.getElementById('verified-count');
+            if (!container) return;
+
+            // 僅抓取「已標記為可行」且「未刪除」的情境
+            const verifiedScenarios = (window.scenarios || []).filter(s => s.isVerified === true && !s.isDeleted);
+            
+            countBadge.textContent = `共 ${verifiedScenarios.length} 項`;
+
+            if (verifiedScenarios.length === 0) {
+                container.innerHTML = `<div class="text-center py-16 text-slate-400 italic bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200 flex flex-col items-center justify-center">
+                    <i data-lucide="shield-question" class="w-16 h-16 mb-4 opacity-30"></i>
+                    <p class="text-lg font-bold text-slate-500 mb-1">尚無已驗證的高層情境</p>
+                    <p class="text-sm">請在情境詳細頁面，與各單位討論後點擊「標記為可行」來將其收錄至此。</p>
+                </div>`;
+                if (typeof lucide !== 'undefined') lucide.createIcons();
+                return;
+            }
+
+            const getRiskWeight = (scenario) => {
+                const r = scenario.risk || '';
+                if (r.includes('極高') || r.includes('Critical') || r.includes('紅') || r.includes('A')) return 4;
+                if (r.includes('高') || r.includes('High')) return 3;
+                if (r.includes('中') || r.includes('Medium') || r.includes('黃') || r.includes('B')) return 2;
+                if (r.includes('低') || r.includes('Low') || r.includes('綠') || r.includes('C')) return 1;
+                return 0;
+            };
+
+            let html = '';
+
+            // 依據全局的分類定義 (window.categoriesDef) 來分組渲染
+            window.categoriesDef.forEach(cat => {
+                // 找出屬於該分類的已驗證情境
+                const catScenarios = verifiedScenarios.filter(s => s.categoryId === cat.id);
+                if (catScenarios.length === 0) return; // 若該分類無驗證情境，則略過不顯示
+                
+                // 群組內依照風險高低排序
+                catScenarios.sort((a, b) => getRiskWeight(b) - getRiskWeight(a));
+                
+                const baseColor = cat.colorClass.split('-')[1]; // 取出色彩前綴如 indigo, rose
+
+                // 建立該分類的標題區塊
+                html += `
+                    <div class="bg-white rounded-xl">
+                        <div class="flex items-center mb-4 border-b-2 border-${baseColor}-200 pb-2">
+                            <div class="bg-${baseColor}-100 p-2 rounded-lg mr-3 shadow-sm">
+                                <i data-lucide="${cat.icon}" class="w-5 h-5 text-${baseColor}-600"></i>
+                            </div>
+                            <h3 class="text-lg font-bold text-slate-800 tracking-wide">${cat.name}</h3>
+                            <span class="ml-3 bg-${baseColor}-50 border border-${baseColor}-200 text-${baseColor}-700 px-2.5 py-0.5 rounded-full text-xs font-bold shadow-sm">
+                                ${catScenarios.length} 項戰略
+                            </span>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                `;
+
+                // 渲染該分類下的圖卡
+                catScenarios.forEach(s => {
+                    let rColor = window.getRiskColor(s);
+                    const rLabel = s.risk || '未知';
+                    
+                    const fiveMNames = (s.fiveM || []).map(mId => {
+                        const m = window.fiveMDef.find(d => d.id === mId);
+                        return m ? m.name.split(' ')[0] : '';
+                    }).filter(n => n).join(', ');
+
+                    html += `
+                        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all cursor-pointer flex flex-col group relative overflow-hidden" onclick="window.switchView('scenario'); window.selectScenario('${s.id}')">
+                            <div class="h-2 w-full ${rColor}"></div>
+                            <div class="p-6 flex flex-col flex-grow">
+                                <div class="flex justify-between items-start mb-4">
+                                    <span class="px-3 py-1 text-xs font-bold rounded-lg ${cat.bgClass} ${cat.colorClass} flex items-center border border-slate-100">
+                                        <i data-lucide="${cat.icon}" class="w-3.5 h-3.5 mr-1.5"></i>${cat.name}
+                                    </span>
+                                    <span class="px-2.5 py-1 text-[10px] font-bold text-white rounded-md shadow-sm ${rColor}">
+                                        ${rLabel}
+                                    </span>
+                                </div>
+                                <h3 class="font-bold text-slate-800 text-lg mb-2 line-clamp-2 group-hover:text-indigo-600 transition-colors">${s.title}</h3>
+                                <p class="text-sm text-slate-500 mb-6 line-clamp-3 leading-relaxed flex-grow">${s.desc || '尚無情境描述...'}</p>
+                                
+                                <div class="bg-slate-50 rounded-lg p-3 space-y-2 border border-slate-100 mt-auto">
+                                    <div class="flex items-center justify-between text-xs text-slate-600">
+                                        <span class="flex items-center text-slate-500"><i data-lucide="server" class="w-3.5 h-3.5 mr-1.5 text-indigo-400"></i>涵蓋設備</span>
+                                        <span class="font-bold bg-white px-2 py-0.5 rounded shadow-sm border border-slate-100">${(s.scope || []).length} 類</span>
+                                    </div>
+                                    <div class="flex items-center justify-between text-xs text-slate-600">
+                                        <span class="flex items-center text-slate-500"><i data-lucide="pie-chart" class="w-3.5 h-3.5 mr-1.5 text-pink-400"></i>管理維度</span>
+                                        <span class="font-bold truncate max-w-[140px] text-right" title="${fiveMNames}">${fiveMNames || '未定義'}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                // 封閉該分類的 grid 容器與最外層容器
+                html += `</div></div>`;
+            });
+
+            container.innerHTML = html;
+            if (typeof lucide !== 'undefined') lucide.createIcons();
         };
 
         // 基礎視窗控制
