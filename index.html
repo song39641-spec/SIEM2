@@ -3227,14 +3227,16 @@
             
             columnsToRender.forEach(m => {
                 if (isSingleFocus) {
-                    // 🌟 單獨屬性模式：巨大型彩色圖示與完整標題
-                    html += `<th class="p-6 border text-center bg-slate-50">
-                                <div class="flex flex-col items-center justify-center w-full">
-                                    <div class="p-4 rounded-full ${m.bgClass} mb-3 shadow-md border ${m.borderClass} flex items-center justify-center">
-                                        <i data-lucide="${m.icon}" class="w-10 h-10 ${m.colorClass}"></i>
+                    // 🌟 單獨屬性模式：適中型彩色圖示與橫向標題，大幅節省垂直空間
+                    html += `<th class="p-4 border bg-slate-50">
+                                <div class="flex items-center justify-center w-full gap-4">
+                                    <div class="p-3 rounded-full ${m.bgClass} shadow-sm border ${m.borderClass} flex items-center justify-center flex-shrink-0">
+                                        <i data-lucide="${m.icon}" class="w-7 h-7 ${m.colorClass}"></i>
                                     </div>
-                                    <span class="text-2xl font-bold text-slate-800 tracking-wide mb-1">${m.name}</span>
-                                    <span class="text-sm text-slate-500 font-normal whitespace-normal">${m.desc}</span>
+                                    <div class="flex flex-col text-left">
+                                        <span class="text-xl font-bold text-slate-800 tracking-wide mb-0.5">${m.name}</span>
+                                        <span class="text-sm text-slate-500 font-normal whitespace-normal">${m.desc}</span>
+                                    </div>
                                 </div>
                              </th>`;
                 } else {
