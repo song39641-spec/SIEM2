@@ -251,12 +251,16 @@
                         <div class="overflow-y-auto no-scrollbar flex-1 space-y-5 pr-1" id="scenario-list">
                             <div class="p-5 text-center text-slate-400 text-sm">載入資料中...</div>
                         </div>
-                        <div class="flex gap-2 mt-4 flex-shrink-0">
-                            <button onclick="window.openAIModal()" class="admin-only flex-1 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white px-3 py-3 rounded-lg shadow-sm flex justify-center items-center font-medium transition-all group text-sm">
-                                <i data-lucide="sparkles" class="w-4 h-4 mr-1.5 group-hover:animate-pulse text-yellow-300"></i>輔助生成
+                        <div class="flex flex-wrap gap-2 mt-4 flex-shrink-0">
+                            <button onclick="window.openAIModal()" class="admin-only flex-1 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white px-2 py-2 rounded-lg shadow-sm flex justify-center items-center font-medium transition-all group text-xs md:text-sm">
+                                <i data-lucide="sparkles" class="w-3 h-3 mr-1.5 group-hover:animate-pulse text-yellow-300"></i>單筆生成
                             </button>
-                            <button onclick="window.openCtiModal()" class="admin-only flex-1 bg-gradient-to-r from-rose-500 to-orange-500 hover:from-rose-600 hover:to-orange-600 text-white px-3 py-3 rounded-lg shadow-sm flex justify-center items-center font-medium transition-all group text-sm" title="貼上外部資安新聞或 CVE">
-                                <i data-lucide="rss" class="w-4 h-4 mr-1.5 group-hover:animate-pulse text-yellow-200"></i>✨ 情資解析
+                            <button onclick="window.openCtiModal()" class="admin-only flex-1 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white px-2 py-2 rounded-lg shadow-sm flex justify-center items-center font-medium transition-all group text-xs md:text-sm" title="貼上外部資安新聞或 CVE">
+                                <i data-lucide="rss" class="w-3 h-3 mr-1.5 group-hover:animate-pulse text-yellow-100"></i>情資解析
+                            </button>
+                            <!-- ✨ 新增：自動擴充按鈕 (需管理員權限) -->
+                            <button onclick="window.toggleAutoGenerate()" id="btn-auto-generate" class="admin-only w-full bg-gradient-to-r from-pink-500 to-rose-600 hover:from-pink-600 hover:to-rose-700 text-white px-3 py-2 rounded-lg shadow-sm flex justify-center items-center font-medium transition-all group text-xs md:text-sm" title="每 5 分鐘自動擴充情境庫">
+                                <i data-lucide="bot" class="w-4 h-4 mr-1.5 group-hover:animate-bounce text-pink-200"></i>自動擴充 (關閉中)
                             </button>
                         </div>
                     </div>
@@ -2370,6 +2374,127 @@
                 window.showToast("✨ AI 已成功為您量身打造新情境！");
             }
             document.getElementById('ai-loading').classList.add('hidden');
+        };
+
+        // ✨ 新增：自動化均衡擴充引擎
+        window.isAutoGenerating = false;
+        window.autoGenInterval = null;
+
+        window.toggleAutoGenerate = function() {
+            const btn = document.getElementById('btn-auto-generate');
+            if (window.isAutoGenerating) {
+                // 停止自動生成
+                clearInterval(window.autoGenInterval);
+                window.isAutoGenerating = false;
+                btn.innerHTML = `<i data-lucide="bot" class="w-4 h-4 mr-1.5 group-hover:animate-bounce text-pink-200"></i>自動擴充 (關閉中)`;
+                btn.classList.remove('animate-pulse', 'ring-2', 'ring-pink-400', 'ring-offset-2');
+                window.showToast("🛑 已停止 AI 自動擴充情境。");
+            } else {
+                // 啟動自動生成
+                window.isAutoGenerating = true;
+                btn.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 mr-1.5 animate-spin text-pink-200"></i>自動擴充 (運行中)`;
+                btn.classList.add('animate-pulse', 'ring-2', 'ring-pink-400', 'ring-offset-2');
+                window.showToast("🚀 啟動自動擴充！系統將每 5 分鐘自動產生一個全新情境。");
+
+                // 立即執行第一次，後續每 5 分鐘執行一次
+                window.runAutoGenerateRound();
+                window.autoGenInterval = setInterval(window.runAutoGenerateRound, 5 * 60 * 1000);
+            }
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+        };
+
+        window.runAutoGenerateRound = async function() {
+            if (!window.isAutoGenerating) return;
+
+            // 1. 動態平衡演算法：尋找目前情境數量最少的「威脅分類」
+            const catCounts = {};
+            window.categoriesDef.forEach(c => catCounts[c.id] = 0);
+            window.scenarios.forEach(s => {
+                if(catCounts[s.categoryId] !== undefined && !s.isDeleted) catCounts[s.categoryId]++;
+            });
+
+            let targetCategory = window.categoriesDef[0];
+            let minCount = Infinity;
+            for (const cat of window.categoriesDef) {
+                if (cat.id === 'uncategorized') continue; // 排除未分類
+                if (catCounts[cat.id] < minCount) {
+                    minCount = catCounts[cat.id];
+                    targetCategory = cat;
+                }
+            }
+
+            // 2. 動態平衡演算法：尋找該分類下，目前最缺乏的「風險等級」
+            const riskLevels = ["極高 (Critical)", "高 (High)", "中 (Medium)", "低 (Low)"];
+            const currentCatScenarios = window.scenarios.filter(s => s.categoryId === targetCategory.id && !s.isDeleted);
+            const riskCounts = {"極高 (Critical)": 0, "高 (High)": 0, "中 (Medium)": 0, "低 (Low)": 0};
+            
+            currentCatScenarios.forEach(s => {
+                const rText = s.risk || '';
+                const rLevel = riskLevels.find(rl => rText.includes(rl.split(' ')[0])) || "中 (Medium)";
+                riskCounts[rLevel]++;
+            });
+
+            let targetRisk = riskLevels[0];
+            let minRiskCount = Infinity;
+            riskLevels.forEach(r => {
+                if (riskCounts[r] < minRiskCount) {
+                    minRiskCount = riskCounts[r];
+                    targetRisk = r;
+                }
+            });
+
+            // 3. 提取現有標題作為防重複上下文
+            const existingTitles = currentCatScenarios.map(s => s.title).join('、');
+
+            const activeRoles = [...new Set(window.assets.map(a => a.role))];
+            const validCategories = window.categoriesDef.map(c => c.id).join(', ');
+            const validCSF = window.csfFunctions.map(c => c.id).join(', ');
+            const valid5M = window.fiveMDef.map(m => m.id).join(', ');
+            const fiveMContext = window.fiveMDef.map(m => `${m.id}=${m.name}(${m.desc})`).join(', ');
+
+            const prompt = `我們團隊的 SIEM 監控矩陣需要豐富內容。請為「${targetCategory.name}」這個分類自動擴充一個【${targetRisk}】風險等級的監控情境。
+            【防止重複規定】：目前該類別已經有以下情境，請絕對不要重複類似的攻擊手法或規則名稱：[${existingTitles || '目前尚無'}]。
+            請發揮頂尖資安專家的創意，結合最新 APT 手法或企業常見的真實威脅，設計出一個前沿、實用且不落俗套的偵測情境。`;
+
+            const systemPrompt = `你是一位頂尖的 SIEM 架構專家。請根據要求自動生成一個全新、不重複的威脅監控情境。
+            必須嚴格遵守選項範圍：
+            - categoryId: 必須是 "${targetCategory.id}"
+            - csf 陣列元素只能從中挑選: [${validCSF}]
+            - fiveM 陣列元素只能從中挑選: [${valid5M}]。各屬性定義參考：${fiveMContext}
+            - risk: 必須是 "${targetRisk}"
+            - riskColor: 請對應風險填寫 Tailwind 背景色類別，例如: "bg-red-600", "bg-orange-500", "bg-green-500"。
+            - scope (系統角色) 請優先從使用者現有資產中挑選: [${activeRoles.join(', ')}]。
+            - logs 陣列格式必須為 "[角色名稱] 日誌詳細說明"。
+            - detectionLogic 必須是可直接在 ELK 上執行的 KQL (Kibana Query Language) 語法。
+            - detectionStrategy 說明該語法的偵測原理。
+            
+            輸出純 JSON 格式：
+            { 
+              "id": "s_new", "categoryId": "string", "title": "string", "shortName": "string", "desc": "string", "risk": "string", "riskColor": "string", "csf": ["string"], "fiveM": ["string"], "scope": ["string"], "logs": ["string"], "detectionStrategy": "string", "detectionLogic": "string", "notes": "string", "mitigation": ["string"], "response": ["string"] 
+            }`;
+
+            window.showToast(`⏳ AI 背景運作中：正在擴充「${targetCategory.name}」情境...`);
+
+            const res = await window.callGemini(prompt, systemPrompt, true);
+            
+            // 檢查如果生成期間使用者手動關閉了，就放棄寫入
+            if (res && window.isAutoGenerating) {
+                res.id = 's' + Date.now();
+                res.isVerified = false;
+                res.isDeleted = false;
+                window.scenarios.push(res);
+                if (window.db && window.fs) {
+                    try {
+                        const docRef = await window.fs.addDoc(window.fs.collection(window.db, "scenarios"), res);
+                        res.docId = docRef.id;
+                    } catch(e) { console.warn('Firebase save failed', e); }
+                }
+                
+                // 重新渲染清單與矩陣，但不改變使用者當下選擇的畫面焦點
+                window.renderScenarioButtons();
+                if(window.currentViewMode === 'matrix') window.renderMatrixView();
+                window.showToast(`✨ 自動擴充完成：新增了「${res.title}」`);
+            }
         };
 
         window.generatePlaybookWithAI = async function() {
