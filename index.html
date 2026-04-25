@@ -89,7 +89,7 @@
         .view-tab:not(.active) { color: #64748b; }
         .view-tab:not(.active):hover { color: #334155; background-color: rgba(241, 245, 249, 0.5); }
         .tab-btn.active { border-bottom: 2px solid #4f46e5; color: #4f46e5; }
-        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 4px;}
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
@@ -109,6 +109,10 @@
         .theme-dark table td { border-color: #334155 !important; }
         .theme-dark .hover\:bg-slate-50:hover { background-color: #1e293b !important; }
         
+        /* 矩陣圖專用深色處理 */
+        .theme-dark #matrix-table-container th.sticky { background-color: #1e293b !important; }
+        .theme-dark #matrix-table-container .hover\:bg-slate-50\/50:hover { background-color: rgba(51, 65, 85, 0.4) !important; }
+
         /* 調整原本半透明色塊，適應深色基底 */
         .theme-dark .bg-indigo-50\/40 { background-color: rgba(49, 46, 129, 0.3) !important; }
         .theme-dark .bg-emerald-50\/30 { background-color: rgba(6, 78, 59, 0.3) !important; }
@@ -197,8 +201,10 @@
                         <button onclick="window.switchView('scenario')" id="tab-scenario" class="view-tab active flex items-center px-3 py-1.5 rounded-md text-sm cursor-pointer whitespace-nowrap"><i data-lucide="crosshair" class="w-4 h-4 mr-1.5"></i> 情境</button>
                         <button onclick="window.switchView('system')" id="tab-system" class="view-tab flex items-center px-3 py-1.5 rounded-md text-sm cursor-pointer whitespace-nowrap"><i data-lucide="server" class="w-4 h-4 mr-1.5"></i> 設備</button>
                         <button onclick="window.switchView('mitre')" id="tab-mitre" class="view-tab flex items-center px-3 py-1.5 rounded-md text-sm cursor-pointer whitespace-nowrap"><i data-lucide="radar" class="w-4 h-4 mr-1.5"></i> MITRE</button>
-                        <!-- ✨ 新增：已驗證總覽的分頁 -->
+                        <!-- ✨ 已驗證總覽的分頁 -->
                         <button onclick="window.switchView('verified')" id="tab-verified" class="view-tab flex items-center px-3 py-1.5 rounded-md text-sm cursor-pointer whitespace-nowrap text-emerald-400 hover:text-emerald-200 font-medium"><i data-lucide="check-circle-2" class="w-4 h-4 mr-1.5"></i> 驗證總覽</button>
+                        <!-- ✨ 新增：戰略矩陣分頁 -->
+                        <button onclick="window.switchView('matrix')" id="tab-matrix" class="view-tab flex items-center px-3 py-1.5 rounded-md text-sm cursor-pointer whitespace-nowrap text-fuchsia-400 hover:text-fuchsia-200 font-medium"><i data-lucide="grid-3x3" class="w-4 h-4 mr-1.5"></i> 戰略矩陣</button>
                         <button onclick="window.switchView('recycle')" id="tab-recycle" class="view-tab flex items-center px-3 py-1.5 rounded-md text-sm cursor-pointer whitespace-nowrap text-rose-300 hover:text-rose-100"><i data-lucide="trash-2" class="w-4 h-4 mr-1.5"></i> 回收箱</button>
                     </div>
                     
@@ -512,9 +518,32 @@
                         </div>
                     </div>
                     <div class="overflow-y-auto flex-1 custom-scrollbar pr-2 pb-4">
-                        <!-- 🔧 將原本的 grid 替換為垂直排列 (space-y-8)，網格會在 JS 裡面針對個別分類動態生成 -->
                         <div id="verified-cards-container" class="space-y-8">
                             <!-- 圖卡與分類標題將動態渲染於此 -->
+                        </div>
+                    </div>
+                </div>
+            </main>
+
+            <!-- 📊 視角六：戰略矩陣視角 (Matrix View) -->
+            <main id="view-container-matrix" class="w-full max-w-[1600px] mx-auto p-4 md:p-6 flex flex-col h-full overflow-hidden">
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 flex flex-col h-full overflow-hidden">
+                    <div class="flex justify-between items-center border-b pb-4 mb-4 flex-shrink-0">
+                        <div>
+                            <h2 class="text-xl font-bold flex items-center text-slate-800">
+                                <i data-lucide="grid-3x3" class="w-6 h-6 mr-2 text-fuchsia-500"></i>NIST CSF 戰略覆蓋矩陣 (Matrix Diagram)
+                            </h2>
+                            <p class="text-sm text-slate-500 mt-1">X軸為 12 項資產管理維度，Y軸為 CSF 核心防護階段。透過交集檢視，迅速找出防護盲區與強項。</p>
+                        </div>
+                        <span class="text-sm text-fuchsia-600 bg-fuchsia-50 px-3 py-1 rounded-full font-bold border border-fuchsia-200" id="matrix-verified-count">共 0 項</span>
+                    </div>
+                    
+                    <!-- ✨ 新增：矩陣維度過濾器 (Dimension Filter) -->
+                    <div id="matrix-filter-container" class="flex flex-wrap gap-2 mb-4 flex-shrink-0"></div>
+
+                    <div class="overflow-auto flex-1 custom-scrollbar pb-2">
+                        <div id="matrix-table-container" class="min-w-max pb-4 pr-4">
+                            <!-- 矩陣圖表將動態渲染於此 -->
                         </div>
                     </div>
                 </div>
@@ -551,7 +580,8 @@
             <div class="p-5 overflow-y-auto bg-white grid grid-cols-1 lg:grid-cols-12 gap-6 flex-grow custom-scrollbar">
                 <div class="lg:col-span-4 flex flex-col gap-6">
                     <div><h4 class="font-bold text-sm mb-3 flex items-center border-b pb-2"><i data-lucide="server" class="w-4 h-4 mr-1.5 text-blue-500"></i> 1. 系統角色 (Scope)</h4><div id="edit-scope-checkboxes" class="space-y-4 max-h-[250px] overflow-y-auto custom-scrollbar"></div></div>
-                    <div><h4 class="font-bold text-sm mb-3 flex items-center border-b pb-2"><i data-lucide="pie-chart" class="w-4 h-4 mr-1.5 text-pink-500"></i> 2. 管理元素 (5M1E)</h4><div id="edit-fivem-checkboxes" class="flex flex-col gap-2"></div></div>
+                    <!-- 🔧 升級為雙欄排版以容納 12 個元素，並更改標題 -->
+                    <div><h4 class="font-bold text-sm mb-3 flex items-center border-b pb-2"><i data-lucide="pie-chart" class="w-4 h-4 mr-1.5 text-pink-500"></i> 2. 管理維度與資產屬性</h4><div id="edit-fivem-checkboxes" class="grid grid-cols-2 gap-x-2 gap-y-3"></div></div>
                     <div><h4 class="font-bold text-sm mb-3 flex items-center border-b pb-2"><i data-lucide="layers" class="w-4 h-4 mr-1.5 text-emerald-500"></i> 3. NIST CSF 核心功能</h4><div id="edit-csf-checkboxes" class="grid grid-cols-2 gap-2"></div></div>
                 </div>
                 <div class="lg:col-span-8 flex flex-col h-full space-y-4">
@@ -1081,12 +1111,21 @@
             { id: 'uncategorized', name: '其他未分類情境', icon: 'folder-open', colorClass: 'text-slate-600', bgClass: 'bg-slate-50', borderClass: 'border-slate-100' }
         ];
 
+        // 🔧 擴充為 12 個管理維度元素
         window.fiveMDef = [
             { id: 'man', name: '人 (Man)', desc: '詐欺保護、身分鑑別、行為分析、外部入侵等屬性', icon: 'user', colorClass: 'text-pink-700', bgClass: 'bg-pink-100', borderClass: 'border-pink-200' },
             { id: 'machine', name: '機 (Machine)', desc: '設備鑑別、機台資安、裝置管理等屬性', icon: 'server', colorClass: 'text-cyan-700', bgClass: 'bg-cyan-100', borderClass: 'border-cyan-200' },
-            { id: 'material', name: '料 (Material)', desc: '關鍵原料、關鍵資料等屬性', icon: 'file-text', colorClass: 'text-amber-700', bgClass: 'bg-amber-100', borderClass: 'border-amber-200' },
-            { id: 'method', name: '法 (Method)', desc: '異常程序、日誌分析等屬性', icon: 'git-merge', colorClass: 'text-violet-700', bgClass: 'bg-violet-100', borderClass: 'border-violet-200' },
-            { id: 'environment', name: '環 (Environment)', desc: '人臉&門禁辨識、區域告警等屬性', icon: 'cloud', colorClass: 'text-lime-700', bgClass: 'bg-lime-100', borderClass: 'border-lime-200' }
+            { id: 'material', name: '料 (Material)', desc: '實體物料、硬體等屬性', icon: 'box', colorClass: 'text-amber-700', bgClass: 'bg-amber-100', borderClass: 'border-amber-200' },
+            { id: 'method', name: '法 (Method)', desc: '異常程序、政策違規等屬性', icon: 'git-merge', colorClass: 'text-violet-700', bgClass: 'bg-violet-100', borderClass: 'border-violet-200' },
+            { id: 'environment', name: '環 (Environment)', desc: '人臉&門禁辨識、區域告警等屬性', icon: 'cloud', colorClass: 'text-lime-700', bgClass: 'bg-lime-100', borderClass: 'border-lime-200' },
+            
+            { id: 'system', name: '系統 (System)', desc: '作業系統、中介軟體、應用程式架構', icon: 'layers', colorClass: 'text-indigo-700', bgClass: 'bg-indigo-100', borderClass: 'border-indigo-200' },
+            { id: 'network_dim', name: '網路 (Network)', desc: '網路邊界、內網傳輸、VPN連線', icon: 'network', colorClass: 'text-blue-700', bgClass: 'bg-blue-100', borderClass: 'border-blue-200' },
+            { id: 'data_dim', name: '資料 (Data)', desc: '一般業務資料、資料庫內容', icon: 'database', colorClass: 'text-teal-700', bgClass: 'bg-teal-100', borderClass: 'border-teal-200' },
+            { id: 'cti', name: '外部情資 (CTI)', desc: '威脅情資、CVE漏洞、駭客動態', icon: 'globe', colorClass: 'text-orange-700', bgClass: 'bg-orange-100', borderClass: 'border-orange-200' },
+            { id: 'assets', name: '價值資產 (Assets)', desc: '核心主機、高價值營運設備', icon: 'gem', colorClass: 'text-yellow-700', bgClass: 'bg-yellow-100', borderClass: 'border-yellow-200' },
+            { id: 'monitoring', name: '保密監控 (Monitor)', desc: 'DLP、機密存取稽核、異常外傳監控', icon: 'eye', colorClass: 'text-red-700', bgClass: 'bg-red-100', borderClass: 'border-red-200' },
+            { id: 'confidential', name: '機密資料 (Secret)', desc: '原始碼、財報、個資等極機密數據', icon: 'lock', colorClass: 'text-fuchsia-700', bgClass: 'bg-fuchsia-100', borderClass: 'border-fuchsia-200' }
         ];
 
         window.rolesDef = [
@@ -1133,7 +1172,7 @@
                 id: 's1', categoryId: 'data', title: '營業秘密外洩 (Trade Secret)', shortName: '機密檔案外傳',
                 desc: '監控核心資料夾存取與異常外傳，預防內部人員非法攜出。', risk: '極高 (Critical)', riskColor: 'bg-red-600',
                 csf: ['protect', 'detect'], 
-                fiveM: ['material'],
+                fiveM: ['material', 'monitoring', 'confidential'],
                 scope: ['檔案伺服器 (Windows File Server)', 'Palo Alto NGFW'],
                 logs: ['[檔案伺服器 (Windows File Server)] Windows Event ID 4663 (嘗試存取物件 - 讀取/複製)', '[Palo Alto NGFW] 防火牆出境異常大流量紀錄'],
                 detectionStrategy: '判斷邏輯：監控特定機密資料夾的讀取行為 (Event ID 4663)，並關聯防火牆外連日誌。若單一帳號在短時間內讀取大量機密檔案，且伴隨產生超過 500MB 的異常外部傳輸流量，即觸發高風險告警。',
@@ -1145,19 +1184,19 @@
                 id: 's2', categoryId: 'identity', title: '暴力破解與外部入侵', shortName: 'VPN 暴力破解',
                 desc: '防止外部攻擊者透過密碼噴灑等方式入侵帳號。', risk: '高 (High)', riskColor: 'bg-orange-500',
                 csf: ['detect', 'respond'],
-                fiveM: ['man', 'environment'],
+                fiveM: ['man', 'network_dim', 'environment'],
                 scope: ['Microsoft Active Directory (AD DC)', 'Pulse Secure VPN'],
                 logs: ['[Microsoft Active Directory (AD DC)] Windows Event ID 4625 (登入失敗)', '[Pulse Secure VPN] VPN Gateway 驗證失敗與 MFA 拒絕日誌'],
                 detectionStrategy: '判斷邏輯：監控 AD 與 VPN 閘道的登入失敗日誌。設定時間窗口，若「5 分鐘內」來自「單一來源 IP」的登入失敗次數「超過 5 次」，即判定為疑似暴力破解攻擊並發出告警。',
                 detectionLogic: 'event.action: "login" AND outcome: "failure" \n| stats count() by source.ip >= 5 within 5m',
-                notes: '需設定關聯規則：同一來源 IP 對多帳號嘗試，或單一帳號短時間連續失敗後成功。',
+                notes: '需設定關聯規則：同一來源 IP 對多帳號嘗試，單一帳號短時間連續失敗後成功。',
                 isVerified: false, isDeleted: false
             },
             {
                 id: 's3', categoryId: 'compliance', title: '內部特權濫用 (Privilege Abuse)', shortName: '特權帳號異常',
                 desc: '監控管理員與關鍵群組異動，確保每一筆權限提升都有對應的申請與授權。', risk: '中 (Medium)', riskColor: 'bg-yellow-500',
                 csf: ['govern', 'protect', 'detect'],
-                fiveM: ['man', 'method'],
+                fiveM: ['man', 'method', 'system'],
                 scope: ['Microsoft Active Directory (AD DC)'],
                 logs: ['[Microsoft Active Directory (AD DC)] Windows Event ID 4728, 4732, 4756 (敏感群組成員變更)', '[Microsoft Active Directory (AD DC)] Windows Event ID 4720 (建立新使用者帳戶)'],
                 detectionStrategy: '判斷邏輯：鎖定高特權群組。當系統偵測到有成員被加入這些高權限群組或有建立新帳戶的行為時，立即觸發獨立告警。',
@@ -1169,7 +1208,7 @@
                 id: 's4', categoryId: 'endpoint', title: '勒索軟體早期活動', shortName: '勒索軟體活動',
                 desc: '偵測大規模檔案加密與破壞行為，在大規模加密發生前強行阻斷，減少資料損失。', risk: '極高 (Critical)', riskColor: 'bg-red-600',
                 csf: ['detect', 'respond'],
-                fiveM: ['machine', 'material'],
+                fiveM: ['machine', 'assets', 'data_dim'],
                 scope: ['檔案伺服器 (Windows File Server)', 'CrowdStrike Falcon EDR'],
                 logs: ['[檔案伺服器 (Windows File Server)] 短時間內大量 4663 寫入/重新命名', '[CrowdStrike Falcon EDR] EDR 惡意行為告警'],
                 detectionStrategy: '判斷邏輯：若「1 分鐘內」單一使用者變更「超過 100 個檔案」，或副檔名改為已知勒索特徵，即觸發最高級別隔離告警。',
@@ -1181,7 +1220,7 @@
                 id: 's5', categoryId: 'health', title: '備份系統防護與破壞', shortName: '備份破壞行為',
                 desc: '確保遭遇毀滅性攻擊後仍可復原，監控最後一道防線(備份)是否遭停用或竄改。', risk: '高 (High)', riskColor: 'bg-orange-500',
                 csf: ['identify', 'recover'],
-                fiveM: ['machine', 'method'],
+                fiveM: ['machine', 'method', 'system'],
                 scope: ['Veeam Backup Server'],
                 logs: ['[Veeam Backup Server] 備份軟體任務中斷或設定異動', '[Veeam Backup Server] vssadmin 刪除陰影複製'],
                 detectionStrategy: '判斷邏輯：嚴密監控備份伺服器的日誌清除行為 (1102) 以及執行刪除陰影複製的異常指令。',
@@ -1320,7 +1359,8 @@
             window.initRoleDropdown();
             window.renderRecycleBin();
             window.renderVerifiedCards();
-            window.applyDetailTheme(); // 🔧 初始化時自動套用主題
+            window.renderMatrixView(); // 🔧 載入矩陣視圖
+            window.applyDetailTheme(); 
             if (window.scenarios && window.scenarios.length > 0) window.selectScenario(window.scenarios[0].id);
             if (window.rolesDef && window.rolesDef.length > 0 && window.rolesDef[0].roles.length > 0) window.selectRole(window.rolesDef[0].roles[0]);
             if (window.mitreTactics && window.mitreTactics.length > 0) window.selectMitreTactic(window.mitreTactics[0].id); 
@@ -1333,6 +1373,7 @@
             document.getElementById('tab-scenario').classList.toggle('active', viewName === 'scenario');
             document.getElementById('tab-system').classList.toggle('active', viewName === 'system');
             document.getElementById('tab-mitre').classList.toggle('active', viewName === 'mitre');
+            document.getElementById('tab-matrix').classList.toggle('active', viewName === 'matrix');
             
             const tabRecycle = document.getElementById('tab-recycle');
             if (viewName === 'recycle') {
@@ -1351,14 +1392,24 @@
                 tabVerified.classList.remove('bg-emerald-50', 'text-emerald-700', 'font-bold');
                 tabVerified.classList.add('text-emerald-400', 'hover:text-emerald-200');
             }
+            
+            const tabMatrix = document.getElementById('tab-matrix');
+            if (viewName === 'matrix') {
+                tabMatrix.classList.add('bg-fuchsia-50', 'text-fuchsia-700', 'font-bold');
+                tabMatrix.classList.remove('text-fuchsia-400', 'hover:text-fuchsia-200');
+            } else {
+                tabMatrix.classList.remove('bg-fuchsia-50', 'text-fuchsia-700', 'font-bold');
+                tabMatrix.classList.add('text-fuchsia-400', 'hover:text-fuchsia-200');
+            }
 
-            ['scenario', 'system', 'mitre', 'recycle', 'verified'].forEach(v => { 
+            ['scenario', 'system', 'mitre', 'recycle', 'verified', 'matrix'].forEach(v => { 
                 const el = document.getElementById(`view-container-${v}`); 
                 if (el) el.classList.toggle('active-view', v === viewName); 
             });
 
             if(viewName === 'recycle') window.renderRecycleBin();
             if(viewName === 'verified') window.renderVerifiedCards();
+            if(viewName === 'matrix') window.renderMatrixView(); // 切換時觸發渲染
         };
 
         window.syncCustomRoles = function() {
@@ -2868,6 +2919,118 @@
             if (typeof lucide !== 'undefined') lucide.createIcons();
         };
 
+        // 📊 新增：戰略矩陣視角 (Matrix View) 渲染與過濾邏輯
+        window.currentMatrixFilter = null; // 紀錄當前的維度焦點
+
+        window.setMatrixFilter = function(filterId) {
+            window.currentMatrixFilter = filterId;
+            window.renderMatrixView();
+        };
+
+        window.renderMatrixView = function() {
+            const container = document.getElementById('matrix-table-container');
+            const filterContainer = document.getElementById('matrix-filter-container');
+            const countBadge = document.getElementById('matrix-verified-count');
+            if (!container) return;
+
+            const verifiedScenarios = (window.scenarios || []).filter(s => s.isVerified === true && !s.isDeleted);
+            countBadge.textContent = `共 ${verifiedScenarios.length} 項已驗證情境`;
+
+            // 1. 渲染頂部過濾器按鈕
+            if (filterContainer) {
+                let filterHtml = `<button onclick="window.setMatrixFilter(null)" class="px-4 py-1.5 text-xs rounded-full transition-all duration-200 flex items-center border ${window.currentMatrixFilter === null ? 'bg-slate-800 text-white font-bold shadow-md scale-105 border-slate-800' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-100'}"><i data-lucide="layout-grid" class="w-3.5 h-3.5 mr-1.5"></i>全覽矩陣</button>`;
+                
+                window.fiveMDef.forEach(m => {
+                    const isActive = window.currentMatrixFilter === m.id;
+                    const activeStyles = isActive ? 'opacity-100 font-bold shadow-md scale-105 border-solid ring-1 ring-slate-300' : 'opacity-50 border-dashed hover:opacity-100 hover:shadow-sm';
+                    filterHtml += `<button onclick="window.setMatrixFilter('${m.id}')" class="px-3 py-1.5 text-xs rounded-full border transition-all duration-200 flex items-center ${m.bgClass} ${m.colorClass} ${m.borderClass} ${activeStyles}">
+                        <i data-lucide="${m.icon}" class="w-3.5 h-3.5 mr-1.5"></i>${m.name.split(' ')[0]}
+                    </button>`;
+                });
+                filterContainer.innerHTML = filterHtml;
+            }
+
+            // 2. 決定要渲染的欄位 (全覽或單一焦點)
+            const columnsToRender = window.currentMatrixFilter ? window.fiveMDef.filter(m => m.id === window.currentMatrixFilter) : window.fiveMDef;
+            const isSingleFocus = window.currentMatrixFilter !== null;
+            const colWidthClass = isSingleFocus ? 'w-full min-w-[300px]' : 'min-w-[160px] max-w-[180px]';
+
+            let html = `<table class="w-full text-left border-collapse ${isSingleFocus ? '' : 'min-w-max'} border border-slate-200">`;
+
+            // Thead: X 軸
+            html += '<thead class="bg-slate-50 sticky top-0 z-30 shadow-sm">';
+            html += `<tr><th class="p-3 border text-center font-bold text-slate-700 bg-slate-100 sticky left-0 z-40 ${isSingleFocus ? 'w-[150px]' : 'min-w-[120px]'} shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]">矩陣圖 <br><span class="text-[10px] text-slate-400 font-normal">CSF \\ 屬性</span></th>`;
+            
+            columnsToRender.forEach(m => {
+                html += `<th class="p-3 border text-center font-bold text-slate-600 ${colWidthClass} bg-slate-50">
+                            <div class="flex flex-col items-center justify-center">
+                                <i data-lucide="${m.icon}" class="w-5 h-5 mb-1.5 ${m.colorClass}"></i>
+                                <span class="${isSingleFocus ? 'text-sm' : 'text-xs'} tracking-wide">${m.name}</span>
+                            </div>
+                         </th>`;
+            });
+            html += '</tr></thead>';
+
+            // Tbody: Y 軸 (CSF 核心階段)
+            html += '<tbody class="divide-y divide-slate-200 bg-white">';
+            window.csfFunctions.forEach(csf => {
+                html += `<tr class="hover:bg-slate-50/50 transition-colors">`;
+                
+                // 列標題 (固定在左側)
+                html += `<th class="p-3 border text-center font-bold bg-slate-50 sticky left-0 z-20 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]">
+                            <div class="flex flex-col items-center justify-center ${csf.textColor}">
+                                <i data-lucide="${csf.icon}" class="w-5 h-5 mb-1.5"></i>
+                                <span class="text-sm tracking-wide">${csf.name.split(' ')[0]}</span>
+                            </div>
+                         </th>`;
+
+                // 產生網格資料
+                columnsToRender.forEach(m => {
+                    const cellScenarios = verifiedScenarios.filter(s =>
+                        (s.csf || []).includes(csf.id) &&
+                        (s.fiveM || []).includes(m.id)
+                    );
+
+                    html += `<td class="p-2.5 border align-top bg-white relative">`;
+                    if (cellScenarios.length > 0) {
+                        // 在單一焦點模式下，若資料較多，可改為兩欄/三欄排列以善用寬度
+                        const gridClass = isSingleFocus && cellScenarios.length > 1 ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3' : 'flex flex-col gap-2';
+                        html += `<div class="${gridClass}">`;
+                        
+                        cellScenarios.forEach(s => {
+                            let rColor = window.getRiskColor(s);
+                            const displayName = isSingleFocus ? s.title : (s.shortName || s.title);
+                            
+                            html += `
+                                <div onclick="window.switchView('scenario'); window.selectScenario('${s.id}')"
+                                     class="group cursor-pointer border border-slate-200 rounded bg-white shadow-sm hover:border-indigo-400 hover:shadow-md transition-all relative overflow-hidden p-3 flex flex-col h-full justify-start">
+                                    <div class="absolute top-0 left-0 w-1 h-full ${rColor}"></div>
+                                    <div class="pl-1 w-full min-w-0">
+                                        <div class="text-[12px] font-bold text-slate-800 leading-tight ${isSingleFocus ? 'mb-1' : 'line-clamp-2'} group-hover:text-indigo-600 transition-colors" title="${s.title}">
+                                            ${displayName}
+                                        </div>
+                                        ${isSingleFocus && s.desc ? `<div class="text-[11px] text-slate-500 leading-relaxed line-clamp-3">${s.desc}</div>` : ''}
+                                    </div>
+                                </div>
+                            `;
+                        });
+                        html += `</div>`;
+                    } else {
+                        // 空白網格的視覺處理
+                        html += `<div class="h-full w-full flex items-center justify-center py-6 opacity-30">
+                                    <i data-lucide="minus" class="w-5 h-5 text-slate-300"></i>
+                                 </div>`;
+                    }
+                    html += `</td>`;
+                });
+                html += `</tr>`;
+            });
+            html += '</tbody></table>';
+
+            container.innerHTML = html;
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+        };
+
         // 基礎視窗控制
         window.openAIModal = () => document.getElementById('ai-modal').classList.remove('hidden');
         window.closeAIModal = () => document.getElementById('ai-modal').classList.add('hidden');
@@ -2921,6 +3084,9 @@
             window.showToast(scenario.isVerified ? "✅ 情境已標記為「確認可行」" : "ℹ️ 已取消可行標記");
             window.renderScenarioButtons(); 
             window.selectScenario(scenario.id); 
+            // 如果是在背景切換，同時觸發矩陣重繪
+            window.renderVerifiedCards();
+            window.renderMatrixView();
         };
 
         // ==========================================
@@ -2968,7 +3134,8 @@
             fivemContainer.innerHTML = '';
             window.fiveMDef.forEach(m => {
                 const isChecked = (scenario.fiveM || []).includes(m.id) ? 'checked' : '';
-                fivemContainer.innerHTML += `<label class="flex items-center text-sm text-slate-700 cursor-pointer"><input type="checkbox" value="${m.id}" class="mr-2 rounded text-pink-600 focus:ring-pink-500 edit-fivem-cb" ${isChecked}> ${m.name}</label>`;
+                // 為了適應雙欄，使用 truncate 確保文字不會過長破版
+                fivemContainer.innerHTML += `<label class="flex items-center text-sm text-slate-700 cursor-pointer" title="${m.name}"><input type="checkbox" value="${m.id}" class="mr-2 rounded text-pink-600 focus:ring-pink-500 edit-fivem-cb" ${isChecked}> <span class="truncate">${m.name.split(' ')[0]}</span></label>`;
             });
 
             const csfContainer = document.getElementById('edit-csf-checkboxes');
