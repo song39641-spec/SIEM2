@@ -2951,23 +2951,46 @@
             }
 
             // 2. 決定要渲染的欄位 (全覽或單一焦點)
-            const columnsToRender = window.currentMatrixFilter ? window.fiveMDef.filter(m => m.id === window.currentMatrixFilter) : window.fiveMDef;
             const isSingleFocus = window.currentMatrixFilter !== null;
-            const colWidthClass = isSingleFocus ? 'w-full min-w-[300px]' : 'min-w-[160px] max-w-[180px]';
+            const columnsToRender = isSingleFocus ? window.fiveMDef.filter(m => m.id === window.currentMatrixFilter) : window.fiveMDef;
 
-            let html = `<table class="w-full text-left border-collapse ${isSingleFocus ? '' : 'min-w-max'} border border-slate-200">`;
+            // 🔧 動態控制容器寬度：全覽模式自動縮放滿版 (消除水平滾動)
+            if (isSingleFocus) {
+                container.classList.remove('w-full');
+                container.classList.add('min-w-max');
+            } else {
+                container.classList.remove('min-w-max');
+                container.classList.add('w-full');
+            }
+
+            // 🔧 全覽模式啟動 table-fixed，強迫等比例縮放
+            let html = `<table class="w-full text-left border-collapse border border-slate-200 ${isSingleFocus ? '' : 'table-fixed'}">`;
 
             // Thead: X 軸
             html += '<thead class="bg-slate-50 sticky top-0 z-30 shadow-sm">';
-            html += `<tr><th class="p-3 border text-center font-bold text-slate-700 bg-slate-100 sticky left-0 z-40 ${isSingleFocus ? 'w-[150px]' : 'min-w-[120px]'} shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]">矩陣圖 <br><span class="text-[10px] text-slate-400 font-normal">CSF \\ 屬性</span></th>`;
+            html += `<tr><th class="p-1 md:p-2 border text-center font-bold text-slate-700 bg-slate-100 sticky left-0 z-40 ${isSingleFocus ? 'w-[150px]' : 'w-[50px] md:w-[70px]'} shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]"><div class="text-[10px] md:text-xs">CSF \\ 屬性</div></th>`;
             
             columnsToRender.forEach(m => {
-                html += `<th class="p-3 border text-center font-bold text-slate-600 ${colWidthClass} bg-slate-50">
-                            <div class="flex flex-col items-center justify-center">
-                                <i data-lucide="${m.icon}" class="w-5 h-5 mb-1.5 ${m.colorClass}"></i>
-                                <span class="${isSingleFocus ? 'text-sm' : 'text-xs'} tracking-wide">${m.name}</span>
-                            </div>
-                         </th>`;
+                if (isSingleFocus) {
+                    // 🌟 單獨屬性模式：巨大型彩色圖示與完整標題
+                    html += `<th class="p-6 border text-center bg-slate-50">
+                                <div class="flex flex-col items-center justify-center">
+                                    <div class="p-4 rounded-full ${m.bgClass} mb-3 shadow-md border ${m.borderClass}">
+                                        <i data-lucide="${m.icon}" class="w-10 h-10 ${m.colorClass}"></i>
+                                    </div>
+                                    <span class="text-2xl font-bold text-slate-800 tracking-wide mb-1">${m.name}</span>
+                                    <span class="text-sm text-slate-500 font-normal max-w-md">${m.desc}</span>
+                                </div>
+                             </th>`;
+                } else {
+                    // 🌟 全覽模式：極小化欄位標籤
+                    html += `<th class="p-1 border text-center bg-slate-50 overflow-hidden">
+                                <div class="flex flex-col items-center justify-center">
+                                    <i data-lucide="${m.icon}" class="w-3.5 h-3.5 md:w-4 md:h-4 mb-0.5 md:mb-1 ${m.colorClass}"></i>
+                                    <span class="text-[9px] md:text-[11px] font-bold text-slate-600 tracking-tighter leading-tight truncate w-full">${m.name.split(' ')[0]}</span>
+                                </div>
+                             </th>`;
+                }
             });
             html += '</tr></thead>';
 
@@ -2977,10 +3000,10 @@
                 html += `<tr class="hover:bg-slate-50/50 transition-colors">`;
                 
                 // 列標題 (固定在左側)
-                html += `<th class="p-3 border text-center font-bold bg-slate-50 sticky left-0 z-20 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]">
+                html += `<th class="p-1 md:p-2 border text-center font-bold bg-slate-50 sticky left-0 z-20 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]">
                             <div class="flex flex-col items-center justify-center ${csf.textColor}">
-                                <i data-lucide="${csf.icon}" class="w-5 h-5 mb-1.5"></i>
-                                <span class="text-sm tracking-wide">${csf.name.split(' ')[0]}</span>
+                                <i data-lucide="${csf.icon}" class="w-4 h-4 md:w-5 md:h-5 mb-1"></i>
+                                <span class="text-[10px] md:text-sm tracking-wide">${csf.name.split(' ')[0]}</span>
                             </div>
                          </th>`;
 
@@ -2991,34 +3014,52 @@
                         (s.fiveM || []).includes(m.id)
                     );
 
-                    html += `<td class="p-2.5 border align-top bg-white relative">`;
+                    html += `<td class="p-0.5 md:p-1.5 border align-top bg-white relative">`;
                     if (cellScenarios.length > 0) {
-                        // 在單一焦點模式下，若資料較多，可改為兩欄/三欄排列以善用寬度
-                        const gridClass = isSingleFocus && cellScenarios.length > 1 ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3' : 'flex flex-col gap-2';
-                        html += `<div class="${gridClass}">`;
-                        
-                        cellScenarios.forEach(s => {
-                            let rColor = window.getRiskColor(s);
-                            const displayName = isSingleFocus ? s.title : (s.shortName || s.title);
-                            
-                            html += `
-                                <div onclick="window.switchView('scenario'); window.selectScenario('${s.id}')"
-                                     class="group cursor-pointer border border-slate-200 rounded bg-white shadow-sm hover:border-indigo-400 hover:shadow-md transition-all relative overflow-hidden p-3 flex flex-col h-full justify-start">
-                                    <div class="absolute top-0 left-0 w-1 h-full ${rColor}"></div>
-                                    <div class="pl-1 w-full min-w-0">
-                                        <div class="text-[12px] font-bold text-slate-800 leading-tight ${isSingleFocus ? 'mb-1' : 'line-clamp-2'} group-hover:text-indigo-600 transition-colors" title="${s.title}">
+                        if (isSingleFocus) {
+                            // 單一焦點模式：詳細大圖卡
+                            html += `<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-2">`;
+                            cellScenarios.forEach(s => {
+                                let rColor = window.getRiskColor(s);
+                                html += `
+                                    <div onclick="window.switchView('scenario'); window.selectScenario('${s.id}')"
+                                         class="group cursor-pointer border border-slate-200 rounded-xl bg-white shadow-sm hover:border-indigo-400 hover:shadow-lg transition-all relative overflow-hidden p-4 flex flex-col h-full justify-start">
+                                        <div class="absolute top-0 left-0 w-1.5 h-full ${rColor}"></div>
+                                        <div class="pl-2 w-full min-w-0 flex flex-col flex-grow">
+                                            <div class="text-sm font-bold text-slate-800 leading-tight mb-2 group-hover:text-indigo-600 transition-colors" title="${s.title}">
+                                                ${s.title}
+                                            </div>
+                                            ${s.desc ? `<div class="text-xs text-slate-500 leading-relaxed line-clamp-3 mb-3 flex-grow">${s.desc}</div>` : ''}
+                                            <div class="text-[10px] text-slate-400 font-mono bg-slate-50 px-2 py-1 rounded border border-slate-100 mt-auto inline-block w-max">
+                                                涵蓋 ${(s.scope||[]).length} 類設備
+                                            </div>
+                                        </div>
+                                    </div>
+                                `;
+                            });
+                            html += `</div>`;
+                        } else {
+                            // 全覽模式：極度緊湊的迷你標籤
+                            html += `<div class="flex flex-col gap-1 w-full p-0.5">`;
+                            cellScenarios.forEach(s => {
+                                let rColor = window.getRiskColor(s);
+                                const displayName = s.shortName || s.title;
+                                html += `
+                                    <div onclick="window.switchView('scenario'); window.selectScenario('${s.id}')"
+                                         class="group cursor-pointer border border-slate-200 rounded-sm bg-white shadow-sm hover:border-indigo-400 transition-all relative overflow-hidden p-0.5 md:p-1 flex items-center justify-center text-center min-h-[30px] md:min-h-[40px] w-full mx-auto">
+                                        <div class="absolute top-0 left-0 w-1 h-full ${rColor}"></div>
+                                        <div class="w-full pl-1 line-clamp-2 text-[9px] md:text-[11px] font-bold text-slate-700 leading-tight group-hover:text-indigo-600 break-words" title="${s.title}">
                                             ${displayName}
                                         </div>
-                                        ${isSingleFocus && s.desc ? `<div class="text-[11px] text-slate-500 leading-relaxed line-clamp-3">${s.desc}</div>` : ''}
                                     </div>
-                                </div>
-                            `;
-                        });
-                        html += `</div>`;
+                                `;
+                            });
+                            html += `</div>`;
+                        }
                     } else {
-                        // 空白網格的視覺處理
-                        html += `<div class="h-full w-full flex items-center justify-center py-6 opacity-30">
-                                    <i data-lucide="minus" class="w-5 h-5 text-slate-300"></i>
+                        // 空白網格視覺
+                        html += `<div class="h-full w-full flex items-center justify-center py-4 opacity-20">
+                                    <i data-lucide="minus" class="w-4 h-4 text-slate-300"></i>
                                  </div>`;
                     }
                     html += `</td>`;
