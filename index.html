@@ -258,8 +258,8 @@
                             <button onclick="window.openCtiModal()" class="admin-only flex-1 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white px-2 py-2 rounded-lg shadow-sm flex justify-center items-center font-medium transition-all group text-xs md:text-sm" title="貼上外部資安新聞或 CVE">
                                 <i data-lucide="rss" class="w-3 h-3 mr-1.5 group-hover:animate-pulse text-yellow-100"></i>情資解析
                             </button>
-                            <!-- ✨ 新增：自動擴充按鈕 (需管理員權限) -->
-                            <button onclick="window.toggleAutoGenerate()" id="btn-auto-generate" class="admin-only w-full bg-gradient-to-r from-pink-500 to-rose-600 hover:from-pink-600 hover:to-rose-700 text-white px-3 py-2 rounded-lg shadow-sm flex justify-center items-center font-medium transition-all group text-xs md:text-sm" title="每 5 分鐘自動擴充情境庫">
+                            <!-- ✨ 修改：將 onclick 改為呼叫 handleAutoGenerateClick 進行二次確認攔截 -->
+                            <button onclick="window.handleAutoGenerateClick()" id="btn-auto-generate" class="admin-only w-full bg-gradient-to-r from-pink-500 to-rose-600 hover:from-pink-600 hover:to-rose-700 text-white px-3 py-2 rounded-lg shadow-sm flex justify-center items-center font-medium transition-all group text-xs md:text-sm" title="每 5 分鐘自動擴充情境庫">
                                 <i data-lucide="bot" class="w-4 h-4 mr-1.5 group-hover:animate-bounce text-pink-200"></i>AI自動情境產生器 (關閉中)
                             </button>
                         </div>
@@ -664,6 +664,40 @@
             <div class="p-5 flex items-center text-red-600 border-b bg-red-100"><i data-lucide="alert-octagon" class="w-6 h-6 mr-2"></i><h3 class="text-lg font-bold">永久刪除確認</h3></div>
             <div class="p-5 bg-white"><p class="text-sm text-slate-700 font-bold">此操作無法復原！</p><p class="text-xs text-slate-500 mt-2">確定要從資料庫中永久抹除此情境嗎？</p></div>
             <div class="p-4 border-t bg-slate-50 flex justify-end space-x-3"><button onclick="window.closeHardDeleteModal()" class="bg-slate-200 px-4 py-2 rounded-md text-sm">取消</button><button onclick="window.executeHardDelete()" class="bg-slate-900 text-red-400 font-bold px-4 py-2 rounded-md text-sm">永久刪除</button></div>
+        </div>
+    </div>
+
+    <!-- ✨ 新增：AI 自動擴充二次確認 Modal -->
+    <div id="auto-generate-confirm-modal" class="fixed inset-0 bg-slate-900/60 z-[70] flex items-center justify-center hidden p-4">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col">
+            <div class="p-5 flex items-center text-pink-700 border-b bg-pink-50">
+                <i data-lucide="bot" class="w-6 h-6 mr-2"></i>
+                <h3 class="text-lg font-bold">啟動 AI 自動情境產生器</h3>
+            </div>
+            <div class="p-6 bg-white">
+                <div class="flex items-start mb-4">
+                    <div class="bg-pink-100 p-2.5 rounded-full mr-4 flex-shrink-0 mt-1 shadow-sm">
+                        <i data-lucide="info" class="w-5 h-5 text-pink-600"></i>
+                    </div>
+                    <div>
+                        <h4 class="font-bold text-slate-800 mb-1.5 text-base">這個按鈕的功能是什麼？</h4>
+                        <p class="text-sm text-slate-600 leading-relaxed">
+                            系統將會在背景喚醒「AI 虛擬資安專家」。它會自動掃描您目前的戰略矩陣，找出最缺乏的<strong class="text-pink-600">管理維度</strong>與<strong class="text-pink-600">風險等級</strong>。<br><br>
+                            啟動後，每隔 <strong>5 分鐘</strong>，AI 就會自動為您生成一筆全新且不重複的防護情境，直到您手動關閉為止。這能大幅豐富您的戰略矩陣。
+                        </p>
+                    </div>
+                </div>
+                <div class="bg-yellow-50 border border-yellow-200 p-3.5 rounded-lg text-xs text-yellow-800 flex items-start shadow-sm mt-2">
+                    <i data-lucide="alert-triangle" class="w-4 h-4 mr-2 flex-shrink-0 mt-0.5 text-yellow-600"></i>
+                    <span class="leading-relaxed"><strong>注意：</strong>此功能會在背景持續呼叫 Gemini API，將會消耗您的 API 額度。請確認是否要開始運行？</span>
+                </div>
+            </div>
+            <div class="p-4 border-t bg-slate-50 flex justify-end space-x-3">
+                <button onclick="window.closeAutoGenerateModal()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold px-5 py-2 rounded-md text-sm transition-colors shadow-sm">取消</button>
+                <button onclick="window.confirmStartAutoGenerate()" class="bg-pink-600 hover:bg-pink-700 text-white font-bold px-5 py-2 rounded-md text-sm shadow-sm transition-colors flex items-center">
+                    <i data-lucide="play" class="w-4 h-4 mr-1.5"></i> 確認啟動
+                </button>
+            </div>
         </div>
     </div>
 
@@ -3304,6 +3338,33 @@
         window.closeExecutiveReportModal = () => document.getElementById('executive-report-modal').classList.add('hidden');
         window.closeDeleteModal = () => document.getElementById('delete-confirm-modal').classList.add('hidden');
         window.closeAttackSimModal = () => document.getElementById('attack-sim-modal').classList.add('hidden');
+
+        // ✨ 新增：自動產生器的二次確認邏輯
+        window.handleAutoGenerateClick = function() {
+            if (window.isAutoGenerating) {
+                // 如果正在運行，點擊則「直接關閉」，無需確認（方便緊急煞車）
+                window.toggleAutoGenerate();
+            } else {
+                // 如果是關閉狀態，點擊則「彈出說明視窗」進行二次確認
+                const modal = document.getElementById('auto-generate-confirm-modal');
+                modal.classList.remove('hidden');
+                modal.children[0].classList.add('modal-enter');
+                requestAnimationFrame(() => {
+                    modal.children[0].classList.add('modal-enter-active');
+                    modal.children[0].classList.remove('modal-enter');
+                });
+                if (typeof lucide !== 'undefined') lucide.createIcons();
+            }
+        };
+
+        window.closeAutoGenerateModal = function() {
+            document.getElementById('auto-generate-confirm-modal').classList.add('hidden');
+        };
+
+        window.confirmStartAutoGenerate = function() {
+            window.closeAutoGenerateModal();
+            window.toggleAutoGenerate(); // 呼叫原本的啟動邏輯
+        };
 
         // ✨ 新增：高階戰略簡報大綱 (Pitch Generator)
         window.openPitchModal = async () => {
