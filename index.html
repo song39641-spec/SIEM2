@@ -264,10 +264,7 @@
                             </button>
                         </div>
                     </div>
-                    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5 hidden xl:block flex-shrink-0">
-                        <h2 class="text-sm font-semibold text-slate-500 mb-3 uppercase tracking-wider">NIST CSF 涵蓋率預覽</h2>
-                        <div class="h-48 flex justify-center items-center"><canvas id="csfRadarChart"></canvas></div>
-                    </div>
+                    <!-- 🗑️ 移除原本的雷達圖區塊 -->
                 </div>
 
                 <!-- 🔧 賦予右側面板專屬 ID 以利主題切換 -->
@@ -532,20 +529,35 @@
             </main>
 
             <!-- 📊 視角六：戰略矩陣視角 (Matrix View) -->
-            <main id="view-container-matrix" class="w-full max-w-[1600px] mx-auto p-4 md:p-6 flex flex-col h-full overflow-hidden">
-                <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 flex flex-col h-full overflow-hidden">
-                    <div class="flex justify-between items-center border-b pb-4 mb-4 flex-shrink-0">
+            <main id="view-container-matrix" class="w-full max-w-[1600px] mx-auto p-2 md:p-4 flex flex-col h-full overflow-hidden gap-2 md:gap-3">
+                <!-- ✨ 新增：雙圖表戰情室 (Dashboard) 縮小化 -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-2 md:gap-3 flex-shrink-0">
+                    <!-- CSF 雷達圖 -->
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-2 md:p-3 flex flex-col h-36 md:h-44 transition-colors duration-300">
+                        <h3 class="text-xs font-bold text-slate-700 mb-1 flex items-center"><i data-lucide="shield" class="w-3.5 h-3.5 mr-1 text-indigo-500"></i> NIST CSF 核心防護涵蓋率</h3>
+                        <div class="flex-1 relative w-full h-full"><canvas id="csfRadarChart"></canvas></div>
+                    </div>
+                    <!-- 12維度長條圖 -->
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-2 md:p-3 flex flex-col h-36 md:h-44 transition-colors duration-300">
+                        <h3 class="text-xs font-bold text-slate-700 mb-1 flex items-center"><i data-lucide="pie-chart" class="w-3.5 h-3.5 mr-1 text-fuchsia-500"></i> 12 項資產管理維度涵蓋率</h3>
+                        <div class="flex-1 relative w-full h-full"><canvas id="dimBarChart"></canvas></div>
+                    </div>
+                </div>
+
+                <!-- 矩陣主體表格 -->
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-3 md:p-4 flex flex-col flex-1 overflow-hidden transition-colors duration-300">
+                    <div class="flex justify-between items-center border-b pb-3 mb-3 flex-shrink-0">
                         <div>
-                            <h2 class="text-xl font-bold flex items-center text-slate-800">
-                                <i data-lucide="grid-3x3" class="w-6 h-6 mr-2 text-fuchsia-500"></i>NIST CSF 戰略覆蓋矩陣 (Matrix Diagram)
+                            <h2 class="text-lg md:text-xl font-bold flex items-center text-slate-800">
+                                <i data-lucide="grid-3x3" class="w-5 h-5 md:w-6 md:h-6 mr-2 text-fuchsia-500"></i>NIST CSF 戰略覆蓋矩陣 (Matrix Diagram)
                             </h2>
-                            <p class="text-sm text-slate-500 mt-1">X軸為 12 項資產管理維度，Y軸為 CSF 核心防護階段。透過交集檢視，迅速找出防護盲區與強項。</p>
+                            <p class="text-xs md:text-sm text-slate-500 mt-1 hidden sm:block">X軸為 12 項資產管理維度，Y軸為 CSF 核心防護階段。透過交集檢視，迅速找出防護盲區與強項。</p>
                         </div>
-                        <span class="text-sm text-fuchsia-600 bg-fuchsia-50 px-3 py-1 rounded-full font-bold border border-fuchsia-200" id="matrix-verified-count">共 0 項</span>
+                        <span class="text-xs md:text-sm text-fuchsia-600 bg-fuchsia-50 px-2.5 py-1 rounded-full font-bold border border-fuchsia-200" id="matrix-verified-count">共 0 項</span>
                     </div>
                     
-                    <!-- ✨ 新增：矩陣維度過濾器 (Dimension Filter) -->
-                    <div id="matrix-filter-container" class="flex flex-wrap gap-2 mb-4 flex-shrink-0"></div>
+                    <!-- ✨ 矩陣維度過濾器 (Dimension Filter) -->
+                    <div id="matrix-filter-container" class="flex flex-wrap gap-1.5 mb-2 flex-shrink-0"></div>
 
                     <div class="overflow-auto flex-1 custom-scrollbar pb-2">
                         <div id="matrix-table-container" class="min-w-max pb-4 pr-4">
@@ -1301,16 +1313,22 @@
         window.applyDetailTheme = function() {
             const panel = document.getElementById('right-detail-panel');
             const btn = document.getElementById('theme-toggle-btn');
-            if (!panel) return;
             
             if (window.isDarkTheme) {
-                panel.classList.add('theme-dark');
+                if (panel) panel.classList.add('theme-dark');
+                document.body.classList.add('theme-dark'); // 套用到 body 讓矩陣圖表也能吃到深色
                 if(btn) btn.innerHTML = `<i data-lucide="sun" class="w-4 h-4 mr-1.5 text-amber-400 group-hover:rotate-90 transition-transform duration-500"></i> 淺色模式`;
             } else {
-                panel.classList.remove('theme-dark');
+                if (panel) panel.classList.remove('theme-dark');
+                document.body.classList.remove('theme-dark');
                 if(btn) btn.innerHTML = `<i data-lucide="moon" class="w-4 h-4 mr-1.5 text-slate-500 group-hover:-rotate-12 transition-transform duration-300"></i> 深色模式`;
             }
             if (typeof lucide !== 'undefined') lucide.createIcons();
+
+            // 若目前在矩陣頁面，重繪圖表以更新字體顏色
+            if (window.currentViewMode === 'matrix' && window.initMatrixCharts) {
+                window.initMatrixCharts();
+            }
         };
 
         // ==========================================
@@ -1521,18 +1539,7 @@
             window.closeApiSettingsModal(); window.showToast("✅ AI 引擎設定儲存成功！");
         };
 
-        window.initRadarChart = function() {
-            const canvas = document.getElementById('csfRadarChart'); if(!canvas || typeof Chart === 'undefined') return;
-            const ctx = canvas.getContext('2d'); if (window.radarChart) window.radarChart.destroy();
-            const dataCounts = [0, 0, 0, 0, 0, 0];
-            if(window.scenarios && window.csfFunctions) {
-                window.scenarios.forEach(scenario => { const safeCsf = (scenario.csf || []).map(c => c.toLowerCase()); safeCsf.forEach(c => { const idx = window.csfFunctions.findIndex(cf => cf.id.toLowerCase() === c); if(idx !== -1) dataCounts[idx]++; }); });
-            }
-            window.radarChart = new Chart(ctx, {
-                type: 'radar', data: { labels: (window.csfFunctions||[]).map(c => c.name.split(' ')[0]), datasets: [{ label: '涵蓋權重', data: dataCounts, backgroundColor: 'rgba(59, 130, 246, 0.2)', borderColor: 'rgba(59, 130, 246, 1)', pointBackgroundColor: 'rgba(59, 130, 246, 1)', borderWidth: 2 }] },
-                options: { maintainAspectRatio: false, scales: { r: { angleLines: { display: true, color: 'rgba(0,0,0,0.05)' }, grid: { color: 'rgba(0,0,0,0.05)' }, pointLabels: { font: { family: "'Noto Sans TC', sans-serif", size: 10 } }, suggestedMin: 0, suggestedMax: Math.max(5, ...dataCounts), ticks: { display: false, stepSize: 1 } } }, plugins: { legend: { display: false } } }
-            });
-        };
+        // 🗑️ 移除了原本的 window.initRadarChart
 
         window.getRaciForRole = function(roleName) {
             const roleUpper = roleName.toUpperCase(); let raci = { R: ['系統管理員'], A: ['專案負責人'], C: ['SIEM廠商'], I: ['管理層'] };
@@ -1625,7 +1632,8 @@
                     groupContainer.appendChild(btn);
                 });
             });
-            if (typeof lucide !== 'undefined') lucide.createIcons(); if(window.initRadarChart) window.initRadarChart();
+            if (typeof lucide !== 'undefined') lucide.createIcons(); 
+            // 🗑️ 移除了呼叫 window.initRadarChart()
         };
 
         window.selectScenario = function(id) {
@@ -3188,11 +3196,129 @@
             window.renderMatrixView();
         };
 
+        // ✨ 新增：雙圖表戰情室渲染引擎 (包含 CSF 雷達圖 與 12 維度長條圖)
+        window.initMatrixCharts = function() {
+            const csfCanvas = document.getElementById('csfRadarChart');
+            const dimCanvas = document.getElementById('dimBarChart');
+            if(!csfCanvas || !dimCanvas || typeof Chart === 'undefined') return;
+
+            // 兩張圖表皆只統計「已確認可行」且「未刪除」的有效情境
+            const verifiedScenarios = (window.scenarios || []).filter(s => s.isVerified === true && !s.isDeleted);
+
+            const textColor = window.isDarkTheme ? '#cbd5e1' : '#64748b';
+            const gridColor = window.isDarkTheme ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)';
+
+            // --- 1. CSF 雷達圖 (Radar Chart) ---
+            const csfCtx = csfCanvas.getContext('2d');
+            if (window.csfChart) window.csfChart.destroy();
+            const csfCounts = [0, 0, 0, 0, 0, 0];
+            verifiedScenarios.forEach(scenario => {
+                const safeCsf = (scenario.csf || []).map(c => c.toLowerCase());
+                safeCsf.forEach(c => {
+                    const idx = window.csfFunctions.findIndex(cf => cf.id.toLowerCase() === c);
+                    if(idx !== -1) csfCounts[idx]++;
+                });
+            });
+
+            window.csfChart = new Chart(csfCtx, {
+                type: 'radar',
+                data: {
+                    labels: (window.csfFunctions||[]).map(c => c.name.split(' ')[0]),
+                    datasets: [{
+                        label: '涵蓋數量',
+                        data: csfCounts,
+                        backgroundColor: 'rgba(99, 102, 241, 0.2)', // Indigo 淡紫
+                        borderColor: 'rgba(99, 102, 241, 1)',
+                        pointBackgroundColor: 'rgba(99, 102, 241, 1)',
+                        borderWidth: 2,
+                        pointRadius: 3
+                    }]
+                },
+                options: {
+                    maintainAspectRatio: false,
+                    scales: {
+                        r: {
+                            angleLines: { display: true, color: gridColor },
+                            grid: { color: gridColor },
+                            pointLabels: { font: { family: "'Noto Sans TC', sans-serif", size: 9, weight: 'bold' }, color: textColor },
+                            suggestedMin: 0,
+                            suggestedMax: Math.max(4, ...csfCounts),
+                            ticks: { display: false, stepSize: 1 }
+                        }
+                    },
+                    plugins: { legend: { display: false }, tooltip: { bodyFont: { family: "'Noto Sans TC'" } } }
+                }
+            });
+
+            // --- 2. 12 維度長條圖 (Bar Chart) ---
+            const dimCtx = dimCanvas.getContext('2d');
+            if (window.dimChart) window.dimChart.destroy();
+            const dimCounts = new Array(window.fiveMDef.length).fill(0);
+            verifiedScenarios.forEach(scenario => {
+                const safeDim = scenario.fiveM || [];
+                safeDim.forEach(dId => {
+                    const idx = window.fiveMDef.findIndex(m => m.id === dId);
+                    if(idx !== -1) dimCounts[idx]++;
+                });
+            });
+
+            // 🎨 精心調配的 12 種繽紛漸層色彩 (與維度圖示對應)
+            const bgColors = [
+                'rgba(236, 72, 153, 0.7)', // Pink
+                'rgba(6, 182, 212, 0.7)',  // Cyan
+                'rgba(245, 158, 11, 0.7)', // Amber
+                'rgba(139, 92, 246, 0.7)', // Violet
+                'rgba(132, 204, 22, 0.7)', // Lime
+                'rgba(99, 102, 241, 0.7)', // Indigo
+                'rgba(59, 130, 246, 0.7)', // Blue
+                'rgba(20, 184, 166, 0.7)', // Teal
+                'rgba(249, 115, 22, 0.7)', // Orange
+                'rgba(234, 179, 8, 0.7)',  // Yellow
+                'rgba(239, 68, 68, 0.7)',  // Red
+                'rgba(217, 70, 239, 0.7)'  // Fuchsia
+            ];
+            const borderColors = bgColors.map(c => c.replace('0.7', '1'));
+
+            window.dimChart = new Chart(dimCtx, {
+                type: 'bar',
+                data: {
+                    labels: window.fiveMDef.map(m => m.name.split(' ')[0]),
+                    datasets: [{
+                        label: '涵蓋數量',
+                        data: dimCounts,
+                        backgroundColor: bgColors,
+                        borderColor: borderColors,
+                        borderWidth: 1,
+                        borderRadius: 4 // 圓角設計更現代
+                    }]
+                },
+                options: {
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            grid: { display: false },
+                            ticks: { font: { family: "'Noto Sans TC', sans-serif", size: 9, weight: 'bold' }, color: textColor, maxRotation: 45, minRotation: 45 }
+                        },
+                        y: {
+                            grid: { color: gridColor },
+                            ticks: { font: { family: "'Noto Sans TC', sans-serif" }, color: textColor, stepSize: 1 },
+                            beginAtZero: true,
+                            suggestedMax: Math.max(4, ...dimCounts)
+                        }
+                    },
+                    plugins: { legend: { display: false }, tooltip: { bodyFont: { family: "'Noto Sans TC'" } } }
+                }
+            });
+        };
+
         window.renderMatrixView = function() {
             const container = document.getElementById('matrix-table-container');
             const filterContainer = document.getElementById('matrix-filter-container');
             const countBadge = document.getElementById('matrix-verified-count');
             if (!container) return;
+
+            // 呼叫圖表重繪
+            window.initMatrixCharts();
 
             const verifiedScenarios = (window.scenarios || []).filter(s => s.isVerified === true && !s.isDeleted);
             countBadge.textContent = `共 ${verifiedScenarios.length} 項已驗證情境`;
