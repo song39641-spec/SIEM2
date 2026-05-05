@@ -2459,6 +2459,7 @@
             const validCSF = window.csfFunctions.map(c => c.id).join(', ');
             const valid5M = window.fiveMDef.map(m => m.id).join(', ');
             const fiveMContext = window.fiveMDef.map(m => `${m.id}=${m.name}(${m.desc})`).join(', ');
+            const existingTitles = window.scenarios.filter(s => !s.isDeleted).map(s => s.title).join('、');
 
             // 將選項映射給 AI，幫助其理解嚴重性
             const riskMap = {
@@ -2480,6 +2481,7 @@
             - riskColor 請對應風險填寫 Tailwind 背景色類別，例如: "bg-red-600", "bg-orange-500", "bg-green-500"。
             - detectionLogic 必須是可直接在 ELK 上執行的 KQL (Kibana Query Language) 語法。
             - detectionStrategy 是對該 KQL 偵測邏輯的詳細中文原理解釋與判斷說明。
+            【防重複嚴格限制】：目前系統已經有以下情境：[${existingTitles || '目前尚無'}]。請你務必不要產生與上述標題或概念相似的內容，提供一個全新、未重複的威脅情境。
 
             請輸出純 JSON 格式：
             { 
@@ -2559,38 +2561,8 @@
                 if(catCounts[s.categoryId] !== undefined && !s.isDeleted) catCounts[s.categoryId]++;
             });
 
-            let targetCategory = window.categoriesDef[0];
-            let minCount = Infinity;
-            for (const cat of window.categoriesDef) {
-                if (cat.id === 'uncategorized') continue; // 排除未分類
-                if (catCounts[cat.id] < minCount) {
-                    minCount = catCounts[cat.id];
-                    targetCategory = cat;
-                }
-            }
-
-            // 2. 動態平衡演算法：尋找該分類下，目前最缺乏的「風險等級」
-            const riskLevels = ["極高 (Critical)", "高 (High)", "中 (Medium)", "低 (Low)"];
-            const currentCatScenarios = window.scenarios.filter(s => s.categoryId === targetCategory.id && !s.isDeleted);
-            const riskCounts = {"極高 (Critical)": 0, "高 (High)": 0, "中 (Medium)": 0, "低 (Low)": 0};
-            
-            currentCatScenarios.forEach(s => {
-                const rText = s.risk || '';
-                const rLevel = riskLevels.find(rl => rText.includes(rl.split(' ')[0])) || "中 (Medium)";
-                riskCounts[rLevel]++;
-            });
-
-            let targetRisk = riskLevels[0];
-            let minRiskCount = Infinity;
-            riskLevels.forEach(r => {
-                if (riskCounts[r] < minRiskCount) {
-                    minRiskCount = riskCounts[r];
-                    targetRisk = r;
-                }
-            });
-
-            // 3. 提取現有標題作為防重複上下文
-            const existingTitles = currentCatScenarios.map(s => s.title).join('、');
+            // 3. 提取現有標題作為防重複上下文 (改為提取全局，避免任何重複)
+            const existingTitles = window.scenarios.filter(s => !s.isDeleted).map(s => s.title).join('、');
 
             const activeRoles = [...new Set(window.assets.map(a => a.role))];
             const validCategories = window.categoriesDef.map(c => c.id).join(', ');
@@ -2599,7 +2571,7 @@
             const fiveMContext = window.fiveMDef.map(m => `${m.id}=${m.name}(${m.desc})`).join(', ');
 
             const prompt = `我們團隊的 SIEM 監控矩陣需要豐富內容。請為「${targetCategory.name}」這個分類自動擴充一個【${targetRisk}】風險等級的監控情境。
-            【防止重複規定】：目前該類別已經有以下情境，請絕對不要重複類似的攻擊手法或規則名稱：[${existingTitles || '目前尚無'}]。
+            【防止重複規定】：目前系統已經有以下情境，請絕對不要重複類似的攻擊手法或規則名稱：[${existingTitles || '目前尚無'}]。
             請發揮頂尖資安專家的創意，結合最新 APT 手法或企業常見的真實威脅，設計出一個前沿、實用且不落俗套的偵測情境。`;
 
             const systemPrompt = `你是一位頂尖的 SIEM 架構專家。請根據要求自動生成一個全新、不重複的威脅監控情境。
@@ -2721,10 +2693,12 @@
             const validCSF = window.csfFunctions.map(c => c.id).join(', ');
             const valid5M = window.fiveMDef.map(m => m.id).join(', ');
             const fiveMContext = window.fiveMDef.map(m => `${m.id}=${m.name}(${m.desc})`).join(', ');
+            const existingTitles = window.scenarios.filter(s => !s.isDeleted).map(s => s.title).join('、');
 
             const prompt = `針對 MITRE ATT&CK 戰術 [${tactic.name} (${tactic.en})]：${tactic.desc}
             請設計一個能有效偵測此戰術的最佳 SIEM 防禦情境。
-            【極度重要】：請務必最大化利用以下使用者的「現有資產角色」來設計偵測邏輯與分配日誌收集：[${activeRoles.join(', ')}]。`;
+            【極度重要】：請務必最大化利用以下使用者的「現有資產角色」來設計偵測邏輯與分配日誌收集：[${activeRoles.join(', ')}]。
+            【防重複嚴格限制】：目前系統已經有以下情境：[${existingTitles || '目前尚無'}]。請確保本次產出的情境與上述明顯不同，挖掘該戰術下其他未被涵蓋的攻擊手法。`;
             
             const systemPrompt = `你是一位頂尖的 SIEM 架構專家。請根據 MITRE 戰術與現有設備，為使用者量身打造監控情境。
             必須嚴格遵守選項範圍：
@@ -2835,6 +2809,7 @@
             const validCSF = window.csfFunctions.map(c => c.id).join(', ');
             const valid5M = window.fiveMDef.map(m => m.id).join(', ');
             const fiveMContext = window.fiveMDef.map(m => `${m.id}=${m.name}(${m.desc})`).join(', ');
+            const existingTitles = window.scenarios.filter(s => !s.isDeleted).map(s => s.title).join('、');
 
             const systemPrompt = `你是一位頂尖的威脅情資(CTI)分析師與 SIEM 架構專家。
             使用者將貼上一段未結構化的資安情報、新聞或 CVE 描述。請解析其中的 TTPs 與 IOCs，並結合使用者目前的實體設備清單 [${activeRoles.join(', ')}]，轉化為一組可落地的 SIEM 偵測情境。
@@ -2847,6 +2822,7 @@
             - risk 只能填寫: "極高 (Critical)", "高 (High)", "中 (Medium)", "低 (Low)"。
             - riskColor: 請對應風險填寫 "bg-red-600", "bg-orange-500", "bg-yellow-500" 等。
             - detectionLogic 必須是符合 ELK (Elastic Stack) 規範的 KQL 語法，不可留空。
+            【防重複嚴格限制】：目前系統已經有以下情境：[${existingTitles || '目前尚無'}]。請確保本次產出的情境不要與現有情境高度重複。
 
             回傳純 JSON 格式：
             { 
