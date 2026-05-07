@@ -553,7 +553,13 @@
                             </h2>
                             <p class="text-xs md:text-sm text-slate-500 mt-1 hidden sm:block">X軸為 12 項資產管理維度，Y軸為 CSF 核心防護階段。透過交集檢視，迅速找出防護盲區與強項。</p>
                         </div>
-                        <span class="text-xs md:text-sm text-fuchsia-600 bg-fuchsia-50 px-2.5 py-1 rounded-full font-bold border border-fuchsia-200" id="matrix-verified-count">共 0 項</span>
+                        <div class="flex items-center gap-3">
+                            <span class="text-xs md:text-sm text-fuchsia-600 bg-fuchsia-50 px-2.5 py-1 rounded-full font-bold border border-fuchsia-200" id="matrix-verified-count">共 0 項</span>
+                            <!-- ✨ 補回：戰略矩陣專屬的 Excel 匯出按鈕 -->
+                            <button onclick="window.exportMatrixToExcel()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg font-bold flex items-center transition-colors shadow-sm text-sm">
+                                <i data-lucide="file-spreadsheet" class="w-4 h-4 mr-2"></i> 匯出矩陣 Excel
+                            </button>
+                        </div>
                     </div>
                     
                     <!-- ✨ 矩陣維度過濾器 (Dimension Filter) -->
@@ -2434,7 +2440,14 @@
                 
                 if (jsonMode) {
                     text = text.replace(/```json/gi, '').replace(/```/g, '').trim();
-                    return JSON.parse(text);
+                    let parsed = JSON.parse(text);
+                    
+                    // 🚨 核心防呆：如果 AI 調皮回傳了陣列 (Array)，強制抽出第一個物件 (Object)，避免 Firebase addDoc 崩潰
+                    if (Array.isArray(parsed)) {
+                        parsed = parsed[0];
+                    }
+                    
+                    return parsed;
                 }
                 return text;
             } catch (e) {
