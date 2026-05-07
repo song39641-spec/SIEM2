@@ -3620,10 +3620,12 @@
             window.closeEditScenarioModal();
             window.renderScenarioButtons();
             window.selectScenario(scenario.id);
-            window.showToast("✅ 情境設定與燈號已成功儲存！");
+            window.renderMatrixView();
+            window.renderVerifiedCards();
+            window.showToast("✅ 儲存成功");
         };
 
-        // 🔧 升級：將單純補齊日誌，升級為補齊「日誌、原理解釋、ELK 語法與備註」
+        // 🔧 升級：將單純補齊日誌，升級為補齊「日誌、原理解釋、ELK 語法與備註」，並確保高度一致性
         window.aiAutoFillDetails = async (e) => {
             e.preventDefault();
             const scopeCbs = document.querySelectorAll('.edit-scope-cb:checked');
@@ -3649,14 +3651,18 @@
             KQL 邏輯：${kqlText || '(空)'}
             備註：${notesText || '(空)'}
             
-            請根據系統角色與情境名稱，將上述四個欄位(日誌、判斷邏輯、KQL、備註)全部補齊、擴充到最完整的狀態。`;
+            請根據「系統角色」與「情境名稱」，將上述四個欄位(日誌、判斷邏輯、KQL、備註)擴充到最完整的狀態。
+            【極度重要】：這四項內容必須保持「絕對的上下游邏輯一致性」！
+            1. 日誌清單中提到的來源，必須就是 KQL 查詢的來源。
+            2. KQL 裡面寫的條件、時間閥值，必須跟判斷邏輯說明的內容完全一模一樣。
+            3. 備註必須對應到前面所使用的日誌(例如需要開啟什麼 Audit policy)。`;
             
-            const systemPrompt = `你是一個頂尖的 SIEM 專家。請以嚴格的 JSON 格式回傳以下四個屬性：
+            const systemPrompt = `你是一個頂尖的 SIEM 專家與 ELK 平台架構師。請以嚴格的 JSON 格式回傳以下四個屬性，並且確保內容邏輯完全一致、互相對應不衝突：
             {
                "logs": ["陣列格式，列出必須收集的日誌，如: [設備A] Windows Event ID 4625 (登入失敗)", "[設備B] 防火牆阻擋日誌"],
-               "detectionStrategy": "中文詳細解釋如何利用上述日誌進行關聯分析與判斷",
-               "detectionLogic": "可直接在 ELK 上執行的 KQL (Kibana Query Language) 語法。絕對不要加上 Markdown 的 backticks 標記",
-               "notes": "針對此情境的技術備註，例如需要開啟什麼進階稽核、GPO、前置作業、閾值建議等"
+               "detectionStrategy": "中文詳細解釋偵測策略。請精準描述 KQL 語法中的判斷條件 (例如: X分鐘內發生Y次Z行為)。",
+               "detectionLogic": "可直接在 ELK 上執行的 KQL (Kibana Query Language) 語法。只允許查詢 logs 中定義的來源，並精準落實 detectionStrategy 說明的閾值。絕對不要加上 Markdown 的 backticks 標記",
+               "notes": "針對此情境的技術備註，例如需要開啟哪些進階稽核策略 (Advanced Audit Policy)、GPO、前置作業、或誤判排除建議等"
             }`;
 
             const res = await window.callGemini(prompt, systemPrompt, true);
@@ -3665,7 +3671,7 @@
                 if (res.detectionStrategy) document.getElementById('edit-scenario-strategy').value = res.detectionStrategy;
                 if (res.detectionLogic) document.getElementById('edit-scenario-kql').value = res.detectionLogic;
                 if (res.notes) document.getElementById('edit-scenario-notes').value = res.notes;
-                window.showToast("✨ AI 已為您自動補齊所有技術細節！");
+                window.showToast("✨ AI 已為您自動補齊所有技術細節，且確保內容一致！");
             }
             btn.innerHTML = origHtml; btn.disabled = false;
             if (typeof lucide !== 'undefined') lucide.createIcons();
