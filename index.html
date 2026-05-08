@@ -1484,6 +1484,26 @@
             if(viewName === 'matrix') window.renderMatrixView(); // 切換時觸發渲染
         };
 
+        // ✨ 補回遺失的同步自訂分類函式，解決生成情境時卡住的錯誤
+        window.syncCustomCategories = function() {
+            if(!window.categoriesDef) return;
+            let existingIds = new Set(window.categoriesDef.map(c => c.id));
+            (window.scenarios || []).forEach(s => {
+                if (s.categoryId && !existingIds.has(s.categoryId) && s.categoryId !== 'uncategorized') {
+                    let catName = s.categoryName || s.categoryId.replace(/^custom_/, '');
+                    window.categoriesDef.push({
+                        id: s.categoryId,
+                        name: catName,
+                        icon: 'folder-plus',
+                        colorClass: 'text-indigo-600',
+                        bgClass: 'bg-indigo-50',
+                        borderClass: 'border-indigo-100'
+                    });
+                    existingIds.add(s.categoryId);
+                }
+            });
+        };
+
         window.syncCustomRoles = function() {
             if(!window.rolesDef) return;
             let customGroup = window.rolesDef.find(g => g.group === '自訂新增 (Custom)');
