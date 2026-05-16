@@ -520,6 +520,15 @@
                             <span class="text-sm text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full font-bold border border-emerald-200" id="verified-count">共 0 項</span>
                         </div>
                     </div>
+					<div class="flex justify-between items-center border-b pb-4 mb-4 flex-shrink-0">
+                        </div>
+                    
+                    <div class="flex space-x-2 mb-4 bg-slate-100 p-1 rounded-lg w-max" id="verified-phase-tabs">
+                        <button onclick="window.switchVerifiedPhase('PHASE1')" id="tab-phase1" class="px-4 py-1.5 text-sm font-bold rounded-md bg-white text-emerald-700 shadow-sm transition-all">Phase 1</button>
+                        <button onclick="window.switchVerifiedPhase('PHASE2')" id="tab-phase2" class="px-4 py-1.5 text-sm font-bold rounded-md text-slate-500 hover:text-slate-700 transition-all">Phase 2</button>
+                        <button onclick="window.switchVerifiedPhase('PHASE3')" id="tab-phase3" class="px-4 py-1.5 text-sm font-bold rounded-md text-slate-500 hover:text-slate-700 transition-all">Phase 3</button>
+                    </div>
+                    <div class="overflow-y-auto flex-1 custom-scrollbar pr-2 pb-4">
                     <div class="overflow-y-auto flex-1 custom-scrollbar pr-2 pb-4">
                         <div id="verified-cards-container" class="space-y-8">
                             <!-- 圖卡與分類標題將動態渲染於此 -->
@@ -669,7 +678,61 @@
             <div class="p-4 border-t bg-slate-50 flex justify-end space-x-3"><button onclick="window.closeAIModal()" class="bg-slate-200 px-4 py-2 rounded-md text-sm" id="ai-cancel-btn">取消</button><button onclick="window.generateAIScenario()" class="bg-indigo-600 text-white px-4 py-2 rounded-md text-sm" id="ai-submit-btn">生成</button></div>
         </div>
     </div>
+	
+<div id="phase-select-modal" class="fixed inset-0 bg-slate-900/60 z-[70] flex items-center justify-center hidden p-4">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-sm overflow-hidden flex flex-col">
+            <div class="p-5 flex items-center text-emerald-700 border-b bg-emerald-50">
+                <i data-lucide="calendar-clock" class="w-6 h-6 mr-2"></i>
+                <h3 class="text-lg font-bold">選擇導入階段</h3>
+            </div>
+            <div class="p-5 bg-white space-y-3">
+<p class="text-sm text-slate-600 mb-2">請為此「已確認可行」的情境選擇預計執行的階段：</p>
+                
+                <button onclick="window.confirmVerifyPhase('PHASE1')" class="w-full text-left px-4 py-3 rounded-lg border border-slate-200 hover:border-rose-500 hover:bg-rose-50 focus:outline-none flex justify-between items-center transition-all group shadow-sm">
+                    <div class="flex items-center">
+                        <div class="bg-rose-100 p-1.5 rounded-md mr-3 group-hover:scale-110 transition-transform">
+                            <i data-lucide="zap" class="w-4 h-4 text-rose-600"></i>
+                        </div>
+                        <div class="flex flex-col">
+                            <span class="font-bold text-slate-800 group-hover:text-rose-700">Phase 1</span>
+                            <span class="text-[10px] text-slate-500">近期首要目標</span>
+                        </div>
+                    </div>
+                    <i data-lucide="chevron-right" class="w-4 h-4 text-slate-400 group-hover:text-rose-500"></i>
+                </button>
 
+                <button onclick="window.confirmVerifyPhase('PHASE2')" class="w-full text-left px-4 py-3 rounded-lg border border-slate-200 hover:border-blue-500 hover:bg-blue-50 focus:outline-none flex justify-between items-center transition-all group shadow-sm">
+                    <div class="flex items-center">
+                        <div class="bg-blue-100 p-1.5 rounded-md mr-3 group-hover:scale-110 transition-transform">
+                            <i data-lucide="rocket" class="w-4 h-4 text-blue-600"></i>
+                        </div>
+                        <div class="flex flex-col">
+                            <span class="font-bold text-slate-800 group-hover:text-blue-700">Phase 2</span>
+                            <span class="text-[10px] text-slate-500">中期擴充計畫</span>
+                        </div>
+                    </div>
+                    <i data-lucide="chevron-right" class="w-4 h-4 text-slate-400 group-hover:text-blue-500"></i>
+                </button>
+
+                <button onclick="window.confirmVerifyPhase('PHASE3')" class="w-full text-left px-4 py-3 rounded-lg border border-slate-200 hover:border-emerald-500 hover:bg-emerald-50 focus:outline-none flex justify-between items-center transition-all group shadow-sm">
+                    <div class="flex items-center">
+                        <div class="bg-emerald-100 p-1.5 rounded-md mr-3 group-hover:scale-110 transition-transform">
+                            <i data-lucide="shield-check" class="w-4 h-4 text-emerald-600"></i>
+                        </div>
+                        <div class="flex flex-col">
+                            <span class="font-bold text-slate-800 group-hover:text-emerald-700">Phase 3</span>
+                            <span class="text-[10px] text-slate-500">遠期優化目標</span>
+                        </div>
+                    </div>
+                    <i data-lucide="chevron-right" class="w-4 h-4 text-slate-400 group-hover:text-emerald-500"></i>
+                </button>
+            </div>
+            <div class="p-4 border-t bg-slate-50 flex justify-end">
+                <button onclick="document.getElementById('phase-select-modal').classList.add('hidden')" class="bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-2 rounded-md text-sm transition-colors">取消</button>
+            </div>
+        </div>
+    </div>
+	
     <!-- 刪除確認 Modal -->
     <div id="delete-confirm-modal" class="fixed inset-0 bg-slate-900/60 z-[70] flex items-center justify-center hidden p-4">
         <div class="bg-white rounded-xl shadow-2xl w-full max-w-sm overflow-hidden flex flex-col">
@@ -805,262 +868,262 @@
     </div>
 
     <!-- ✨ 告警沙盤推演 Modal -->
-        // ✨ 更新：支援跳出 Phase 選擇
-        window.toggleScenarioVerify = async function() {
-            const scenario = window.scenarios.find(s => s.id === window.currentSelectedScenarioId);
-            if (!scenario) return;
+    <div id="alert-sim-modal" class="fixed inset-0 bg-slate-900/60 z-[60] flex items-center justify-center hidden p-4">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-5xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div class="p-5 flex items-center justify-between border-b bg-rose-50">
+                <div class="flex items-center text-rose-700 font-bold text-lg"><i data-lucide="target" class="w-6 h-6 mr-2 text-rose-600"></i><h3>✨ 藍隊訓練：告警沙盤推演 (Tabletop Simulator)</h3></div>
+                <button onclick="window.closeAlertSimModal()" class="text-slate-400 hover:text-slate-600 focus:outline-none"><i data-lucide="x" class="w-6 h-6"></i></button>
+            </div>
+            <div class="p-8 bg-white flex flex-col items-center justify-center min-h-[300px]" id="alert-sim-loading">
+                <i data-lucide="loader-2" class="w-10 h-10 text-rose-600 animate-spin mb-4"></i><span class="text-base font-bold text-slate-700 mb-2">AI 正在生成模擬告警事件與調查步驟...</span>
+            </div>
+            <div class="p-6 bg-white hidden flex-col space-y-5 overflow-y-auto custom-scrollbar flex-grow" id="alert-sim-content">
+                <div class="bg-blue-50 border border-blue-200 text-blue-800 text-sm p-4 rounded-lg flex items-start shadow-sm"><i data-lucide="info" class="w-5 h-5 mr-3 flex-shrink-0 text-blue-600 mt-0.5"></i><span class="leading-relaxed font-medium">此為 AI 自動生成的虛擬告警事件 (Mock Alert)，可用於 SOC 團隊的內部兵推演練或教育訓練，驗證 L1/L2 分析師的處置流程是否完善。</span></div>
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div class="flex flex-col h-full">
+                        <h4 class="font-bold text-sm text-slate-800 mb-2 flex items-center"><i data-lucide="file-json" class="w-4 h-4 mr-1.5 text-rose-500"></i> 模擬觸發原始日誌 (Raw Event JSON)</h4>
+                        <div class="relative group flex-grow"><pre class="bg-slate-900 text-green-400 p-4 rounded-lg text-[11px] font-mono whitespace-pre-wrap leading-relaxed border border-slate-700 shadow-inner h-full overflow-y-auto max-h-[400px] custom-scrollbar" id="alert-sim-json"></pre><button onclick="window.copyAlertJson()" class="absolute top-3 right-3 text-slate-400 hover:text-white bg-slate-700 hover:bg-slate-600 px-3 py-1.5 rounded text-xs transition-colors flex items-center opacity-0 group-hover:opacity-100 shadow-sm"><i data-lucide="copy" class="w-3 h-3 mr-1.5"></i> 複製 JSON</button></div>
+                    </div>
+                    <div class="flex flex-col h-full">
+                        <h4 class="font-bold text-sm text-slate-800 mb-2 flex items-center"><i data-lucide="list-checks" class="w-4 h-4 mr-1.5 text-rose-500"></i> 推薦的初步調查步驟 (Triage Steps)</h4>
+                        <div class="text-sm text-slate-600 leading-relaxed bg-slate-50 p-5 rounded-lg border border-slate-100 flex-grow max-h-[400px] overflow-y-auto custom-scrollbar" id="alert-sim-triage"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="p-4 border-t bg-slate-50 flex justify-end"><button onclick="window.closeAlertSimModal()" class="bg-slate-200 hover:bg-slate-300 text-slate-800 px-6 py-2 rounded-md text-sm font-medium transition-colors shadow-sm">完成並關閉</button></div>
+        </div>
+    </div>
 
-            if (scenario.isVerified) {
-                scenario.isVerified = false;
-                scenario.phase = null;
-                if (window.db && window.fs && scenario.docId) {
-                    try {
-                        await window.fs.updateDoc(window.fs.doc(window.db, "scenarios", scenario.docId), {
-                            isVerified: false,
-                            phase: null
-                        });
-                    } catch(e) { console.error(e); }
-                }
-                window.showToast("ℹ️ 已取消可行標記");
-                window.renderScenarioButtons(); 
-                window.selectScenario(scenario.id); 
-                window.renderVerifiedCards();
-                window.renderMatrixView();
-            } else {
-                document.getElementById('phase-select-modal').classList.remove('hidden');
-            }
-        };
+    <!-- ✨ Sigma Rule Modal -->
+    <div id="sigma-modal" class="fixed inset-0 bg-slate-900/60 z-[60] flex items-center justify-center hidden p-4">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-3xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div class="p-5 flex items-center justify-between border-b bg-sky-50">
+                <div class="flex items-center text-sky-700 font-bold text-lg"><i data-lucide="file-code-2" class="w-6 h-6 mr-2 text-sky-600"></i><h3>✨ Sigma 威脅狩獵規則轉換</h3></div>
+                <button onclick="window.closeSigmaModal()" class="text-slate-400 hover:text-slate-600 focus:outline-none"><i data-lucide="x" class="w-6 h-6"></i></button>
+            </div>
+            <div class="p-8 bg-white flex flex-col items-center justify-center min-h-[300px]" id="sigma-loading">
+                <i data-lucide="loader-2" class="w-10 h-10 text-sky-600 animate-spin mb-4"></i><span class="text-base font-bold text-slate-700 mb-2">AI 正在將 KQL 轉換為 Sigma YAML...</span>
+            </div>
+            <div class="p-6 bg-white hidden flex-col space-y-5 overflow-y-auto custom-scrollbar flex-grow" id="sigma-content">
+                <div class="bg-slate-50 border border-slate-200 text-slate-700 text-sm p-4 rounded-lg flex items-start shadow-sm"><i data-lucide="info" class="w-5 h-5 mr-3 flex-shrink-0 text-sky-500 mt-0.5"></i><span class="leading-relaxed font-medium">Sigma 是一種開放、通用的特徵格式，可用於描述相關日誌事件。您可以將此 YAML 匯出，並透過 Sigma 編譯器無縫轉換為 Splunk, QRadar, Microsoft Sentinel 等各家 SIEM 支援的查詢語法。</span></div>
+                <div>
+                    <div class="relative group"><pre class="bg-slate-900 text-sky-300 p-5 rounded-lg text-sm font-mono whitespace-pre-wrap leading-relaxed border border-slate-700 shadow-inner max-h-[400px] overflow-y-auto custom-scrollbar" id="sigma-yaml-output"></pre><button onclick="window.copySigmaRule()" class="absolute top-3 right-3 text-slate-400 hover:text-white bg-slate-700 hover:bg-slate-600 px-3 py-1.5 rounded text-xs transition-colors flex items-center opacity-0 group-hover:opacity-100 shadow-sm"><i data-lucide="copy" class="w-3 h-3 mr-1.5"></i> 複製 YAML</button></div>
+                </div>
+            </div>
+            <div class="p-4 border-t bg-slate-50 flex justify-end"><button onclick="window.closeSigmaModal()" class="bg-slate-200 hover:bg-slate-300 text-slate-800 px-6 py-2 rounded-md text-sm font-medium transition-colors shadow-sm">完成並關閉</button></div>
+        </div>
+    </div>
 
-        window.closePhaseModal = function() {
-            document.getElementById('phase-select-modal').classList.add('hidden');
-        };
+    <!-- ✨ 威脅情資 CTI 轉化 Modal -->
+    <div id="cti-modal" class="fixed inset-0 bg-slate-900/60 z-[60] flex items-center justify-center hidden p-4">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col">
+            <div class="p-5 border-b bg-orange-50 flex justify-between items-center">
+                <h3 class="text-lg font-bold flex items-center text-orange-800"><i data-lucide="rss" class="w-5 h-5 mr-2 text-orange-600"></i>✨ 威脅情資 (CTI) 自動轉化</h3>
+                <button onclick="window.closeCtiModal()" class="text-slate-400" id="cti-close-btn"><i data-lucide="x" class="w-6 h-6"></i></button>
+            </div>
+            <div class="p-6 bg-white space-y-4">
+                <div class="bg-orange-100 text-orange-800 text-xs p-3 rounded-md border border-orange-200 leading-relaxed font-medium flex items-start">
+                    <i data-lucide="info" class="w-4 h-4 inline mr-2 flex-shrink-0 mt-0.5"></i> 貼上資安新聞、CVE 報告或任何非結構化情報。AI 會自動提取 TTPs 並配合您「現有的資產環境」翻譯成可落地的防護情境！
+                </div>
+                <div>
+                    <label class="block text-sm font-bold text-slate-700 mb-2">請貼上情報原文或網頁摘錄：</label>
+                    <textarea id="cti-prompt" rows="8" class="w-full text-sm border-slate-300 rounded-md shadow-sm focus:ring-2 focus:ring-orange-500 p-3 border resize-none" placeholder="例如：CVE-2024-XXXXX 是一個出現在某防火牆設備的 RCE 漏洞，攻擊者可以透過構造特定的 HTTP 請求..."></textarea>
+                </div>
+                <div id="cti-loading" class="hidden flex-col items-center py-4"><i data-lucide="loader-2" class="w-8 h-8 text-orange-600 animate-spin mb-2"></i><span class="text-sm font-bold text-slate-700">AI 正在深度解析情報並媒合資產...</span></div>
+            </div>
+            <div class="p-4 border-t bg-slate-50 flex justify-end space-x-3">
+                <button onclick="window.closeCtiModal()" class="bg-slate-200 px-4 py-2 rounded-md text-sm text-slate-700 hover:bg-slate-300 transition-colors" id="cti-cancel-btn">取消</button>
+                <button onclick="window.generateFromCti()" class="bg-orange-600 hover:bg-orange-700 text-white px-5 py-2 rounded-md text-sm font-bold shadow-sm transition-colors flex items-center" id="cti-submit-btn"><i data-lucide="zap" class="w-4 h-4 mr-1"></i> 開始解析</button>
+            </div>
+        </div>
+    </div>
 
-        window.confirmVerifyPhase = async function(phase) {
-            const scenario = window.scenarios.find(s => s.id === window.currentSelectedScenarioId);
-            if (!scenario) return;
+    <!-- ✨ 自動化腳本 Modal -->
+    <div id="script-modal" class="fixed inset-0 bg-slate-900/60 z-[60] flex items-center justify-center hidden p-4">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-4xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div class="p-5 flex items-center justify-between border-b bg-indigo-50">
+                <div class="flex items-center text-indigo-700 font-bold text-lg"><i data-lucide="terminal-square" class="w-6 h-6 mr-2 text-indigo-600"></i><h3>✨ AI 自動化日誌收集腳本</h3></div>
+                <button onclick="window.closeScriptModal()" class="text-slate-400 hover:text-slate-600 focus:outline-none"><i data-lucide="x" class="w-6 h-6"></i></button>
+            </div>
+            <div class="p-8 bg-white flex flex-col items-center justify-center min-h-[300px]" id="script-loading">
+                <i data-lucide="loader-2" class="w-10 h-10 text-indigo-600 animate-spin mb-4"></i><span class="text-base font-bold text-slate-700 mb-2">AI 正在為 <span id="script-target-role" class="text-indigo-600 font-mono"></span> 撰寫部署腳本...</span>
+            </div>
+            <div class="p-6 bg-white hidden flex-col space-y-5 overflow-y-auto custom-scrollbar flex-grow" id="script-content">
+                <div class="bg-blue-50 border border-blue-200 text-blue-800 text-sm p-4 rounded-lg flex items-start shadow-sm"><i data-lucide="info" class="w-5 h-5 mr-3 flex-shrink-0 text-blue-600 mt-0.5"></i><span class="leading-relaxed font-medium">此腳本專為您目前選擇的系統角色與應收集之日誌所量身打造。請根據貴公司的環境變數進行微調後執行。</span></div>
+                <div>
+                    <div class="flex justify-between items-center mb-2">
+                        <h4 class="font-bold text-sm text-slate-800 flex items-center"><i data-lucide="code" class="w-4 h-4 mr-1.5 text-indigo-500"></i> 部署腳本 (Bash / PowerShell)</h4>
+                        <button onclick="window.copyLogScript()" class="text-slate-600 hover:text-indigo-600 bg-slate-100 hover:bg-indigo-50 border border-slate-200 px-3 py-1 rounded text-xs transition-colors flex items-center shadow-sm"><i data-lucide="copy" class="w-3 h-3 mr-1.5"></i> 複製腳本</button>
+                    </div>
+                    <pre class="bg-slate-900 text-green-400 p-5 rounded-lg text-sm font-mono whitespace-pre-wrap leading-relaxed border border-slate-700 shadow-inner" id="script-command"></pre>
+                </div>
+                <div><h4 class="font-bold text-sm text-slate-800 mb-2 flex items-center"><i data-lucide="file-text" class="w-4 h-4 mr-1.5 text-indigo-500"></i> 腳本原理解析與手動檢查項目</h4><p class="text-sm text-slate-600 leading-relaxed bg-slate-50 p-4 rounded-lg border border-slate-100" id="script-explanation"></p></div>
+            </div>
+            <div class="p-4 border-t bg-slate-50 flex justify-end"><button onclick="window.closeScriptModal()" class="bg-slate-200 hover:bg-slate-300 text-slate-800 px-6 py-2 rounded-md text-sm font-medium transition-colors shadow-sm">完成並關閉</button></div>
+        </div>
+    </div>
 
-            scenario.isVerified = true;
-            scenario.phase = phase;
+    <!-- ✨ 戰略簡報產生器 Modal -->
+    <div id="pitch-modal" class="fixed inset-0 bg-slate-900/80 z-[80] flex items-center justify-center hidden p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-4xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div class="p-5 border-b bg-gradient-to-r from-teal-600 to-emerald-600 flex items-center justify-between">
+                <div class="flex items-center text-white">
+                    <i data-lucide="presentation" class="w-6 h-6 mr-2"></i>
+                    <h3 class="text-lg font-bold tracking-wide">✨ AI 高階戰略簡報大綱 (Pitch Deck)</h3>
+                </div>
+                <button onclick="window.closePitchModal()" class="text-white/70 hover:text-white transition-colors"><i data-lucide="x" class="w-6 h-6"></i></button>
+            </div>
+            <div id="pitch-loading" class="flex-grow flex flex-col items-center justify-center min-h-[400px] bg-slate-50 hidden">
+                <i data-lucide="loader-2" class="w-12 h-12 text-teal-600 animate-spin mb-4"></i>
+                <h4 class="text-lg font-bold text-slate-700 mb-2">正在為高階主管統整防護進度...</h4>
+                <p class="text-sm text-slate-500">AI 正在將已驗證情境轉化為商業語言</p>
+            </div>
+            <div id="pitch-content" class="p-8 bg-white overflow-y-auto custom-scrollbar flex-grow hidden">
+                <div class="prose max-w-none text-slate-700" id="pitch-markdown"></div>
+            </div>
+            <div class="p-4 border-t bg-slate-50 flex justify-between items-center">
+                <button onclick="window.copyPitch()" class="bg-teal-50 text-teal-700 border border-teal-200 hover:bg-teal-100 px-4 py-2 rounded-md text-sm font-bold transition-colors shadow-sm flex items-center">
+                    <i data-lucide="copy" class="w-4 h-4 mr-1.5"></i> 複製簡報內容
+                </button>
+                <button onclick="window.closePitchModal()" class="bg-slate-200 hover:bg-slate-300 text-slate-800 px-6 py-2 rounded-md text-sm font-bold transition-colors shadow-sm">關閉</button>
+            </div>
+        </div>
+    </div>
 
-            if (window.db && window.fs && scenario.docId) {
-                try {
-                    await window.fs.updateDoc(window.fs.doc(window.db, "scenarios", scenario.docId), {
-                        isVerified: true,
-                        phase: phase
-                    });
-                } catch(e) { console.error(e); }
-            }
-
-            window.closePhaseModal();
-            window.showToast(`✅ 情境已標記為可行，並歸類至 ${phase}`);
-            window.renderScenarioButtons(); 
-            window.selectScenario(scenario.id); 
-            window.renderVerifiedCards();
-            window.renderMatrixView();
-        };
-
-        window.switchVerifiedPhase = function(phase) {
-            window.currentVerifiedPhase = phase;
-            ['PHASE1', 'PHASE2', 'PHASE3'].forEach(p => {
-                const btn = document.getElementById(`tab-${p.toLowerCase()}`);
-                if (btn) {
-                    if (p === phase) {
-                        btn.className = "px-4 py-1.5 text-sm rounded-md bg-indigo-600 text-white font-bold transition-colors shadow-sm";
-                    } else {
-                        btn.className = "px-4 py-1.5 text-sm rounded-md bg-slate-200 text-slate-600 font-bold transition-colors hover:bg-slate-300 shadow-sm";
-                    }
-                }
-            });
-            window.renderVerifiedCards();
-        };
-
-        window.renderVerifiedCards = function() {
-            const container = document.getElementById('verified-cards-container');
-            const countBadge = document.getElementById('verified-count');
-            if (!container) return;
-
-            const allVerified = Array.isArray(window.scenarios) ? window.scenarios.filter(s => s.isVerified === true && !s.isDeleted) : [];
-            const phaseScenarios = allVerified.filter(s => (s.phase || 'PHASE1') === window.currentVerifiedPhase);
-            
-            if (countBadge) countBadge.textContent = `共 ${phaseScenarios.length} 項`;
-
-            if (phaseScenarios.length === 0) {
-                container.innerHTML = `<div class="text-center py-16 text-slate-400 italic bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200 flex flex-col items-center justify-center m-2">
-                    <i data-lucide="shield-question" class="w-16 h-16 mb-4 opacity-30"></i>
-                    <p class="text-lg font-bold text-slate-500 mb-1">此階段尚無已驗證的情境</p>
-                    <p class="text-sm">請在情境詳細頁面點擊「標記為可行」，並歸類至此階段。</p>
-                </div>`;
-                if (typeof lucide !== 'undefined') lucide.createIcons();
-                return;
-            }
-
-            const getRiskWeight = (scenario) => {
-                const r = scenario.risk || '';
-                if (r.includes('極高') || r.includes('Critical') || r.includes('紅') || r.includes('A')) return 4;
-                if (r.includes('高') || r.includes('High')) return 3;
-                if (r.includes('中') || r.includes('Medium') || r.includes('黃') || r.includes('B')) return 2;
-                if (r.includes('低') || r.includes('Low') || r.includes('綠') || r.includes('C')) return 1;
-                return 0;
-            };
-
-            let html = '';
-
-            window.categoriesDef.forEach(cat => {
-                const catScenarios = phaseScenarios.filter(s => s.categoryId === cat.id);
-                if (catScenarios.length === 0) return; 
-                
-                catScenarios.sort((a, b) => getRiskWeight(b) - getRiskWeight(a));
-                const baseColor = cat.colorClass.split('-')[1]; 
-
-                html += `
-                    <div class="bg-white rounded-xl mb-6">
-                        <div class="flex items-center mb-3 border-b-2 border-${baseColor}-200 pb-2">
-                            <div class="bg-${baseColor}-100 p-2 rounded-lg mr-3 shadow-sm">
-                                <i data-lucide="${cat.icon}" class="w-5 h-5 text-${baseColor}-600"></i>
-                            </div>
-                            <h3 class="text-lg font-bold text-slate-800 tracking-wide">${cat.name}</h3>
-                            <span class="ml-3 bg-${baseColor}-50 border border-${baseColor}-200 text-${baseColor}-700 px-2.5 py-0.5 rounded-full text-xs font-bold shadow-sm">
-                                ${catScenarios.length} 項戰略
-                            </span>
+    <!-- 資產管理 Modal -->
+    <div id="asset-modal" class="fixed inset-0 bg-slate-900/60 z-[60] flex items-center justify-center hidden p-4">
+        <!-- 🔧 1. 視窗放寬為 max-w-5xl -->
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-5xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div class="p-5 border-b bg-slate-50 flex justify-between items-center">
+                <h3 class="text-lg font-bold flex items-center text-slate-800"><i data-lucide="server-cog" class="w-5 h-5 mr-2 text-blue-600"></i>SIEM 伺服器資產管理</h3>
+                <button onclick="window.closeAssetModal()" class="text-slate-400 hover:text-slate-600"><i data-lucide="x" class="w-6 h-6"></i></button>
+            </div>
+            <div class="flex-grow flex flex-col overflow-hidden">
+                <div class="flex border-b bg-white px-5 pt-3 admin-only">
+                    <button onclick="window.switchAssetMode('smart')" id="asset-tab-smart" class="tab-btn active px-4 py-2 text-sm font-medium transition-colors flex items-center"><i data-lucide="sparkles" class="w-4 h-4 mr-1.5 text-indigo-500"></i> ✨ AI 分析與連動</button>
+                    <button onclick="window.switchAssetMode('manual')" id="asset-tab-manual" class="tab-btn px-4 py-2 text-sm font-medium text-slate-500 transition-colors">手動新增資產</button>
+                </div>
+                <div class="p-5 overflow-y-auto bg-slate-50/50 flex-grow custom-scrollbar">
+                    <div id="asset-mode-smart" class="space-y-4 admin-only">
+                        <div class="bg-indigo-50 border border-indigo-100 rounded-lg p-5">
+                            <h4 class="text-sm font-bold text-indigo-800 mb-2 flex items-center"><i data-lucide="bot" class="w-5 h-5 mr-2"></i> 請描述您要納管的新系統</h4>
+                            <textarea id="ai-asset-prompt" rows="2" class="w-full text-sm border-indigo-200 rounded-md p-3" placeholder="例如：我有一台負責跑資料庫的 Oracle..."></textarea>
+                            <div class="mt-3 flex justify-end"><button onclick="window.analyzeAssetWithAI()" id="ai-asset-submit-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 px-5 rounded-md text-sm flex items-center"><i data-lucide="zap" class="w-4 h-4 mr-2"></i> 深度分析</button></div>
                         </div>
-                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                `;
-
-                catScenarios.forEach(s => {
-                    let rColor = window.getRiskColor(s);
-                    const rLabel = s.risk || '未知';
+                        <div id="ai-asset-loading" class="hidden flex-col items-center py-6 bg-white rounded-lg border border-slate-200"><i data-lucide="loader-2" class="w-8 h-8 text-indigo-600 animate-spin mb-3"></i><div class="text-sm font-bold">辨識中...</div></div>
+                    </div>
                     
-                    const fiveMNames = (s.fiveM || []).map(mId => {
-                        const m = window.fiveMDef.find(d => d.id === mId);
-                        return m ? m.name.split(' ')[0] : '';
-                    }).filter(n => n).join(', ');
-
-                    html += `
-                        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all cursor-pointer flex flex-col group relative overflow-hidden" onclick="window.switchView('scenario'); window.selectScenario('${s.id}')">
-                            <div class="h-1.5 w-full ${rColor}"></div>
-                            <div class="p-5 flex flex-col flex-grow">
-                                <div class="flex justify-between items-start mb-3">
-                                    <span class="px-2.5 py-1 text-[10px] font-bold text-white rounded-md shadow-sm ${rColor}">
-                                        ${rLabel}
-                                    </span>
+                    <form id="asset-mode-manual" class="hidden bg-white p-5 rounded-lg border border-slate-200 shadow-sm admin-only">
+                        <div class="grid grid-cols-1 sm:grid-cols-12 gap-3 items-start">
+                            <div class="sm:col-span-3">
+                                <label class="block text-xs font-medium text-slate-500 mb-1">主機/群組名稱</label>
+                                <input type="text" id="asset-name" class="w-full text-sm border-slate-300 rounded-md p-2 border" placeholder="如: DB-01 或 SAP群組">
+                            </div>
+                            <div class="sm:col-span-3 flex flex-col gap-1">
+                                <label class="block text-xs font-medium text-slate-500 flex justify-between items-center mb-0.5">
+                                    <span>系統角色</span>
+                                    <span class="text-[10px] text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded cursor-pointer flex items-center hover:bg-indigo-100 transition-colors shadow-sm" onclick="window.aiSuggestRole()"><i data-lucide="sparkles" class="w-3 h-3 mr-0.5"></i>AI 幫我選</span>
+                                </label>
+                                <div id="ai-role-search-box" class="hidden flex gap-1 mb-1">
+                                    <input type="text" id="ai-role-keyword" placeholder="關鍵字 (如: Oracle)" class="w-full text-xs border-indigo-200 rounded p-1.5 border bg-indigo-50/50 focus:ring-1 focus:ring-indigo-400 focus:outline-none">
+                                    <button type="button" onclick="window.executeAiRoleSearch()" id="ai-role-search-exec-btn" class="bg-indigo-100 text-indigo-700 px-2 rounded hover:bg-indigo-200 transition-colors flex items-center justify-center"><i data-lucide="search" class="w-3 h-3"></i></button>
                                 </div>
-                                <h3 class="font-bold text-slate-800 text-base mb-2 line-clamp-2 group-hover:text-indigo-600 transition-colors">${s.title}</h3>
-                                <p class="text-xs text-slate-500 mb-4 line-clamp-3 leading-relaxed flex-grow">${s.desc || '尚無情境描述...'}</p>
-                                
-                                <div class="bg-slate-50 rounded-lg p-2.5 space-y-1.5 border border-slate-100 mt-auto">
-                                    <div class="flex items-center justify-between text-xs text-slate-600">
-                                        <span class="flex items-center text-slate-500"><i data-lucide="server" class="w-3.5 h-3.5 mr-1.5 text-indigo-400"></i>涵蓋設備</span>
-                                        <span class="font-bold bg-white px-2 py-0.5 rounded shadow-sm border border-slate-100">${(s.scope || []).length} 類</span>
-                                    </div>
-                                </div>
+                                <select id="asset-role" onchange="window.toggleCustomRoleInput()" class="w-full text-sm border-slate-300 rounded-md p-2 border bg-white"></select>
+                                <input type="text" id="custom-role-input" class="hidden w-full text-sm border-indigo-300 rounded-md p-2 border bg-indigo-50" placeholder="自訂角色">
+                            </div>
+                            <div class="sm:col-span-2">
+                                <label class="block text-xs font-medium text-slate-500 mb-1">資產大類</label>
+                                <select id="asset-category" class="w-full text-sm border-slate-300 rounded-md p-2 border bg-white">
+                                    <option value="伺服器">伺服器</option>
+                                    <option value="網路設備">網路設備</option>
+                                    <option value="應用程式">應用程式</option>
+                                    <option value="軟體服務">軟體服務</option>
+                                    <option value="資料庫">資料庫</option>
+                                    <option value="端點設備">端點設備</option>
+                                    <option value="資安設備">資安設備</option>
+                                    <option value="其他">其他</option>
+                                </select>
+                            </div>
+                            <div class="sm:col-span-1">
+                                <label class="block text-xs font-medium text-slate-500 mb-1">數量</label>
+                                <input type="number" id="asset-quantity" min="1" value="1" class="w-full text-sm border-slate-300 rounded-md p-2 border">
+                            </div>
+                            <div class="sm:col-span-2">
+                                <label class="block text-xs font-medium text-slate-500 mb-1">狀態</label>
+                                <select id="asset-status" class="w-full text-sm border-slate-300 rounded-md p-2 border bg-white">
+                                    <option value="未接取">未接取</option>
+                                    <option value="設定中">設定中</option>
+                                    <option value="已接取">已接取</option>
+                                </select>
+                            </div>
+                            <div class="sm:col-span-1 flex items-end h-full">
+                                <button type="button" onclick="window.handleAddAssetManual()" class="w-full bg-slate-800 hover:bg-slate-700 text-white font-medium py-2 px-2 rounded-md text-sm mb-0.5 transition-colors">新增</button>
                             </div>
                         </div>
-                    `;
-                });
-                html += `</div></div>`;
-            });
+                    </form>
+                    
+                    <div class="mt-6 bg-white p-5 rounded-lg border border-slate-200 shadow-sm">
+                        <div class="flex justify-between items-center mb-3">
+                            <h4 class="text-sm font-semibold text-slate-700 flex items-center"><i data-lucide="list" class="w-4 h-4 mr-1.5"></i> 已註冊清單</h4>
+                            <div class="flex items-center gap-2">
+                                <span class="text-xs text-amber-500 bg-amber-50 px-2 py-1 rounded font-bold border border-amber-200 admin-only-reverse hide-in-admin"><i data-lucide="eye" class="w-3 h-3 inline mr-1"></i>目前為唯讀模式</span>
+                                <!-- ✨ 新增：資產 Excel 匯出匯入按鈕 -->
+                                <input type="file" id="asset-excel-upload" accept=".xlsx, .xls" class="hidden" onchange="window.importAssetsFromExcel(event)">
+                                <button onclick="window.exportAssetsToExcel()" class="text-xs bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 px-2.5 py-1.5 rounded flex items-center transition-colors shadow-sm" title="下載資產範本或備份"><i data-lucide="download" class="w-3.5 h-3.5 mr-1"></i> 匯出 Excel</button>
+                                <button onclick="window.triggerAssetExcelUpload()" class="admin-only text-xs bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 px-2.5 py-1.5 rounded flex items-center transition-colors shadow-sm" title="上傳 Excel 以整批新增或更新資產"><i data-lucide="upload" class="w-3.5 h-3.5 mr-1"></i> 匯入 / 更新</button>
+                            </div>
+                        </div>
+                        <div class="overflow-x-auto border rounded-lg custom-scrollbar">
+                            <!-- 🔧 2. 解除 whitespace-nowrap 鎖定，並為操作欄加入 sticky right-0 -->
+                            <table class="w-full text-left text-sm">
+                                <thead class="bg-slate-50 text-slate-600">
+                                    <tr>
+                                        <th class="p-3 border-b whitespace-nowrap min-w-[120px]">主機/群組名稱</th>
+                                        <th class="p-3 border-b min-w-[180px]">系統角色</th>
+                                        <th class="p-3 border-b whitespace-nowrap">資產分類</th>
+                                        <th class="p-3 border-b whitespace-nowrap">數量</th>
+                                        <th class="p-3 border-b whitespace-nowrap">狀態</th>
+                                        <!-- 🔧 3. 將操作欄吸附於右側並加上陰影 -->
+                                        <th class="p-3 border-b text-center admin-only whitespace-nowrap sticky right-0 bg-slate-50 shadow-[-4px_0_10px_-2px_rgba(0,0,0,0.05)] z-10">操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="asset-list-tbody" class="divide-y divide-slate-100"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="p-4 border-t bg-white text-right"><button onclick="window.closeAssetModal()" class="bg-slate-200 hover:bg-slate-300 text-slate-800 px-5 py-2 rounded-md text-sm font-medium">關閉</button></div>
+        </div>
+    </div>
 
-            container.innerHTML = html;
-            if (typeof lucide !== 'undefined') lucide.createIcons();
-        };
+    <!-- Toast -->
+    <div id="toast" class="fixed bottom-5 right-5 text-white px-4 py-2 rounded shadow-lg transform transition-transform translate-y-20 opacity-0 flex items-center z-[9999] duration-300"><i data-lucide="info" class="w-5 h-5 mr-2" id="toast-icon"></i><span id="toast-message"></span></div>
 
-        window.openPitchModal = async () => {
-            const phaseScenarios = (window.scenarios || []).filter(s => s.isVerified && !s.isDeleted && (s.phase || 'PHASE1') === window.currentVerifiedPhase);
-            if (phaseScenarios.length === 0) return window.showToast("⚠️ 此階段尚無已驗證情境，無法生成簡報！", true);
-
-            document.getElementById('pitch-modal').classList.remove('hidden');
-            document.getElementById('pitch-loading').classList.remove('hidden');
-            document.getElementById('pitch-content').classList.add('hidden');
-
-            const phaseLabel = window.currentVerifiedPhase === 'PHASE2' ? 'Phase 2 (中期計畫)' : (window.currentVerifiedPhase === 'PHASE3' ? 'Phase 3 (長期願景)' : 'Phase 1 (近期目標)');
-            const context = phaseScenarios.map(s => `- [${s.risk}] ${s.title} (涵蓋設備: ${(s.scope||[]).join(', ')})`).join('\n');
-            const prompt = `我們團隊已經在 SIEM 平台上驗證了以下屬於【${phaseLabel}】的監控情境：\n${context}\n\n請為我產生一份給高階主管(C-level)或董事會的「資安監控導入進度報告」簡報大綱(約4-5頁)。\n必須包含：\n1. 執行摘要 (Executive Summary)\n2. 已覆蓋的核心風險與威脅 (用商業語言描述)\n3. 資產覆蓋率與跨部門協作狀態\n4. 下一步計畫 (Next Steps)。\n\n請使用 Markdown 格式，適當使用 emoji 讓重點更突出。不需要給 JSON，直接輸出 Markdown 文本即可。`;
-            const systemPrompt = `你是一位經驗豐富的虛擬資安長 (vCISO)。擅長將生硬的技術指標轉化為高階主管能懂的商業與風險價值。`;
+    <!-- 主核心腳本區 -->
+    <script>
+        // ==========================================
+        // 1. Auth 認證邏輯 (Firebase Email/Password)
+        // ==========================================
+        window.handleLogin = async function() {
+            const email = document.getElementById('auth-email').value.trim();
+            const pwd = document.getElementById('auth-password').value.trim();
+            const errDiv = document.getElementById('auth-error');
+            if (!email || !pwd) { errDiv.textContent = "請輸入電子郵件與密碼"; errDiv.classList.remove('hidden'); return; }
             
-            const res = await window.callGemini(prompt, systemPrompt, false);
-            if (res) {
-                document.getElementById('pitch-markdown').innerHTML = res.replace(/\n/g, '<br>');
-                document.getElementById('pitch-loading').classList.add('hidden');
-                document.getElementById('pitch-content').classList.remove('hidden');
-            } else {
-                window.closePitchModal();
-            }
-        };
-
-        window.playVoiceBriefing = async function() {
-            window.openVoiceBriefingModal();
-            document.getElementById('voice-loading').classList.remove('hidden');
-            document.getElementById('voice-player-container').classList.add('hidden');
-
-            const phaseLabel = window.currentVerifiedPhase === 'PHASE2' ? '第二階段中期計畫' : (window.currentVerifiedPhase === 'PHASE3' ? '第三階段長期願景' : '第一階段近期目標');
-            const phaseScenarios = window.scenarios.filter(s => !s.isDeleted && s.isVerified && (s.phase || 'PHASE1') === window.currentVerifiedPhase);
-            const criticalCount = phaseScenarios.filter(s => window.getRiskColor(s) === 'bg-red-600').length;
-            const assetCount = window.assets.length;
-
-            const prompt = `請扮演一位名為「AI 守護者 (AI Guardian)」的 SOC 資安語音助理。請根據以下系統目前的防護狀態，為高階主管與分析師撰寫一段約 30 秒的晨間資安語音簡報 (Daily Audio Briefing)。\n
-            【目前狀態】：\n
-            - 正在聚焦檢閱的階段：${phaseLabel}
-            - 全局納管伺服器總數：${assetCount} 台\n
-            - 此階段運行中的實戰防禦情境：${phaseScenarios.length} 項\n
-            - 此階段中極高風險 (Critical) 的情境數量：${criticalCount} 項\n\n
-            【語氣要求】：\n
-            1. 專業、自信、溫和且具備未來科技感。\n
-            2. 開場白請使用「各位長官與分析師早安，我是您的 SIEM 語音守護者...」\n
-            3. 純對話文字，請勿輸出任何 Markdown 標記、粗體星號 (**) 或動作註記 (如 [微笑])，因為這段文字將直接送給語音合成 API 朗讀。`;
-            
-            const scriptText = await window.callGemini(prompt, "你是一個專業的語音助理腳本撰寫員。", false);
-
-            if (!scriptText) {
-                window.showToast("語音腳本生成失敗", true);
-                window.closeVoiceBriefingModal();
-                return;
-            }
-
-            const key = window.apiKey || "";
-            const ttsUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${key}`;
-
-            const ttsPayload = {
-                contents: [{ parts: [{ text: scriptText }] }],
-                generationConfig: {
-                    responseModalities: ["AUDIO"],
-                    speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: "Aoede" } } }
-                },
-                model: "gemini-2.5-flash-preview-tts"
-            };
+            const btn = document.getElementById('btn-login');
+            const origText = btn.innerHTML;
+            btn.innerHTML = `<i data-lucide="loader-2" class="w-5 h-5 animate-spin"></i>`;
+            btn.disabled = true;
 
             try {
-                const response = await fetch(ttsUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(ttsPayload)
-                });
-
-                if (!response.ok) throw new Error("TTS API 呼叫失敗");
-
-                const result = await response.json();
-                const inlineData = result.candidates?.[0]?.content?.parts?.[0]?.inlineData;
-                if (!inlineData) throw new Error("TTS API 未回傳音訊資料");
-
-                const mimeType = inlineData.mimeType;
-                const match = mimeType.match(/rate=(\d+)/);
-                const sampleRate = match ? parseInt(match[1]) : 24000;
-
-                const wavBlob = window.pcmToWav(inlineData.data, sampleRate);
-                const audioUrl = URL.createObjectURL(wavBlob);
-
-                const audioEl = document.getElementById('voice-player');
-                audioEl.src = audioUrl;
-
-                document.getElementById('voice-loading').classList.add('hidden');
-                document.getElementById('voice-player-container').classList.remove('hidden');
-                document.getElementById('voice-script-text').textContent = scriptText;
-
-                audioEl.play();
-
-            } catch (e) {
-                console.error(e);
-                window.showToast("語音合成失敗", true);
-                window.closeVoiceBriefingModal();
+                await window.firebaseAuthAPI.signInWithEmailAndPassword(window.auth, email, pwd);
+                errDiv.classList.add('hidden');
+            } catch (error) {
+                errDiv.textContent = "登入失敗，帳號或密碼錯誤。 (" + error.code + ")";
+                errDiv.classList.remove('hidden');
+                btn.innerHTML = origText;
+                btn.disabled = false;
             }
         };
 
@@ -1683,9 +1746,13 @@
 
             const verifiedBadge = document.getElementById('verified-badge');
             const toggleVerifyBtn = document.getElementById('toggle-verify-btn');
+            
             if (scenario.isVerified) {
                 verifiedBadge.classList.remove('hidden');
-                toggleVerifyBtn.innerHTML = `<i data-lucide="x-circle" class="w-4 h-4 mr-1 text-slate-500"></i> 取消確認`;
+                const phaseLabel = scenario.phase === 'PHASE2' ? 'Phase 2' : (scenario.phase === 'PHASE3' ? 'Phase 3' : 'Phase 1');
+                verifiedBadge.innerHTML = `<i data-lucide="check-circle" class="w-3 h-3 mr-1"></i> 已確認可行 (${phaseLabel})`;
+                
+                toggleVerifyBtn.innerHTML = `<i data-lucide="x-circle" class="w-4 h-4 mr-1 text-slate-500"></i> 取消標記`;
                 toggleVerifyBtn.className = "admin-only text-xs bg-slate-100 text-slate-600 hover:bg-slate-200 border border-slate-300 px-3 py-1.5 rounded flex items-center transition-colors shadow-sm hidden group";
             } else {
                 verifiedBadge.classList.add('hidden');
@@ -2235,6 +2302,81 @@
             ws['!cols'] = [{wch: 15}, {wch: 30}, {wch: 10}, {wch: 45}, {wch: 15}, {wch: 25}, {wch: 25}, {wch: 30}, {wch: 50}, {wch: 50}, {wch: 40}, {wch: 30}];
             const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "SIEM 監控情境清單"); XLSX.writeFile(wb, "SIEM_Strategy_Plan.xlsx");
             window.showToast('✅ 成功匯出 Excel 報表！');
+        };
+		
+// ✨ 新增：戰略矩陣專屬的 Excel 交叉表匯出功能
+        window.exportMatrixToExcel = function() {
+            if (typeof XLSX === 'undefined') {
+                return window.showToast('⚠️ 未偵測到 Excel 匯出套件 (SheetJS)！請確認網路連線。', true);
+            }
+
+            // 1. 篩選出所有「已確認可行」且「未刪除」的有效情境
+            const verifiedScenarios = (window.scenarios || []).filter(s => s.isVerified === true && !s.isDeleted);
+
+            // 2. 建立 Excel 的二維陣列資料結構，第一列為標題列 (X 軸)
+            const headers = ["NIST CSF 核心功能 \\ 12項資產管理維度"];
+            window.fiveMDef.forEach(m => headers.push(m.name));
+            
+            const matrixData = [headers];
+
+            // 3. 依序填入 Y 軸 (NIST CSF 核心功能階段) 每一列的交叉比對資料
+            window.csfFunctions.forEach(csf => {
+                const row = [csf.name]; // 每一列的第一欄顯示該 CSF 功能名稱
+                
+                // 巡檢 12 個資產管理維度
+                window.fiveMDef.forEach(m => {
+                    // 找出同時符合當前 CSF 功能與當前資產維度的交集情境
+                    const cellScenarios = verifiedScenarios.filter(s =>
+                        (s.csf || []).includes(csf.id) &&
+                        (s.fiveM || []).includes(m.id)
+                    );
+                    
+                    // 將網格內的所有情境名稱，以換行字元 (\n) 串接在一起
+                    const cellText = cellScenarios.map(s => s.shortName || s.title).join('\n');
+                    row.push(cellText);
+                });
+                
+                matrixData.push(row);
+            });
+
+            try {
+                // 4. 使用 SheetJS (xlsx.full.min.js) 將二維陣列轉化為工作表
+                const ws = XLSX.utils.aoa_to_sheet(matrixData);
+                
+                // 5. 配置欄位寬度與防破版樣式調整
+                const colWidths = [{ wch: 28 }]; // 第一欄 (CSF名稱欄) 寬度加寬
+                for (let i = 1; i <= window.fiveMDef.length; i++) {
+                    colWidths.push({ wch: 22 }); // 12維度欄位等寬分配
+                }
+                ws['!cols'] = colWidths;
+
+                // 6. 遍歷工作表，為包含多個情境的儲存格開啟自動換行 (wrapText) 屬性
+                const range = XLSX.utils.decode_range(ws['!ref']);
+                for (let R = range.s.r; R <= range.e.r; ++R) {
+                    for (let C = range.s.c; C <= range.e.c; ++C) {
+                        const cellRef = XLSX.utils.encode_cell({ c: C, r: R });
+                        if (!ws[cellRef]) continue;
+                        
+                        // 初始化或寫入儲存格的樣式設定 (特別是對齊格式)
+                        if (!ws[cellRef].s) ws[cellRef].s = {};
+                        ws[cellRef].s.alignment = { 
+                            wrapText: true, 
+                            vertical: 'top', 
+                            horizontal: C === 0 ? 'center' : 'left' 
+                        };
+                    }
+                }
+
+                // 7. 封裝成活頁簿並自動觸發下載
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, "NIST CSF 覆蓋矩陣");
+                XLSX.writeFile(wb, "SIEM_NIST_CSF_Strategic_Matrix.xlsx");
+                
+                window.showToast('✅ 成功匯出戰略覆蓋矩陣 Excel 交叉分析表！');
+            } catch (err) {
+                console.error("矩陣 Excel 匯出失敗:", err);
+                window.showToast('❌ 匯出過程中發生錯誤，請查看主控台。', true);
+            }
         };
 
         // ✨ 新增：伺服器資產的 Excel 匯出與匯入功能
@@ -3093,22 +3235,60 @@
             window.closeHardDeleteModal();
         };
 
-        // 🌟 升級：高層視角 (按分類群組 + 風險排序渲染)
+        // ✨ 新增：記錄當前觀看的 Phase 頁籤 (預設 PHASE1)
+        window.currentVerifiedPhase = 'PHASE1';
+
+        // ✨ 新增：切換頁籤狀態的函式
+        window.switchVerifiedPhase = function(phase) {
+            window.currentVerifiedPhase = phase;
+            
+            // 定義三個階段的專屬 Active 顏色
+            const phaseStyles = {
+                'PHASE1': 'bg-rose-50 text-rose-700 border-rose-200',
+                'PHASE2': 'bg-blue-50 text-blue-700 border-blue-200',
+                'PHASE3': 'bg-emerald-50 text-emerald-700 border-emerald-200'
+            };
+
+            ['PHASE1', 'PHASE2', 'PHASE3'].forEach(p => {
+                const btn = document.getElementById(`tab-${p.toLowerCase()}`);
+                if (btn) {
+                    if (p === phase) {
+                        // 啟動狀態的樣式
+                        btn.className = `px-4 py-1.5 text-sm font-bold rounded-md shadow-sm border transition-all ${phaseStyles[p]}`;
+                    } else {
+                        // 未啟動狀態的樣式
+                        btn.className = "px-4 py-1.5 text-sm font-bold rounded-md text-slate-500 hover:text-slate-700 border border-transparent hover:bg-slate-200/50 transition-all";
+                    }
+                }
+            });
+            window.renderVerifiedCards(); 
+        };
+
+// 🌟 升級版：支援 Phase 過濾與視覺化徽章的渲染邏輯
         window.renderVerifiedCards = function() {
             const container = document.getElementById('verified-cards-container');
             const countBadge = document.getElementById('verified-count');
             if (!container) return;
 
-            // 僅抓取「已標記為可行」且「未刪除」的情境
-            const verifiedScenarios = (window.scenarios || []).filter(s => s.isVerified === true && !s.isDeleted);
+            // 🛡️ 防呆 1：確保目前選定的頁籤絕對有預設值
+            if (!window.currentVerifiedPhase) {
+                window.currentVerifiedPhase = 'PHASE1';
+            }
+
+            // 🛡️ 防呆 2：過濾出符合當前 Phase 的已驗證情境
+            const verifiedScenarios = (window.scenarios || []).filter(s => {
+                const sPhase = (s.phase || 'PHASE1').toUpperCase().trim();
+                const currentTab = window.currentVerifiedPhase.toUpperCase().trim();
+                return s.isVerified === true && !s.isDeleted && sPhase === currentTab;
+            });
             
-            countBadge.textContent = `共 ${verifiedScenarios.length} 項`;
+            countBadge.textContent = `${window.currentVerifiedPhase.replace('PHASE', 'Phase ')} 共 ${verifiedScenarios.length} 項`;
 
             if (verifiedScenarios.length === 0) {
                 container.innerHTML = `<div class="text-center py-16 text-slate-400 italic bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200 flex flex-col items-center justify-center">
                     <i data-lucide="shield-question" class="w-16 h-16 mb-4 opacity-30"></i>
-                    <p class="text-lg font-bold text-slate-500 mb-1">尚無已驗證的高層情境</p>
-                    <p class="text-sm">請在情境詳細頁面，與各單位討論後點擊「標記為可行」來將其收錄至此。</p>
+                    <p class="text-lg font-bold text-slate-500 mb-1">此階段尚無已驗證的情境</p>
+                    <p class="text-sm">請在情境詳細頁面，點擊「標記為可行」並選擇對應階段。</p>
                 </div>`;
                 if (typeof lucide !== 'undefined') lucide.createIcons();
                 return;
@@ -3123,20 +3303,22 @@
                 return 0;
             };
 
+            // ✨ 視覺化定義字典 (放在這確保全域都讀得到)
+            const phaseUI = {
+                'PHASE1': { name: 'Phase 1', icon: 'zap', color: 'text-rose-700', bg: 'bg-rose-100', border: 'border-rose-200' },
+                'PHASE2': { name: 'Phase 2', icon: 'rocket', color: 'text-blue-700', bg: 'bg-blue-100', border: 'border-blue-200' },
+                'PHASE3': { name: 'Phase 3', icon: 'shield-check', color: 'text-emerald-700', bg: 'bg-emerald-100', border: 'border-emerald-200' }
+            };
+
             let html = '';
 
-            // 依據全局的分類定義 (window.categoriesDef) 來分組渲染
             window.categoriesDef.forEach(cat => {
-                // 找出屬於該分類的已驗證情境
                 const catScenarios = verifiedScenarios.filter(s => s.categoryId === cat.id);
-                if (catScenarios.length === 0) return; // 若該分類無驗證情境，則略過不顯示
+                if (catScenarios.length === 0) return; 
                 
-                // 群組內依照風險高低排序
                 catScenarios.sort((a, b) => getRiskWeight(b) - getRiskWeight(a));
-                
-                const baseColor = cat.colorClass.split('-')[1]; // 取出色彩前綴如 indigo, rose
+                const baseColor = cat.colorClass.split('-')[1]; 
 
-                // 建立該分類的標題區塊
                 html += `
                     <div class="bg-white rounded-xl">
                         <div class="flex items-center mb-4 border-b-2 border-${baseColor}-200 pb-2">
@@ -3151,15 +3333,17 @@
                         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                 `;
 
-                // 渲染該分類下的圖卡
                 catScenarios.forEach(s => {
                     let rColor = window.getRiskColor(s);
                     const rLabel = s.risk || '未知';
-                    
                     const fiveMNames = (s.fiveM || []).map(mId => {
                         const m = window.fiveMDef.find(d => d.id === mId);
                         return m ? m.name.split(' ')[0] : '';
                     }).filter(n => n).join(', ');
+
+                    // ✨ 精準定位：在這裡抽出該情境的 Phase，並抓取對應的 UI 設定
+                    const sPhase = (s.phase || 'PHASE1').toUpperCase().trim();
+                    const pUI = phaseUI[sPhase] || phaseUI['PHASE1']; // 若找不到預設抓 PHASE1
 
                     html += `
                         <div class="bg-white rounded-2xl border border-slate-200 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all cursor-pointer flex flex-col group relative overflow-hidden" onclick="window.switchView('scenario'); window.selectScenario('${s.id}')">
@@ -3173,6 +3357,13 @@
                                         ${rLabel}
                                     </span>
                                 </div>
+                                
+                                <div class="mb-3">
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-black border ${pUI.bg} ${pUI.color} ${pUI.border} shadow-sm">
+                                        <i data-lucide="${pUI.icon}" class="w-3 h-3 mr-1"></i> ${pUI.name}
+                                    </span>
+                                </div>
+
                                 <h3 class="font-bold text-slate-800 text-lg mb-2 line-clamp-2 group-hover:text-indigo-600 transition-colors">${s.title}</h3>
                                 <p class="text-sm text-slate-500 mb-6 line-clamp-3 leading-relaxed flex-grow">${s.desc || '尚無情境描述...'}</p>
                                 
@@ -3190,8 +3381,6 @@
                         </div>
                     `;
                 });
-
-                // 封閉該分類的 grid 容器與最外層容器
                 html += `</div></div>`;
             });
 
@@ -3533,20 +3722,52 @@
             const scenario = window.scenarios.find(s => s.id === window.currentSelectedScenarioId);
             if (!scenario) return;
 
-            scenario.isVerified = !scenario.isVerified;
+            // 如果目前是「已驗證」，點擊則是「取消驗證」
+            if (scenario.isVerified) {
+                scenario.isVerified = false;
+                scenario.phase = null; // 取消時清空 Phase
+                if (window.db && window.fs && scenario.docId) {
+                    try {
+                        await window.fs.updateDoc(window.fs.doc(window.db, "scenarios", scenario.docId), {
+                            isVerified: false,
+                            phase: null
+                        });
+                    } catch(e) { console.error(e); }
+                }
+                window.showToast("ℹ️ 已取消可行標記");
+                window.renderScenarioButtons(); 
+                window.selectScenario(scenario.id); 
+                window.renderVerifiedCards();
+                window.renderMatrixView();
+            } else {
+                // 如果目前是「未驗證」，點擊則彈出選擇 Phase 的 Modal
+                const modal = document.getElementById('phase-select-modal');
+                modal.classList.remove('hidden');
+                if (typeof lucide !== 'undefined') lucide.createIcons();
+            }
+        };
+
+        // 新增：確認 Phase 並寫入資料庫的函式
+        window.confirmVerifyPhase = async function(phaseStr) {
+            const scenario = window.scenarios.find(s => s.id === window.currentSelectedScenarioId);
+            if (!scenario) return;
+
+            scenario.isVerified = true;
+            scenario.phase = phaseStr;
 
             if (window.db && window.fs && scenario.docId) {
                 try {
                     await window.fs.updateDoc(window.fs.doc(window.db, "scenarios", scenario.docId), {
-                        isVerified: scenario.isVerified
+                        isVerified: true,
+                        phase: phaseStr
                     });
                 } catch(e) { console.error(e); }
             }
 
-            window.showToast(scenario.isVerified ? "✅ 情境已標記為「確認可行」" : "ℹ️ 已取消可行標記");
+            document.getElementById('phase-select-modal').classList.add('hidden');
+            window.showToast(`✅ 情境已標記為「確認可行」，並歸類於 ${phaseStr}`);
             window.renderScenarioButtons(); 
             window.selectScenario(scenario.id); 
-            // 如果是在背景切換，同時觸發矩陣重繪
             window.renderVerifiedCards();
             window.renderMatrixView();
         };
